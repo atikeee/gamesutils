@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Puzzle & Game Hub</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      padding: 30px;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #222;
+    }
+    .app-list {
+      max-width: 800px;
+      margin: auto;
+    }
+    .app-item {
+      background: white;
+      padding: 15px 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin-bottom: 15px;
+    }
+    .app-item a {
+      font-weight: bold;
+      font-size: 18px;
+      text-decoration: none;
+      color: #0077cc;
+    }
+    .app-item a:hover {
+      text-decoration: underline;
+    }
+    .description {
+      margin-top: 5px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Welcome to the Game Hub</h1>
+  <div class="app-list">
+    <div class="app-item">
+      <a href="/buzzer">Buzzer</a>
+      <div class="description">Press the buzzer to record who clicked first. Tracks name and IP. View results in the report page.</div>
+    </div>
+
+    <div class="app-item">
+      <a href="/report">Buzzer Report</a>
+      <div class="description">View all buzzers with timestamps. Clear results or reset name mappings.</div>
+    </div>
+
+    <div class="app-item">
+      <a href="/photoscramble">Photo Scramble</a>
+      <div class="description">Guess the image hidden behind scrambled grids. Change grid size to make it harder or easier.</div>
+    </div>
+
+    <div class="app-item">
+      <a href="/guesstune">Guess Tune</a>
+      <div class="description">Listen to segments from YouTube music clips. Try to guess the song. Change clip and segment.</div>
+    </div>
+
+    <div class="app-item">
+      <a href="/photopair">Photo Pair</a>
+      <div class="description">Flip grid tiles to reveal matching photo pairs. Shows pairs used below. Timed reveal included.</div>
+    </div>
+
+    <div class="app-item">
+      <a href="/shuffle_cards">Shuffle Card</a>
+      <div class="description">Displays a shuffled 52-card deck in 4 rows using a single sprite sheet.</div>
+    </div>
+
+    <div class="app-item">
+      <a href="/misc">Misc Quiz</a>
+      <div class="description">Each slide shows a photo and a question with optional hint and answer. Controlled by CSV.</div>
+    </div>
+
+    <div class="app-item">
+      <a href="/riddle">Riddle Cards</a>
+      <div class="description">Flashcards with question, hint, and answer. Click the card to flip. Text loaded from files.</div>
+    </div>
+
+    <div class="app-item">
+      <a href="/crack">Crack the Code</a>
+      <div class="description">Decrypt scrambled answers by flipping individual letters. One-click reveals all same letters.</div>
+    </div>
+    <div class="app-item">
+      <a href="/codenames">Codenames: Find your teams word from the clue given. </a>
+      <div class="description">Codenames play between Red and Blue team. Each team will have a spymaster and he/she will give a clue with one word and a number. only spymaster will know
+        what is red word or blue word. there is one black (forbidden) word too. whoever click black will loose the game. if any team select other teams color the word selection turn will be over. 
+      </div>
+    </div>
+    <div class="app-item">
+      <a href="/codenames_spy">Codenames Spy: Give wise clue with maximum number possible</a>
+      <div class="description">This page is protected by one time password and only spymaster can/ should see this page. </div>
+    </div>
+    <div class="app-item">
+      <a href="/panchforon/namelist">Register Player for panchforon</a>
+      <div class="description">This can be played among any group of player. each group should register their name first before the game start.  </div>
+    </div>
+    <div class="app-item">
+      <a href="/panchforon/play">Play panchforon</a>
+      <div class="description">There will be 3 level of game. 1st lever can say anything to express the word. But forbid to use synonyme / antonym. second level 1 word and 3rd level only acting. </div>
+    </div>
+    <div class="app-item">
+      <a href="/playmedia">Play Media</a>
+      <div class="description">Play media audio only and check VDO later. </div>
+    </div>
+  </div>
+</body>
+</html>

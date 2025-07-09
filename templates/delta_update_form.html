@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Flight</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 2rem;
+            background: #f8f9fa;
+        }
+        h1 {
+            text-align: center;
+        }
+        form {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        label {
+            display: block;
+            margin-top: 1rem;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="datetime-local"], input[type="number"] {
+            width: 100%;
+            padding: 0.6rem;
+            margin-top: 0.3rem;
+            box-sizing: border-box;
+        }
+        button {
+            margin-top: 1.5rem;
+            padding: 0.75rem 2rem;
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .message {
+            text-align: center;
+            margin-top: 1rem;
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+    <script>
+        function validateForm() {
+            const iataRegex = /^[A-Z]{3}$/;
+
+            let src = document.getElementById("src").value.toUpperCase();
+            let dst = document.getElementById("dst").value.toUpperCase();
+            document.getElementById("src").value = src;
+            document.getElementById("dst").value = dst;
+
+            if (!iataRegex.test(src) || !iataRegex.test(dst)) {
+                alert("Airport codes must be 3 uppercase letters (e.g. JFK, LAX)");
+                return false;
+            }
+
+            const formatTime = dt => {
+                const date = new Date(dt);
+                const pad = n => n.toString().padStart(2, '0');
+                return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
+            };
+
+            const depInput = document.getElementById("departure");
+            const arrInput = document.getElementById("arrival");
+
+            document.getElementById("formatted_departure").value = formatTime(depInput.value);
+            document.getElementById("formatted_arrival").value = formatTime(arrInput.value);
+
+            return true;
+        }
+    </script>
+</head>
+<body>
+    <h1>Add Delta Flight</h1>
+    {% if message %}
+        <div class="message {{ 'error' if '❌' in message else '' }}">{{ message }}</div>
+    {% endif %}
+    <form method="POST" onsubmit="return validateForm()">
+        <label for="flightno">Flight No</label>
+        <input type="text" name="flightno" id="flightno" required>
+
+        <label for="src">From (IATA Code)</label>
+        <input type="text" name="src" id="src" required maxlength="3">
+
+        <label for="dst">To (IATA Code)</label>
+        <input type="text" name="dst" id="dst" required maxlength="3">
+
+        <label for="departure">Departure Time</label>
+        <input type="datetime-local" id="departure" required>
+
+        <label for="arrival">Arrival Time</label>
+        <input type="datetime-local" id="arrival" required>
+
+        <!-- Hidden fields for formatted datetime -->
+        <input type="hidden" name="departure" id="formatted_departure">
+        <input type="hidden" name="arrival" id="formatted_arrival">
+
+        <label for="duration">Duration (in minutes)</label>
+        <input type="number" name="duration" id="duration" required min="1">
+
+        <button type="submit">Add Flight</button>
+    </form>
+</body>
+</html>

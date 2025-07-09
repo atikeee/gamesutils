@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Panchforon Play</title>
+    <style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f2f2f2;
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .left-top {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .label-box {
+        font-size: 1.2rem;
+        padding: 10px 15px;
+        background-color: #ffffff;
+        border: 2px solid #ccc;
+        border-radius: 8px;
+    }
+
+    .label-box .icon {
+        margin-right: 8px;
+    }
+
+    .right-top {
+        display: flex;
+        gap: 10px;
+    }
+
+    #playerName {
+        font-size: 2rem;
+        font-weight: bold;
+        margin: 20px auto;
+        text-align: center;
+        color: #333;
+    }
+
+    #cardBox {
+        width: 300px;
+        height: 150px;
+        background-color: #fff;
+        border: 2px solid #ccc;
+        border-radius: 12px;
+        margin: 20px auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    #cardBox.hidden {
+        background-color: #e0e0e0;
+        color: transparent;
+    }
+
+    .button-bar {
+        text-align: center;
+        margin-top: 30px;
+    }
+
+    button {
+        font-size: 1.2rem;
+        padding: 12px 25px;
+        margin: 10px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    button:disabled {
+        background-color: #e0e0e0;
+        color: #999;
+        border: 2px dashed #bbb;
+        cursor: not-allowed;
+        opacity: 0.4;
+    }
+    button:disabled:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+
+
+    #startPauseBtn {
+        background-color: #3498db;
+        color: white;
+    }
+
+    #skipBtn, #saveBtn {
+        background-color: #2ecc71;
+        color: white;
+    }
+
+    #nextLevelBtn, #nextPlayerBtn {
+        background-color: #f39c12;
+        color: white;
+    }
+</style>
+
+</head>
+<body>
+    <h1>Play</h1>
+    <div class="top-bar">
+        <div class="left-top">
+            <button onclick="toggleStartPause()" id="startPauseBtn">Start</button>
+            <div class="label-box"><span class="icon">🎮</span>Level: <span id="gameLevel">{{ pf_level }}</span></div>
+            <div class="label-box"><span class="icon">⏰</span><span id="timer">{{ timer }}</span>s</div>
+        </div>
+        <div class="right-top">
+            <button onclick="nextPlayer()" id="nextPlayerBtn" disabled>Next Player</button>
+            
+
+            <button onclick="nextLevel()" id="nextLevelBtn" disabled>Next Level</button>
+        </div>
+    </div>
+    
+    <div id="playerName">{{ player }}</div>
+    
+    <div id="cardBox" class="hidden"></div>
+    
+    <div class="button-bar">
+        <button onclick="skipWord()" id="skipBtn" disabled>Skip</button>
+        <button onclick="saveWord()" id="saveBtn" disabled>Save</button>
+    </div>
+
+    <script>
+        let pf_deck = {{ pf_deck | tojson }};
+        let timer = {{ timer }};
+        let pf_cards = {{ pf_cards | tojson }};
+        let pf_players = {{pf_players| tojson}};
+        let pf_player_idx = {{pf_player_idx}};
+        let pf_cur_savedwords = {{pf_cur_savedwords|tojson}};
+        let pf_cur_skippedwords = {{pf_cur_skippedwords|tojson}};
+        
+        const currentPlayer = pf_players[pf_player_idx];
+        let currentIndex = {{ pf_word_idx }};
+        
+        let timerInterval = null;
+        let paused = true;
+
+        function toggleStartPause() {
+            if(!checkDeckEmpty())
+            {
+                if (paused) {
+                
+                document.getElementById("cardBox").classList.remove("hidden");
+
+                startTimer();
+                paused = false;
+                document.getElementById("startPauseBtn").textContent = "Pause";
+            } else {
+                document.getElementById("cardBox").classList.add("hidden");
+
+                
+                stopTimer();
+                paused = true;
+                document.getElementById("startPauseBtn").textContent = "Start";
+            }   
+            }
+            
+        }
+
+        function startTimer() {
+            document.getElementById("timer").textContent = timer;
+            
+            disable_startpause_skip_save_nxtplr_nxtlvl(false,false,false,true,true);
+            timerInterval = setInterval(() => {
+                timer--;
+                document.getElementById("timer").textContent = timer;
+                if (timer <= 0) {
+                    stopTimer();
+                    disable_startpause_skip_save_nxtplr_nxtlvl(true,true,true,false,true);
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        
+        function skipWord() {
+            if (pf_deck.length === 0) return;
+            const word = pf_deck[currentIndex];
+            currentIndex = (currentIndex + 1) % pf_deck.length;
+            document.getElementById("cardBox").textContent = pf_deck[currentIndex];
+            fetch("/panchforon/review_skip", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    skipped_word: word
+                })
+                }).catch(error => {
+                    console.error("Error sending data to server:", error);
+                });
+        }
+
+        function saveWord() {
+            const word = pf_deck[currentIndex];
+            if (!pf_cards[currentPlayer]) {
+                pf_cards[currentPlayer] = [];
+            }
+            pf_cards[currentPlayer].push(word);
+            pf_deck.splice(currentIndex, 1);
+            if (pf_deck.length > 0) {
+                currentIndex = currentIndex % pf_deck.length;
+                document.getElementById("cardBox").textContent = pf_deck[currentIndex];
+
+            } else {
+                document.getElementById("cardBox").textContent = "";
+            }
+            checkDeckEmpty();
+            fetch("/panchforon/review_save", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    saved_word: word
+                })
+                }).catch(error => {
+                    console.error("Error sending data to server:", error);
+                });
+        }
+
+        function checkDeckEmpty() {
+            if (pf_deck.length === 0) {
+                disable_startpause_skip_save_nxtplr_nxtlvl(true,true,true,true,false);
+                return true;
+            }
+            return false;
+        }
+
+        function nextPlayer() {
+            
+            disable_startpause_skip_save_nxtplr_nxtlvl(false,true,true,true,true);
+            checkDeckEmpty();
+            timer = {{ timer }};  // reset timer from backend
+            paused = true;
+            document.getElementById("timer").textContent = timer;
+            document.getElementById("startPauseBtn").textContent = "Start";
+            document.getElementById("cardBox").style.display = "none";
+            document.getElementById("playerName").textContent = currentPlayer;
+            fetch("/panchforon/review", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                pf_cur_skippedwords: pf_cur_skippedwords,
+                pf_cur_savedwords: pf_cur_savedwords
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                // ✅ Redirect to the review page
+                window.location.href = "/panchforon/review";
+            } else {
+                console.error("Server returned an error:", response.statusText);
+            }
+        })
+        .catch(error => {
+            console.error("Error saving to server:", error);
+        });
+
+        }
+
+        function nextLevel() {
+            fetch("/panchforon/next_level", {
+                method: "POST"
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "max_level") {
+                    document.getElementById("nextLevelBtn").disabled = true;
+                    alert("You have reached the maximum level.");
+                } else {
+                    // Optional: Reload page or update DOM
+                    location.reload();
+                }
+            })
+            .catch(error => console.error("Next level error:", error));
+        }
+
+
+        window.onload = () => {
+            document.getElementById("playerName").textContent = currentPlayer;
+            document.getElementById("cardBox").textContent = pf_deck[currentIndex];
+        }
+
+        function disable_startpause_skip_save_nxtplr_nxtlvl(d1,d2,d3,d4,d5)
+        {
+            document.getElementById("startPauseBtn").disabled = d1;
+            document.getElementById("skipBtn").disabled = d2;
+            document.getElementById("saveBtn").disabled = d3;
+            document.getElementById("nextPlayerBtn").disabled = d4;
+            document.getElementById("nextLevelBtn").disabled = d5;
+        }
+    </script>
+</body>
+</html>

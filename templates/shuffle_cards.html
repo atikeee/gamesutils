@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shuffle Cards</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #f0f0f0;
+            padding: 20px;
+            text-align: center;
+        }
+        .shuffle-btn {
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .card-row {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 15px;
+            flex-wrap: nowrap;
+            gap: 10px;
+        }
+        .card-row img {
+            width: 80px;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <button class="shuffle-btn" onclick="shuffleCards()">🔀 Shuffle Cards</button>
+
+    <div id="cardContainer">
+        {% for row in cards|batch(13) %}
+            <div class="card-row">
+                {% for card in row %}
+                    <img src="{{ 'cards/' + card }}" alt="{{ card }}">
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        function shuffleCards() {
+            const container = document.getElementById("cardContainer");
+            const allImages = Array.from(container.querySelectorAll("img"));
+
+            for (let i = allImages.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [allImages[i], allImages[j]] = [allImages[j], allImages[i]];
+            }
+
+            container.innerHTML = "";
+            for (let i = 0; i < allImages.length; i += 13) {
+                const row = document.createElement("div");
+                row.className = "card-row";
+                allImages.slice(i, i + 13).forEach(img => row.appendChild(img));
+                container.appendChild(row);
+            }
+        }
+    </script>
+
+</body>
+</html>

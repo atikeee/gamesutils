@@ -1,0 +1,14 @@
+How far can you go if you stand on 42 fold paper. 
+1 fold means 2 layer of paper. 
+2 fold means 4 layer of paper. 
+assume paper thickness 0.1 mm. 
+assume we have infinitely large paper. 
+
+A) Mount Everest 
+B) 4 story building 
+C) Moon 
+D) sun
+***
+C) Moon
+***
+Think wise. No hidden trick. 

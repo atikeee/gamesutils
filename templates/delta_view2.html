@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Delta Flights</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Delta Flights</h1>
+
+    <label for="srcSelect">From:</label>
+    <select id="srcSelect" onchange="filterTable()">
+        <option value="">All</option>
+        {% for src in data['srclist'] %}
+            <option value="{{ src }}">{{ src }}</option>
+        {% endfor %}
+    </select>
+
+    <label for="dstSelect">To:</label>
+    <select id="dstSelect" onchange="filterTable()">
+        <option value="">All</option>
+        {% for dst in data['dstlist'] %} 
+            <option value="{{ dst }}">{{ dst }}</option>
+        {% endfor %}
+    </select>
+    
+    <table id="flightTable">
+        <thead>
+            <tr>
+                <th>Flight No</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Departure</th>
+                <th>Arrival</th>
+                <th>Duration (min)</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in data['rows'] %}
+        <tr>
+            <td>{{row[0]}}</td>
+            <td>{{row[1]}}</td>
+            <td>{{row[2]}}</td>
+            <td>{{row[3]}}</td>
+            <td>{{row[4]}}</td>
+            <td>{{row[5]}}</td>
+        </tr>
+        {% endfor %}
+            
+            </tbody>
+    </table>
+
+    <script>
+        function filterTable() {
+            const srcFilter = document.getElementById('srcSelect').value;
+            const dstFilter = document.getElementById('dstSelect').value;
+            const rows = document.querySelectorAll('#flightTable tbody tr');
+            const uniqueDestinations = new Set();
+            const currentDstFilter = dstSelect.value;
+            rows.forEach(row => {
+                const src = row.cells[1].textContent;
+                const dst = row.cells[2].textContent;
+                // no need to use dstFilter here. 
+                const show = (!srcFilter || src === srcFilter) ;
+                if (show)
+                    uniqueDestinations.add(dst);
+                row.style.display = show ? '' : 'none';
+            });
+            console.log("test");
+            console.log(uniqueDestinations);
+                const allOption = document.createElement('option');
+                allOption.value = '';
+                allOption.textContent = 'All';
+                dstSelect=document.getElementById('dstSelect');
+                dstSelect.innerHTML='';
+                dstSelect.appendChild(allOption);
+                const sortedDestinations = Array.from(uniqueDestinations).sort();
+                sortedDestinations.forEach(dst => {
+                    const option = document.createElement('option');
+                    option.value = dst;
+                    option.textContent = dst;
+                    dstSelect.appendChild(option);
+                });
+                if (uniqueDestinations.has(currentDstFilter)) {
+                    dstSelect.value = currentDstFilter;
+                } else {
+                    dstSelect.value = ''; // Reset to 'All' if the previous selection is no longer valid
+                }
+                const finalDstFilter = dstSelect.value; // Get the value after repopulating/re-selecting
+
+                rows.forEach(row => {
+                const src = row.cells[1].textContent;
+                const dst = row.cells[2].textContent;
+                const show = (!srcFilter || src === srcFilter) && (!finalDstFilter || dst === finalDstFilter);
+                row.style.display = show ? '' : 'none';
+    });
+        }
+        function filterTableD() {
+            const srcFilter = document.getElementById('srcSelect').value;
+            const dstFilter = document.getElementById('dstSelect').value;
+            const rows = document.querySelectorAll('#flightTable tbody tr');
+            rows.forEach(row => {
+                const src = row.cells[1].textContent;
+                const dst = row.cells[2].textContent;
+                const show = (!srcFilter || src === srcFilter) && (!dstFilter || dst === dstFilter);
+                row.style.display = show ? '' : 'none';
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const dstSelect = document.getElementById('dstSelect');
+            dstSelect.value = document.getElementById('srcSelect');
+            filterTable();
+        });
+    </script>
+</body>
+</html>

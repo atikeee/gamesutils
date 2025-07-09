@@ -1,0 +1,5 @@
+How many 9's needed to write from 1 to 100? 
+***
+19 
+***
+No trick. try to find how many 9's needed. 

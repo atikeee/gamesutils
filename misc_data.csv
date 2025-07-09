@@ -1,0 +1,100 @@
+image,question,hint,answer,hide_image
+mean_4g4g.png,What is written?,2 words, Forgive and forget,1
+mean_4gi.png,What is written?,2 words, Forget it,1
+mean_4h.png,What is written?,1 word, Forehead,1
+mean_7s.png,What is written?,location, The seven seas,1
+mean_ap.png,What is written?,food, Apple Pie,1
+mean_arctic.png,What is this? , place, Arctic,1
+mean_bollywood.png,what this means, we like --- movie,bollywood,1
+mean_butterfly.png,what is this, easy, butterfly,1
+mean_chkbs.png,this is a phrase,need to be good driver,check blind spot,0
+mean_cr.png,What is written?,location,Cross Roads,1
+mean_dt.png,What is written?,location, Downtown,1
+mean_eggplant.png,what this means, food, eggplant,1
+mean_fa.png,What is written?,health, First Aid,1
+mean_fnh.png,What is the phrase here?,phrase, Needle in the haystack,1
+mean_ge.png,What is written?,finance state, Growing Economy,1
+mean_honeymoon.png,what this could be, just 2 words together, honeymoon,1
+mean_icecream.png,what this could be , food, icecream,1
+mean_jib.png,What is written?, restaurent, Jack in the box,1
+mean_kidnap.png,what this could be, only second photo is enough,kidnap,1
+mean_lighthouse.png,what this could be, easy, lighthouse,1
+mean_missun.png,What is written?,bad if you do, Misunderstood,1
+mean_mu.png,What is written?, find what missing, Missing You,1
+mean_onemil.png,What is written?,Rare thing, One in a Million,1
+mean_out.png,What is written?, Old days, Once upon a time,1
+mean_rainbow.png, what this could be, colors, rainbow,1
+mean_rbl.png,What is written?, 2 lines , Read between the lines,1
+mean_sandwich.png,What this could be? ,food, Sandwich,1
+mean_t2g.png,What is written?, Leaving ? , Time to go,1
+mean_tob.png,What is written?, Think wise, Think out of the box,1
+mean_toc.png,What is written?, Going abroad, Travel overseas,1
+mean_ttu.png,What is written?, you dont get it? , Try to understand,1
+mean_v.png,What is written?, healthy, Vegetables,1
+mean_pirat.png,What is written?, villan, Pirate,1
+mean_wf.png,What is written?, nice place, Waterfall,1
+mean_sg.png,What do you think it is?,too bright?,sun glass,1
+mean_starbucks.png,can you find this?, any other words for 2nd ? we like to go in the long trip break, starbucks,1
+crosswords1.png, find as many words as you can (horizontal/diagonal/vertical),Christmas related word,Gabriel Mary David Rome JOseph Sheep Jesus Christ Child Dove Simeon Days Old Poor Born Star Dream Flee Children Baby Egypt Rise Chosen,0
+crosswords2.png, find as many words as you can (horizontal/diagonal/vertical),Volcano related,ash dome geologist rock volcano cascades earthquake glacier washington crater erruption landslide steam crust gases plate tremor,0
+crosswords3.png, find as many words as you can (horizontal/diagonal/vertical),Grilling word,Barbecue Baste Black Buns Lighter Lunch Marinade Matches Clean Meat Coal Mesquite Cover Outside Crust Party Dinner Poultry Drips Propane Fire Pungent Fish Rack Food Sauce Fuel Sear Grate Smoke Grill Spatula Hamburger Steak Hot Tongs Wings Ignite Wood Light Yard,0
+crosswords4.png, find as many words as you can (horizontal/diagonal/vertical),Zoo,Lamb Lizard Zoo Dog Frog Farm Moose Owl ,0
+#crosswords5.png, find as many words as you can (horizontal/diagonal/vertical),,frog hog tree terrific huge tiny and crook climbed sad not green like no problems jiffy goodbye back jog in enjoy log jump carrot stood he,0
+find_1word_elephant.png, What is the word,animal,elephant,1
+find_1word_life.png, what is the word, ,Life,1
+find_1word_west.png, what is the word, , West,1
+find_1word_youblindbat.png,what is the phrase, 3 words,you blind bat,1
+find_2word_bomb.png, Find both words, , bomb/bluff,1
+find_2word_dead.png, Find both words, , dead/alive,1
+find_2word_defeat.png, find both words, , victory/defeat,1
+find_2word_figure.png, find both words, , ground/figure,1
+find_2word_fillin.jpg, find both words, , outline/fill-in,1
+find_2word_good.png, find both words, , good/evil, 1
+find_2word_me.png, find both words, , me/you,1
+find_2word_suicide.png, find both words, one is phrase, suicide/right to die,1
+find_2word_threat.png, find both words , ,threat/pretext,1
+find_mis_598.png.png,can you find anything? ,number,598,1
+find_face1.jpg, find a face in the beans, keep looking, ,0
+find_face2.jpg, find a face in the beans, keep looking, ,0
+find_face3.jpg, find a face in the beans, keep looking, ,0
+find_face4.jpg, find a face in the beans, keep looking, ,0
+find_hiddentiger.png, find The hidden tiger, Its not small/ in front of your eyes, ,0
+find_wordsfromimage1.jpg, find as many hidden words as you can, , , 0
+find_wordsfromimage10.jpg, find as many hidden words as you can, , , 0
+find_wordsfromimage11.jpg, find as many hidden words as you can, , , 0
+find_wordsfromimage12.jpg, find as many hidden words as you can, , , 0
+find_wordsfromimage13.jpg, find as many hidden words as you can, , , 0
+find_wordsfromimage14.jpg, find as many hidden words as you can, , , 0
+find_wordsfromimage15.jpg, find as many hidden words as you can, , , 0
+find_wordsfromimage16.jpg, find as many hidden words as you can, , , 0
+find_wordsfromimage17.jpg, find as many hidden words as you can, , , 0
+find_wordsfromimage2.jpg , find as many hidden words as you can, , , 0
+find_wordsfromimage3.jpg , find as many hidden words as you can, , , 0
+find_wordsfromimage4.jpg , find as many hidden words as you can, , , 0
+find_wordsfromimage5.jpg , find as many hidden words as you can, , , 0
+find_wordsfromimage6.jpg , find as many hidden words as you can, , , 0
+find_wordsfromimage7.jpg , find as many hidden words as you can, , , 0
+find_wordsfromimage8.jpg , find as many hidden words as you can, , , 0
+find_wordsfromimage9.jpg , find as many hidden words as you can, , , 0
+movie_12am.png, Find this hit Hollywood Movie, ,12 Angry men,0
+movie_aladin.png, Find this hit Hollywood Movie, ,Aladin,0
+movie_fg.png, Find this hit Hollywood Movie, ,Forest Gump,0
+movie_gf.png, Find this hit Hollywood Movie, ,GodFather,0
+movie_gladiator.png, Find this hit Hollywood Movie, ,Gladiator,0
+movie_gm.png, Find this hit Hollywood Movie, ,Green Mila,0
+movie_jb.png, Find this hit Hollywood Movie, ,James Bond 007,0
+movie_jw.png, Find this hit Hollywood Movie, ,Jurrasic Park,0
+movie_lor.png, Find this hit Hollywood Movie, ,Lord of the ring,0
+movie_matrix.png, Find this hit Hollywood Movie, ,Matrix,0
+movie_mi.png, Find this hit Hollywood Movie, ,Mission Impossible,0
+movie_rm.png, Find this hit Hollywood Movie, ,Rain Man,0
+movie_sm.png, Find this hit Hollywood Movie, ,Spider Man,0
+movie_sw.png, Find this hit Hollywood Movie, ,Star Wars,0
+movie_t2.png, Find this hit Hollywood Movie, ,Terminator 2,0
+movie_thor.png, Find this hit Hollywood Movie, ,Thor,0
+movie_tt.png, Find this hit Hollywood Movie, ,Titanic,0
+illusion_icantsleep.png, what do you see, sentence, i cant sleep,1
+illusion_panda.png, What do you see, , its a panda,0
+illusion_rock.png, What is written, hard, rock, 1
+q_9dot2square.png, Draw 2 rectangle to isolate all the dots,no hint, Draw 2 rectangle in 45 angle,0
+q_connect_dot.jpg, Connect all the dots single stroke, , no solution,0

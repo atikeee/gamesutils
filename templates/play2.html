@@ -1,0 +1,114 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Panchforon Play</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        .label { font-size: 1.5rem; margin: 10px; }
+        #word { font-size: 2rem; margin: 20px; display: none; }
+        button { font-size: 1.2rem; padding: 10px 20px; margin: 10px; }
+        #timer { font-weight: bold; color: darkred; }
+    </style>
+</head>
+<body>
+    <h2>Panchforon Play</h2>
+    <div class="label">Level: <span id="gameLevel"></span></div>
+    <div class="label">Player: <span id="playerName"></span></div>
+    <div class="label">Timer: <span id="timer">00</span></div>
+
+    <div id="word"></div>
+
+    <button onclick="toggleStartPause()" id="startPauseBtn">Start</button>
+    <button onclick="skipWord()">Skip</button>
+    <button onclick="saveWord()">Save</button>
+    <button onclick="nextLevel()" id="nextLevelBtn" disabled>Next Level</button>
+
+    <script>
+        const pf_deck = {{ pf_deck | tojson }};
+        const timer = {{ timer}};
+        const pf_cards = {{ pf_cards | tojson }};
+        const gameLevel = {{ level }};
+        const pf_deck = {{ pf_deck | tojson }};
+        const currentPlayer = {{ player }};
+        let currentIndex = {{pf_word_idx}};
+        
+        let timerInterval = null;
+        let paused = true;
+
+        function updateDisplay() {
+            document.getElementById("gameLevel").textContent = gameLevel;
+            document.getElementById("playerName").textContent = currentPlayer;
+        }
+
+        function toggleStartPause() {
+            if (paused) {
+                document.getElementById("word").style.display = "block";
+                startTimer();
+                paused = false;
+                document.getElementById("startPauseBtn").textContent = "Pause";
+            } else {
+                document.getElementById("word").style.display = "none";
+                stopTimer();
+                paused = true;
+                document.getElementById("startPauseBtn").textContent = "Start";
+            }
+        }
+
+        function startTimer() {
+            
+            document.getElementById("timer").textContent = timer;
+            timerInterval = setInterval(() => {
+                timer--;
+                document.getElementById("timer").textContent = timer;
+                if (timer <= 0) {
+                    stopTimer();
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        function skipWord() {
+            if (pf_deck.length === 0) return;
+            currentIndex = (currentIndex + 1) % pf_deck.length;
+            document.getElementById("word").textContent = pf_deck[currentIndex];
+            checkDeckEmpty();
+        }
+
+        function saveWord() {
+            const word = pf_deck[currentIndex];
+            if (!pf_cards[currentPlayer]) {
+                pf_cards[currentPlayer] = [];
+            }
+            pf_cards[currentPlayer].push(word);
+            pf_deck.splice(currentIndex, 1);
+            if (pf_deck.length > 0) {
+                currentIndex = currentIndex % pf_deck.length;
+                document.getElementById("word").textContent = pf_deck[currentIndex];
+            } else {
+                document.getElementById("word").textContent = "";
+            }
+            checkDeckEmpty();
+        }
+
+        function checkDeckEmpty() {
+            if (pf_deck.length === 0) {
+                document.getElementById("nextLevelBtn").disabled = false;
+            }
+        }
+
+        function nextLevel() {
+            alert("Moving to the next level...");
+        }
+
+        window.onload = function () {
+            updateDisplay();
+            alert("sdsd");
+            document.getElementById("word").textContent = pf_deck[0];
+        }
+    </script>
+</body>
+</html>

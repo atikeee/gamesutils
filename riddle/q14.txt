@@ -1,0 +1,5 @@
+ A girl has as many brothers as sisters, but each brother has only half as many brothers as sisters. How many brothers and sisters are there in the family?
+***
+4 sisters 3 broters
+***
+

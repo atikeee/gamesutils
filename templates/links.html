@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>All Bookmarks</title>
+
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .topic, .subtopic { cursor: pointer; margin: 5px 0; font-weight: bold; }
+        .subtopic-list, .link-list { display: none; margin-left: 20px; }
+        .link-item { margin-left: 20px; }
+        #searchResults { margin-top: 20px; }
+    </style>
+    <script>
+        function toggleVisibility(id) {
+            var el = document.getElementById(id);
+            if (el.style.display === 'none') {
+                el.style.display = 'block';
+            } else {
+                el.style.display = 'none';
+            }
+        }
+
+        function searchLinks() {
+            var input = document.getElementById('searchInput').value.toLowerCase();
+            var results = document.getElementById('searchResults');
+            results.innerHTML = '';
+            if (input.length === 0) return;
+
+            var links = document.querySelectorAll('.link-item');
+            links.forEach(function(link) {
+                var text = link.textContent.toLowerCase();
+                var url = link.getAttribute('data-url').toLowerCase();
+                var topic = link.getAttribute('data-topic').toLowerCase();
+                var subtopic = link.getAttribute('data-subtopic').toLowerCase();
+                if (text.includes(input) || url.includes(input) || topic.includes(input) || subtopic.includes(input)) {
+                    var clone = link.cloneNode(true);
+                    results.appendChild(clone);
+                }
+            });
+        }
+    </script>
+    <link href="style.css" rel="stylesheet"/></head>
+    
+</head>
+<body>
+<h1>Atiq's Bookmarks Collection</h1>
+<input type='text' id='searchInput' onkeyup='searchLinks()' placeholder='Search links...' style='width: 100%; padding: 8px;'>
+<div id='bookmarkContainer'>
+<div class='topic' onclick="toggleVisibility('topic_0')">Intel</div>
+<div class='subtopic-list' id='topic_0' style='display:none;'>
+<div class='subtopic' onclick="toggleVisibility('topic_0_sub_0')">sharepoint</div>
+<div class='link-list' id='topic_0_sub_0' style='display:none;'>
+<div class='link-item' data-topic='Intel' data-subtopic='sharepoint' data-url='https://intel.sharepoint.com/sites/intelkeygenerationfacility'>IKGF - <a href='https://intel.sharepoint.com/sites/intelkeygenerationfacility' target='_blank'>https://intel.sharepoint.com/sites/intelkeygenerationfacility</a></div>
+<div class='link-item' data-topic='Intel' data-subtopic='sharepoint' data-url='https://intel.sharepoint.com/sites/caascustomercommunity/SitePages/CaaS-Wiki-Home.aspx'>CAAS docker - <a href='https://intel.sharepoint.com/sites/caascustomercommunity/SitePages/CaaS-Wiki-Home.aspx' target='_blank'>https://intel.sharepoint.com/sites/caascustomercommunity/SitePages/CaaS-Wiki-Home.aspx</a></div>
+<div class='link-item' data-topic='Intel' data-subtopic='sharepoint' data-url='https://intel.sharepoint.com/sites/PSE_CPS/Shared%20Documents/Forms/AllItems.aspx'>sai pse - <a href='https://intel.sharepoint.com/sites/PSE_CPS/Shared%20Documents/Forms/AllItems.aspx' target='_blank'>https://intel.sharepoint.com/sites/PSE_CPS/Shared%20Documents/Forms/AllItems.aspx</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_0_sub_1')">AI</div>
+<div class='link-list' id='topic_0_sub_1' style='display:none;'>
+<div class='link-item' data-topic='Intel' data-subtopic='AI' data-url='https://intel.sharepoint.com/sites/C4S_AI/SitePages/Live-Training-Sessions.aspx'>AI training - <a href='https://intel.sharepoint.com/sites/C4S_AI/SitePages/Live-Training-Sessions.aspx' target='_blank'>https://intel.sharepoint.com/sites/C4S_AI/SitePages/Live-Training-Sessions.aspx</a></div>
+<div class='link-item' data-topic='Intel' data-subtopic='AI' data-url='https://circuit.intel.com/content/np/sites/AIInside/AITools1.html'>intel AI tools - <a href='https://circuit.intel.com/content/np/sites/AIInside/AITools1.html' target='_blank'>https://circuit.intel.com/content/np/sites/AIInside/AITools1.html</a></div>
+<div class='link-item' data-topic='Intel' data-subtopic='AI' data-url='https://wiki.ith.intel.com/pages/viewpage.action?pageId=3341530451'>intel AI tools - <a href='https://wiki.ith.intel.com/pages/viewpage.action?pageId=3341530451' target='_blank'>https://wiki.ith.intel.com/pages/viewpage.action?pageId=3341530451</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_0_sub_2')">tools</div>
+<div class='link-list' id='topic_0_sub_2' style='display:none;'>
+<div class='link-item' data-topic='Intel' data-subtopic='tools' data-url='https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/?redirectedfrom=MSDN'>devices connected - <a href='https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/?redirectedfrom=MSDN' target='_blank'>https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/?redirectedfrom=MSDN</a></div>
+<div class='link-item' data-topic='Intel' data-subtopic='tools' data-url='https://wiki.ith.intel.com/display/ITPII/Home'>dbg tools supprt wiki - <a href='https://wiki.ith.intel.com/display/ITPII/Home' target='_blank'>https://wiki.ith.intel.com/display/ITPII/Home</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_0_sub_3')">info</div>
+<div class='link-list' id='topic_0_sub_3' style='display:none;'>
+<div class='link-item' data-topic='Intel' data-subtopic='info' data-url='https://intelpedia.intel.com/Proxy_at_Intel#npm_.28node.js.29'>intel proxy - <a href='https://intelpedia.intel.com/Proxy_at_Intel#npm_.28node.js.29' target='_blank'>https://intelpedia.intel.com/Proxy_at_Intel#npm_.28node.js.29</a></div>
+<div class='link-item' data-topic='Intel' data-subtopic='info' data-url='https://wiki.ith.intel.com/display/ITSIPF/Solar+Tool'>Solar tool - <a href='https://wiki.ith.intel.com/display/ITSIPF/Solar+Tool' target='_blank'>https://wiki.ith.intel.com/display/ITSIPF/Solar+Tool</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_0_sub_4')">SDL</div>
+<div class='link-list' id='topic_0_sub_4' style='display:none;'>
+<div class='link-item' data-topic='Intel' data-subtopic='SDL' data-url='https://wiki.ith.intel.com/display/SDLEssentials'>SDLe home - <a href='https://wiki.ith.intel.com/display/SDLEssentials' target='_blank'>https://wiki.ith.intel.com/display/SDLEssentials</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_0_sub_5')">cCAMS</div>
+<div class='link-list' id='topic_0_sub_5' style='display:none;'>
+<div class='link-item' data-topic='Intel' data-subtopic='cCAMS' data-url='https://ikgfjama.intel.com/perspective.req#/projects/92/dashboard'>JAMA - <a href='https://ikgfjama.intel.com/perspective.req#/projects/92/dashboard' target='_blank'>https://ikgfjama.intel.com/perspective.req#/projects/92/dashboard</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_0_sub_6')">OCS</div>
+<div class='link-list' id='topic_0_sub_6' style='display:none;'>
+<div class='link-item' data-topic='Intel' data-subtopic='OCS' data-url='https://ikgfjama.intel.com/perspective.req#/projects/70/dashboard'>JAMA OCS - <a href='https://ikgfjama.intel.com/perspective.req#/projects/70/dashboard' target='_blank'>https://ikgfjama.intel.com/perspective.req#/projects/70/dashboard</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_0_sub_7')">docker registry,</div>
+<div class='link-list' id='topic_0_sub_7' style='display:none;'>
+<div class='link-item' data-topic='Intel' data-subtopic='docker registry,' data-url='https://amr-registry-pre.caas.intel.com/harbor/projects/123667/repositories/coverity/artifacts-tab'>coverity - <a href='https://amr-registry-pre.caas.intel.com/harbor/projects/123667/repositories/coverity/artifacts-tab' target='_blank'>https://amr-registry-pre.caas.intel.com/harbor/projects/123667/repositories/coverity/artifacts-tab</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_0_sub_8')">TSC</div>
+<div class='link-list' id='topic_0_sub_8' style='display:none;'>
+<div class='link-item' data-topic='Intel' data-subtopic='TSC' data-url='https://ikgfpreprodssrs.intel.com/ReportManager/report/OCS%20Reports/TSCSS%20Reports/TSCSS%20DBP%20Queue'>TSC signing db - <a href='https://ikgfpreprodssrs.intel.com/ReportManager/report/OCS%20Reports/TSCSS%20Reports/TSCSS%20DBP%20Queue' target='_blank'>https://ikgfpreprodssrs.intel.com/ReportManager/report/OCS%20Reports/TSCSS%20Reports/TSCSS%20DBP%20Queue</a></div>
+<div class='link-item' data-topic='Intel' data-subtopic='TSC' data-url='https://github.com/intel-innersource/inventory/blob/master/organizations/intel-innersource/repos/applications/security/supplychain/repos.yml'>repos - <a href='https://github.com/intel-innersource/inventory/blob/master/organizations/intel-innersource/repos/applications/security/supplychain/repos.yml' target='_blank'>https://github.com/intel-innersource/inventory/blob/master/organizations/intel-innersource/repos/applications/security/supplychain/repos.yml</a></div>
+<div class='link-item' data-topic='Intel' data-subtopic='TSC' data-url='https://github.com/intel-innersource/inventory/blob/master/runner-groups/1source-arc-blue.yml'>inventory arcblue - <a href='https://github.com/intel-innersource/inventory/blob/master/runner-groups/1source-arc-blue.yml' target='_blank'>https://github.com/intel-innersource/inventory/blob/master/runner-groups/1source-arc-blue.yml</a></div>
+<div class='link-item' data-topic='Intel' data-subtopic='TSC' data-url='https://github.com/intel-innersource/inventory/blob/master/runner-groups/1source-arc-green.yml'>inventory arcgreen - <a href='https://github.com/intel-innersource/inventory/blob/master/runner-groups/1source-arc-green.yml' target='_blank'>https://github.com/intel-innersource/inventory/blob/master/runner-groups/1source-arc-green.yml</a></div>
+<div class='link-item' data-topic='Intel' data-subtopic='TSC' data-url='https://github.com/intel-sandbox/tsc_validation'>Git TSC validation - <a href='https://github.com/intel-sandbox/tsc_validation' target='_blank'>https://github.com/intel-sandbox/tsc_validation</a></div>
+<div class='link-item' data-topic='Intel' data-subtopic='TSC' data-url='https://coverityent.devtools.intel.com/prod3/#/project-view/12533/10198'>Coverity - <a href='https://coverityent.devtools.intel.com/prod3/#/project-view/12533/10198' target='_blank'>https://coverityent.devtools.intel.com/prod3/#/project-view/12533/10198</a></div>
+<div class='link-item' data-topic='Intel' data-subtopic='TSC' data-url='https://jira.devtools.intel.com/projects/TRANSPAREO/issues/TRANSPAREO-8'>Jira - <a href='https://jira.devtools.intel.com/projects/TRANSPAREO/issues/TRANSPAREO-8' target='_blank'>https://jira.devtools.intel.com/projects/TRANSPAREO/issues/TRANSPAREO-8</a></div>
+</div>
+</div>
+<div class='topic' onclick="toggleVisibility('topic_1')">Learning</div>
+<div class='subtopic-list' id='topic_1' style='display:none;'>
+<div class='subtopic' onclick="toggleVisibility('topic_1_sub_0')">AI</div>
+<div class='link-list' id='topic_1_sub_0' style='display:none;'>
+<div class='link-item' data-topic='Learning' data-subtopic='AI' data-url='https://www.blackbox.ai/'>learn deeplearning - <a href='https://www.blackbox.ai/' target='_blank'>https://www.blackbox.ai/</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='AI' data-url='https://omny.fm/shows/technically-speaking/ai-education-programs-with-intel'>AI podcast - <a href='https://omny.fm/shows/technically-speaking/ai-education-programs-with-intel' target='_blank'>https://omny.fm/shows/technically-speaking/ai-education-programs-with-intel</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_1_sub_1')">Linux</div>
+<div class='link-list' id='topic_1_sub_1' style='display:none;'>
+<div class='link-item' data-topic='Learning' data-subtopic='Linux' data-url='https://man7.org/linux/man-pages/man1/grep.1.html'>grep manual - <a href='https://man7.org/linux/man-pages/man1/grep.1.html' target='_blank'>https://man7.org/linux/man-pages/man1/grep.1.html</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='Linux' data-url='https://www.binarytides.com/linux-commands-hardware-info/'>16 linux commands - <a href='https://www.binarytides.com/linux-commands-hardware-info/' target='_blank'>https://www.binarytides.com/linux-commands-hardware-info/</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_1_sub_2')">Interview Prep</div>
+<div class='link-list' id='topic_1_sub_2' style='display:none;'>
+<div class='link-item' data-topic='Learning' data-subtopic='Interview Prep' data-url='https://projecteuler.net/archives'>math problems - <a href='https://projecteuler.net/archives' target='_blank'>https://projecteuler.net/archives</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='Interview Prep' data-url='https://www.simplilearn.com/tutorials/c-sharp-tutorial/c-sharp-interview-questions'>c# interview question - <a href='https://www.simplilearn.com/tutorials/c-sharp-tutorial/c-sharp-interview-questions' target='_blank'>https://www.simplilearn.com/tutorials/c-sharp-tutorial/c-sharp-interview-questions</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='Interview Prep' data-url='https://www.teamblind.com/post/new-year-gift-curated-list-of-top-75-leetcode-questions-to-save-your-time-oam1oreu'>leetcode 75 questions - <a href='https://www.teamblind.com/post/new-year-gift-curated-list-of-top-75-leetcode-questions-to-save-your-time-oam1oreu' target='_blank'>https://www.teamblind.com/post/new-year-gift-curated-list-of-top-75-leetcode-questions-to-save-your-time-oam1oreu</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='Interview Prep' data-url='https://leetcode.com/studyplan/top-interview-150/'>leetcode 150 Questions - <a href='https://leetcode.com/studyplan/top-interview-150/' target='_blank'>https://leetcode.com/studyplan/top-interview-150/</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='Interview Prep' data-url='https://www.techiedelight.com/'>programming problems - <a href='https://www.techiedelight.com/' target='_blank'>https://www.techiedelight.com/</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='Interview Prep' data-url='https://adriann.github.io/programming_problems.html'>programming problems - <a href='https://adriann.github.io/programming_problems.html' target='_blank'>https://adriann.github.io/programming_problems.html</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='Interview Prep' data-url='https://www.hackerrank.com/skills-directory'>skill dev - <a href='https://www.hackerrank.com/skills-directory' target='_blank'>https://www.hackerrank.com/skills-directory</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='Interview Prep' data-url='https://www.hackerrank.com/interview/preparation-kits'>prep kit - <a href='https://www.hackerrank.com/interview/preparation-kits' target='_blank'>https://www.hackerrank.com/interview/preparation-kits</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='Interview Prep' data-url='https://bytebytego.com/courses/system-design-interview/'>System Design - <a href='https://bytebytego.com/courses/system-design-interview/' target='_blank'>https://bytebytego.com/courses/system-design-interview/</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='Interview Prep' data-url='https://coderbyte.com/'>coding platform - <a href='https://coderbyte.com/' target='_blank'>https://coderbyte.com/</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='Interview Prep' data-url='https://www.codewars.com/'>coding platform - <a href='https://www.codewars.com/' target='_blank'>https://www.codewars.com/</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_1_sub_3')">Cheat sheet</div>
+<div class='link-list' id='topic_1_sub_3' style='display:none;'>
+<div class='link-item' data-topic='Learning' data-subtopic='Cheat sheet' data-url='https://about.gitlab.com/images/press/git-cheat-sheet.pdf'>git - <a href='https://about.gitlab.com/images/press/git-cheat-sheet.pdf' target='_blank'>https://about.gitlab.com/images/press/git-cheat-sheet.pdf</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='Cheat sheet' data-url='https://vim.rtorr.com/'>vim - <a href='https://vim.rtorr.com/' target='_blank'>https://vim.rtorr.com/</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='Cheat sheet' data-url='https://vim.fandom.com/wiki/Best_Vim_Tips'>vim tips - <a href='https://vim.fandom.com/wiki/Best_Vim_Tips' target='_blank'>https://vim.fandom.com/wiki/Best_Vim_Tips</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='Cheat sheet' data-url='https://support.apple.com/en-us/102650'>Mac Shortcuts - <a href='https://support.apple.com/en-us/102650' target='_blank'>https://support.apple.com/en-us/102650</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_1_sub_4')">Misc</div>
+<div class='link-list' id='topic_1_sub_4' style='display:none;'>
+<div class='link-item' data-topic='Learning' data-subtopic='Misc' data-url='https://git-scm.com/book/en/v2'>git book - <a href='https://git-scm.com/book/en/v2' target='_blank'>https://git-scm.com/book/en/v2</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='Misc' data-url='https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/modern-standby-vs-s3'>Modern Standby - <a href='https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/modern-standby-vs-s3' target='_blank'>https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/modern-standby-vs-s3</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_1_sub_5')">book</div>
+<div class='link-list' id='topic_1_sub_5' style='display:none;'>
+<div class='link-item' data-topic='Learning' data-subtopic='book' data-url='https://www.oreilly.com/library/view/powershell-for-sysadmins/9781098122638/'>Powershell for sysadmin - <a href='https://www.oreilly.com/library/view/powershell-for-sysadmins/9781098122638/' target='_blank'>https://www.oreilly.com/library/view/powershell-for-sysadmins/9781098122638/</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='book' data-url='https://www.oreilly.com/library/view/learn-windows-powershell/9781617294167/'>Learn powershell - <a href='https://www.oreilly.com/library/view/learn-windows-powershell/9781617294167/' target='_blank'>https://www.oreilly.com/library/view/learn-windows-powershell/9781617294167/</a></div>
+<div class='link-item' data-topic='Learning' data-subtopic='book' data-url='https://github.com/Carreau/ipython-wiki/blob/master/A-gallery-of-interesting-IPython-Notebooks.md#introductory-tutorials'>Ipython wiki notebook - <a href='https://github.com/Carreau/ipython-wiki/blob/master/A-gallery-of-interesting-IPython-Notebooks.md#introductory-tutorials' target='_blank'>https://github.com/Carreau/ipython-wiki/blob/master/A-gallery-of-interesting-IPython-Notebooks.md#introductory-tutorials</a></div>
+</div>
+</div>
+<div class='topic' onclick="toggleVisibility('topic_2')">Tools</div>
+<div class='subtopic-list' id='topic_2' style='display:none;'>
+<div class='subtopic' onclick="toggleVisibility('topic_2_sub_0')">image to text</div>
+<div class='link-list' id='topic_2_sub_0' style='display:none;'>
+<div class='link-item' data-topic='Tools' data-subtopic='image to text' data-url='https://capture2text.sourceforge.net/'>Capture2text download - <a href='https://capture2text.sourceforge.net/' target='_blank'>https://capture2text.sourceforge.net/</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='image to text' data-url='https://apps.microsoft.com/detail/9nblggh6hrzh'>photo to text ms download - <a href='https://apps.microsoft.com/detail/9nblggh6hrzh' target='_blank'>https://apps.microsoft.com/detail/9nblggh6hrzh</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='image to text' data-url='https://www.imagetotext.io/'>Image to text - <a href='https://www.imagetotext.io/' target='_blank'>https://www.imagetotext.io/</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_2_sub_1')">Text/file share</div>
+<div class='link-list' id='topic_2_sub_1' style='display:none;'>
+<div class='link-item' data-topic='Tools' data-subtopic='Text/file share' data-url='https://system.tips/text/text-share'>multitool no login - <a href='https://system.tips/text/text-share' target='_blank'>https://system.tips/text/text-share</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Text/file share' data-url='https://kuick.io/'>qtext - <a href='https://kuick.io/' target='_blank'>https://kuick.io/</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Text/file share' data-url='https://rentry.co/'>text share - <a href='https://rentry.co/' target='_blank'>https://rentry.co/</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Text/file share' data-url='https://file.pizza/'>filexfer - <a href='https://file.pizza/' target='_blank'>https://file.pizza/</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Text/file share' data-url='https://limewire.com/'>any size file - <a href='https://limewire.com/' target='_blank'>https://limewire.com/</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_2_sub_2')">Utility</div>
+<div class='link-list' id='topic_2_sub_2' style='display:none;'>
+<div class='link-item' data-topic='Tools' data-subtopic='Utility' data-url='https://rweverything.com/download/'>rweverything download - <a href='https://rweverything.com/download/' target='_blank'>https://rweverything.com/download/</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Utility' data-url='https://wiki.ith.intel.com/display/DebugEncyclopedia/Read+Write+Everything+tool+-+usage+notes'>rweverything usage - <a href='https://wiki.ith.intel.com/display/DebugEncyclopedia/Read+Write+Everything+tool+-+usage+notes' target='_blank'>https://wiki.ith.intel.com/display/DebugEncyclopedia/Read+Write+Everything+tool+-+usage+notes</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Utility' data-url='https://www.netresec.com/?page=RawCap'>Rawcap(net sniffer) - <a href='https://www.netresec.com/?page=RawCap' target='_blank'>https://www.netresec.com/?page=RawCap</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Utility' data-url='https://github.com/googleprojectzero/winafl'>fuzzing tool - <a href='https://github.com/googleprojectzero/winafl' target='_blank'>https://github.com/googleprojectzero/winafl</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Utility' data-url='https://learn.microsoft.com/en-us/sysinternals/downloads/'>sysinternal tools download - <a href='https://learn.microsoft.com/en-us/sysinternals/downloads/' target='_blank'>https://learn.microsoft.com/en-us/sysinternals/downloads/</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Utility' data-url='https://live.sysinternals.com/'>sysinternal download - <a href='https://live.sysinternals.com/' target='_blank'>https://live.sysinternals.com/</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Utility' data-url='https://lcamtuf.coredump.cx/afl/'>afl tool - <a href='https://lcamtuf.coredump.cx/afl/' target='_blank'>https://lcamtuf.coredump.cx/afl/</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Utility' data-url='https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/using-poolmon-to-find-a-kernel-mode-memory-leak'>poolmon find mem leak - <a href='https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/using-poolmon-to-find-a-kernel-mode-memory-leak' target='_blank'>https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/using-poolmon-to-find-a-kernel-mode-memory-leak</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Utility' data-url='https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/?redirectedfrom=MSDN'>install win dbg - <a href='https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/?redirectedfrom=MSDN' target='_blank'>https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/?redirectedfrom=MSDN</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Utility' data-url='https://pkitools.net/pages/ca/asn1.html'>asn parser and more - <a href='https://pkitools.net/pages/ca/asn1.html' target='_blank'>https://pkitools.net/pages/ca/asn1.html</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Utility' data-url='https://lapo.it/asn1js'>asn parser - <a href='https://lapo.it/asn1js' target='_blank'>https://lapo.it/asn1js</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Utility' data-url='https://github.com/pavel-a/devmemX'>write to/from mem - <a href='https://github.com/pavel-a/devmemX' target='_blank'>https://github.com/pavel-a/devmemX</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Utility' data-url='https://www.canva.com/'>design - <a href='https://www.canva.com/' target='_blank'>https://www.canva.com/</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Utility' data-url='https://sketch.io/sketchpad/'>sketchpad - <a href='https://sketch.io/sketchpad/' target='_blank'>https://sketch.io/sketchpad/</a></div>
+<div class='link-item' data-topic='Tools' data-subtopic='Utility' data-url='https://fakedetail.com/fake-facebook-chat-generator'>fakefb - <a href='https://fakedetail.com/fake-facebook-chat-generator' target='_blank'>https://fakedetail.com/fake-facebook-chat-generator</a></div>
+</div>
+</div>
+<div class='topic' onclick="toggleVisibility('topic_3')">ToolsAI</div>
+<div class='subtopic-list' id='topic_3' style='display:none;'>
+<div class='subtopic' onclick="toggleVisibility('topic_3_sub_0')">LLM</div>
+<div class='link-list' id='topic_3_sub_0' style='display:none;'>
+<div class='link-item' data-topic='ToolsAI' data-subtopic='LLM' data-url='https://www.blackbox.ai/'>prompt ai - <a href='https://www.blackbox.ai/' target='_blank'>https://www.blackbox.ai/</a></div>
+<div class='link-item' data-topic='ToolsAI' data-subtopic='LLM' data-url='https://claude.ai/'>Claude - <a href='https://claude.ai/' target='_blank'>https://claude.ai/</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_3_sub_1')">Misc</div>
+<div class='link-list' id='topic_3_sub_1' style='display:none;'>
+<div class='link-item' data-topic='ToolsAI' data-subtopic='Misc' data-url='https://www.yeschat.ai/'>multi AI - <a href='https://www.yeschat.ai/' target='_blank'>https://www.yeschat.ai/</a></div>
+<div class='link-item' data-topic='ToolsAI' data-subtopic='Misc' data-url='https://theresanaiforthat.com/'>Unknown - <a href='https://theresanaiforthat.com/' target='_blank'>https://theresanaiforthat.com/</a></div>
+</div>
+</div>
+<div class='topic' onclick="toggleVisibility('topic_4')">Career</div>
+<div class='subtopic-list' id='topic_4' style='display:none;'>
+</div>
+<div class='topic' onclick="toggleVisibility('topic_5')">MyPersonal</div>
+<div class='subtopic-list' id='topic_5' style='display:none;'>
+<div class='subtopic' onclick="toggleVisibility('topic_5_sub_0')">Games</div>
+<div class='link-list' id='topic_5_sub_0' style='display:none;'>
+<div class='link-item' data-topic='MyPersonal' data-subtopic='Games' data-url='http://chriscarr.name:8080/westerncardgame/index.html'>bang - <a href='http://chriscarr.name:8080/westerncardgame/index.html' target='_blank'>http://chriscarr.name:8080/westerncardgame/index.html</a></div>
+<div class='link-item' data-topic='MyPersonal' data-subtopic='Games' data-url='https://netgames.io/games/'>7 game collections - <a href='https://netgames.io/games/' target='_blank'>https://netgames.io/games/</a></div>
+<div class='link-item' data-topic='MyPersonal' data-subtopic='Games' data-url='https://tabletopia.com/games'>collections - <a href='https://tabletopia.com/games' target='_blank'>https://tabletopia.com/games</a></div>
+<div class='link-item' data-topic='MyPersonal' data-subtopic='Games' data-url='https://rubiks-cube-solver.com/how-to-solve/'>rubric cube solver - <a href='https://rubiks-cube-solver.com/how-to-solve/' target='_blank'>https://rubiks-cube-solver.com/how-to-solve/</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_5_sub_1')">bills</div>
+<div class='link-list' id='topic_5_sub_1' style='display:none;'>
+<div class='link-item' data-topic='MyPersonal' data-subtopic='bills' data-url='https://commonres.twa.rentmanager.com/'>HOA - <a href='https://commonres.twa.rentmanager.com/' target='_blank'>https://commonres.twa.rentmanager.com/</a></div>
+<div class='link-item' data-topic='MyPersonal' data-subtopic='bills' data-url='https://portlandgeneral.com/'>PGE - <a href='https://portlandgeneral.com/' target='_blank'>https://portlandgeneral.com/</a></div>
+<div class='link-item' data-topic='MyPersonal' data-subtopic='bills' data-url='https://oprusipng-opencloud.openintl.com/'>TVWD - <a href='https://oprusipng-opencloud.openintl.com/' target='_blank'>https://oprusipng-opencloud.openintl.com/</a></div>
+<div class='link-item' data-topic='MyPersonal' data-subtopic='bills' data-url='https://www.online-billpay.com/'>Gas - <a href='https://www.online-billpay.com/' target='_blank'>https://www.online-billpay.com/</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_5_sub_2')">Stock</div>
+<div class='link-list' id='topic_5_sub_2' style='display:none;'>
+<div class='link-item' data-topic='MyPersonal' data-subtopic='Stock' data-url='https://www.tradingview.com/chart/'>check stock - <a href='https://www.tradingview.com/chart/' target='_blank'>https://www.tradingview.com/chart/</a></div>
+<div class='link-item' data-topic='MyPersonal' data-subtopic='Stock' data-url='https://www.nasdaq.com/market-activity/ipos'>IPO listing - <a href='https://www.nasdaq.com/market-activity/ipos' target='_blank'>https://www.nasdaq.com/market-activity/ipos</a></div>
+<div class='link-item' data-topic='MyPersonal' data-subtopic='Stock' data-url='https://www.google.com/finance/portfolio/watchlist'>googlefinance watchlist - <a href='https://www.google.com/finance/portfolio/watchlist' target='_blank'>https://www.google.com/finance/portfolio/watchlist</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_5_sub_3')">Misc</div>
+<div class='link-list' id='topic_5_sub_3' style='display:none;'>
+<div class='link-item' data-topic='MyPersonal' data-subtopic='Misc' data-url='https://itsforfun.pythonanywhere.com/'>My Pages - <a href='https://itsforfun.pythonanywhere.com/' target='_blank'>https://itsforfun.pythonanywhere.com/</a></div>
+</div>
+</div>
+<div class='topic' onclick="toggleVisibility('topic_6')">Ila</div>
+<div class='subtopic-list' id='topic_6' style='display:none;'>
+</div>
+<div class='topic' onclick="toggleVisibility('topic_7')">Areeba</div>
+<div class='subtopic-list' id='topic_7' style='display:none;'>
+<div class='subtopic' onclick="toggleVisibility('topic_7_sub_0')">Books</div>
+<div class='link-list' id='topic_7_sub_0' style='display:none;'>
+<div class='link-item' data-topic='Areeba' data-subtopic='Books' data-url='https://monkeypen.com/pages/free-childrens-books'>free books - <a href='https://monkeypen.com/pages/free-childrens-books' target='_blank'>https://monkeypen.com/pages/free-childrens-books</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_7_sub_1')">Misc</div>
+<div class='link-list' id='topic_7_sub_1' style='display:none;'>
+<div class='link-item' data-topic='Areeba' data-subtopic='Misc' data-url='https://scratch.mit.edu/projects/editor/?tutorial=getStarted'>Game Making - <a href='https://scratch.mit.edu/projects/editor/?tutorial=getStarted' target='_blank'>https://scratch.mit.edu/projects/editor/?tutorial=getStarted</a></div>
+<div class='link-item' data-topic='Areeba' data-subtopic='Misc' data-url='https://www.roomrecess.com/games/TypingTutorForKids/play.html'>Typing lesson - <a href='https://www.roomrecess.com/games/TypingTutorForKids/play.html' target='_blank'>https://www.roomrecess.com/games/TypingTutorForKids/play.html</a></div>
+</div>
+<div class='subtopic' onclick="toggleVisibility('topic_7_sub_2')">School</div>
+<div class='link-list' id='topic_7_sub_2' style='display:none;'>
+<div class='link-item' data-topic='Areeba' data-subtopic='School' data-url='https://parentvue.beaverton.k12.or.us/PXP2_Login.aspx'>ParentVue - <a href='https://parentvue.beaverton.k12.or.us/PXP2_Login.aspx' target='_blank'>https://parentvue.beaverton.k12.or.us/PXP2_Login.aspx</a></div>
+<div class='link-item' data-topic='Areeba' data-subtopic='School' data-url='https://www.homeschoolmath.net/teaching/NC_3-5_resources.php'>Homeschool curriculam - <a href='https://www.homeschoolmath.net/teaching/NC_3-5_resources.php' target='_blank'>https://www.homeschoolmath.net/teaching/NC_3-5_resources.php</a></div>
+<div class='link-item' data-topic='Areeba' data-subtopic='School' data-url='https://www.commoncoresheets.com/using-substitution-to-solve-problems/95/download'>worksheet - <a href='https://www.commoncoresheets.com/using-substitution-to-solve-problems/95/download' target='_blank'>https://www.commoncoresheets.com/using-substitution-to-solve-problems/95/download</a></div>
+</div>
+</div>
+</div>
+<h2>Search Results</h2>
+<div id='searchResults'></div>
+</body>
+</html>

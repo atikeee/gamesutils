@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Misc Quiz</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f2f2f2;
+      text-align: center;
+      padding: 30px;
+    }
+
+    h2 {
+      margin-bottom: 30px;
+      color: #333;
+    }
+
+    img {
+      max-width: 95vw;
+      max-height: 60vh;
+      object-fit: contain;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 30px;
+      background-color: white;
+    }
+
+    .card {
+      background-color: white;
+      border-radius: 10px;
+      padding: 20px 30px;
+      max-width: 700px;
+      margin: auto;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      text-align: left;
+    }
+
+    .card p {
+      font-size: 1.2rem;
+      color: #222;
+    }
+
+    .reveal-box {
+      margin-top: 15px;
+      font-size: 1.1rem;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border-left: 4px solid #3498db;
+      display: none;
+    }
+
+    .buttons {
+      margin-top: 20px;
+    }
+
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 1.1rem;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #217dbb;
+    }
+
+    .nav-buttons {
+      margin-top: 40px;
+    }
+
+    .nav-buttons button {
+      background-color: #7f8c8d;
+    }
+
+    .nav-buttons button:hover {
+      background-color: #5e6d70;
+    }
+    #buzzInfo {
+      text-transform: uppercase;
+      font-weight: bold;
+      color: #d00;
+    }
+  </style>
+</head>
+<body>
+  <h2>📷 Misc Image Quiz</h2>
+
+  {% if data.image %}
+    <img id="miscImage"  src="{{ url_for('misc_image', filename=data.image) }}" alt="Image" />
+  {% endif %}
+  <p id="buzzInfo"></p>
+  <div class="card">
+    <p><strong>Question:</strong> {{ data.question }}</p>
+
+    <div class="buttons">
+      <button onclick="document.getElementById('hint').style.display='block'">💡 Show Hint</button>
+      <button onclick="document.getElementById('answer').style.display='block'">✅ Show Answer</button>
+      <button id="showimg" style="visibility: hidden;" onclick="showimageback()" > Show Image</button>
+    </div>
+
+    <div id="hint" class="reveal-box"><strong>Hint:</strong> {{ data.hint }}</div>
+    <div id="answer" class="reveal-box"><strong>Answer:</strong> {{ data.answer }}</div>
+    
+  </div>
+
+  <div class="nav-buttons">
+    {% if data.index > 0 %}
+      <a href="{{ url_for('misc', index=data.index - 1) }}">
+        <button>⬅️ Previous</button>
+      </a>
+    {% endif %}
+    {% if data.index < data.total - 1 %}
+      <a href="{{ url_for('misc', index=data.index + 1) }}">
+        <button>Next ➡️</button>
+      </a>
+    {% endif %}
+  </div>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    const socket = io();
+    socket.on("buzz_trigger", (data) => {
+      const shouldHide = {{ data.hide_image|tojson }};
+      if (shouldHide) {
+        const image = document.getElementById("miscImage");
+        image.style.visibility = 'hidden';
+        const btn = document.getElementById("showimg");
+        btn.style.visibility = 'visible';
+        const buzzInfo = document.getElementById("buzzInfo");
+        if(buzzInfo.textContent =="")
+          buzzInfo.textContent = `${data.name}`;
+        else
+          buzzInfo.textContent += " | "+`${data.name}`;
+        }
+    });
+    function showimageback()
+    {
+      const image = document.getElementById("miscImage");
+      //image.style.display = "block";
+      //image.style.alignContent = "center";
+      image.style.visibility = 'visible';
+      const btn = document.getElementById("showimg");
+      btn.style.visibility = 'hidden';
+      const buzzInfo = document.getElementById("buzzInfo");
+      buzzInfo.textContent ="";
+
+    }
+  </script>
+</body>
+
+</html>
