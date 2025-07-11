@@ -5,11 +5,11 @@ import random
 from PIL import Image
 from io import BytesIO
 import base64
-from flask import Flask, request, render_template, redirect, url_for,jsonify,render_template_string,abort,send_from_directory,make_response,session
+from flask import Flask, request, render_template, redirect, url_for,jsonify,render_template_string,abort,send_from_directory,make_response,session,Response
 import sqlite3
 from datetime import datetime,timedelta
 import requests
-
+from ppp import process_links,OUTPUT_FILE
 DB = "flights.db"
 
 
@@ -883,3 +883,71 @@ def configure_routes(app,socketio):
                 except Exception as e:
                     message = f"❌ An unexpected error occurred: {e}"
         return render_template("delta_parseflights.html", message=message)
+    @app.route('/ppp_tool', methods=['GET', 'POST'])
+    def ppp_tool_page():
+        """
+        Handles the web interface for the ppp.py script.
+        GET: Displays the form.
+        POST: Processes the form data using ppp.py and displays the result.
+        """
+        result = ""
+        download_link_available = False # Flag to control download link visibility
+        view_link_available = False # Flag to control view link visibility
+
+        if request.method == 'POST':
+            beg_str = request.form.get('beg', '1')
+            end_str = request.form.get('end', '0')
+
+            # Basic input validation
+            try:
+                beg = int(beg_str)
+                end = int(end_str)
+            except ValueError:
+                result = "Error: 'Beg' and 'End' must be valid numbers."
+                return render_template('ppp_tool.html', result=result, download_link_available=download_link_available, view_link_available=view_link_available)
+
+            # Call the process_links function from ppp.py
+            # ppp.py is now responsible for reading from _input.txt and writing to OUTPUT_FILE
+            processed_result_message = process_links(beg, end)
+            result = processed_result_message
+
+            # Check if processing was successful to enable download and view links
+            if result.startswith("✅"): # Assuming success message starts with "✅"
+                download_link_available = True
+                view_link_available = True # Enable view link too
+
+        return render_template('ppp_tool.html', result=result, download_link_available=download_link_available, view_link_available=view_link_available, output_filename=OUTPUT_FILE)
+    # END NEW ROUTE
+
+    # NEW ROUTE TO SERVE THE GENERATED OUTPUT FILE FOR DIRECT VIEWING
+    @app.route(f'/{OUTPUT_FILE}') # Use f-string for dynamic filename
+    def view_ppp_output():
+        """
+        Allows users to view the zzz.m3u file directly in the browser without styling.
+        """
+        if os.path.exists(OUTPUT_FILE):
+            try:
+                with open(OUTPUT_FILE, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                # Return the content with text/plain MIME type
+                return Response(content, mimetype='text/plain')
+            except Exception as e:
+                return f"Error reading output file: {e}", 500
+        else:
+            return "Error: Output file not found. Please process the URLs first.", 404
+    # END NEW VIEW ROUTE
+
+    # EXISTING ROUTE TO SERVE THE GENERATED OUTPUT FILE FOR DOWNLOAD
+    @app.route('/download_ppp_output')
+    def download_ppp_output():
+        """
+        Allows users to download the zzz.m3u file.
+        """
+        # Ensure the file exists before sending
+        if os.path.exists(OUTPUT_FILE):
+            # send_from_directory will securely serve the file
+            # as_attachment=True will prompt a download
+            return send_from_directory(os.getcwd(), OUTPUT_FILE, as_attachment=True)
+        else:
+            return "Error: Output file not found. Please process the URLs first.", 404
+ 
