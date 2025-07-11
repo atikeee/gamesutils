@@ -8,6 +8,7 @@ import os
 
 # Define the output file path globally or pass it as an argument
 OUTPUT_FILE = "zzz.m3u"
+ERROR_FILE = "error.txt"
 INPUT_FILE = "_input.txt"
 
 def process_links(beg, end):
@@ -23,7 +24,8 @@ def process_links(beg, end):
         str: A status message indicating success or failure, including file path if successful.
     """
     output_lines = []
-
+    error_lines = []
+    
     if not os.path.exists(INPUT_FILE):
         return f"Error: Input file '{INPUT_FILE}' not found on the server. Please create it."
 
@@ -45,19 +47,19 @@ def process_links(beg, end):
         if not line.startswith('#'):
             if(line.strip() == ""):
                 continue
-
+            error_lines.append(str(n)+" "+line) 
             if( line.startswith("https://www.pornhub")):
-                output_lines.append(f"\nPornHub {n}: {line}")
+                #output_lines.append(f"\nPornHub {n}: {line}")
                 try:
                     data = urllib.request.urlopen(line.strip())
                     tree = html.fromstring(data.read())
                     item = tree.xpath(r'//*[@id="player"]/script[1]/text()')
                     title = str(n) + "." + tree.xpath(r'//h1/span')[0].text + "|pornhub"
                 except urllib.error.HTTPError as e:
-                    output_lines.append(f"Error: {e}")
+                    error_lines.append(f"Error: {e}")
                     continue
                 except Exception as e2:
-                    output_lines.append(f"Error: {e2}")
+                    error_lines.append(f"Error: {e2}")
                     continue
 
                 if(len(item) > 0):
@@ -76,10 +78,8 @@ def process_links(beg, end):
                                     l = link.replace('\\', '')
                                     output_lines.append(f'#EXTINF:-1 group-title="ph",{title}')
                                     output_lines.append(l)
-
-                        output_lines.append(f"final: {l}")
             elif(line.startswith("https://pornheal.com")):
-                output_lines.append(f"\nFreshPorno {n}: {line}")
+                #output_lines.append(f"\nFreshPorno {n}: {line}")
                 headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36'}
                 try:
                     req = Request(url=line.strip(), headers=headers)
@@ -91,18 +91,18 @@ def process_links(beg, end):
                     if video_src and len(video_src) > 0:
                         video_link = video_src[0]
                         title = str(n) + "." + (title_elements[0] if title_elements else "FreshPorno Video")
-                        output_lines.append(f"link: {video_link}\n")
+                        #output_lines.append(f"link: {video_link}\n")
                         output_lines.append(f'#EXTINF:-1 group-title="fp",{title}')
                         output_lines.append(video_link)
                     else:
-                        output_lines.append("Could not find video src on FreshPorno page.")
+                        error_lines.append("Could not find video src on FreshPorno page.")
 
                 except Exception as e:
-                    output_lines.append(f"Error processing FreshPorno link: {e}")
+                    error_lines.append(f"Error processing FreshPorno link: {e}")
 
 
             elif(line.startswith("https://xhamster")):
-                output_lines.append(f"\nXHamster {n}: {line}")
+                #output_lines.append(f"\nXHamster {n}: {line}")
                 headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36'}
                 reg_url = line.strip()
                 try:
@@ -114,20 +114,28 @@ def process_links(beg, end):
                     for i in items:
                         l= i.attrib['href']
                         if l.endswith("m3u8"):
-                            output_lines.append(f"link: {l}\n")
+                            #output_lines.append(f"link: {l}\n")
                             output_lines.append(f'#EXTINF:-1 #EXTINF:-1 group-title="xh",{title}')
                             output_lines.append(l)
                 except Exception as e:
-                    output_lines.append(f"Error: {e}")
+                    error_lines.append(f"Error: {e}")
+                    pass
 
+    error_content = "\n".join(error_lines)
+    try:
+        with open(ERROR_FILE, 'w', encoding="utf-8") as file_o:
+            file_o.write(error_content)
+    except Exception as e:
+        pass
     final_output_content = "\n".join(output_lines)
-
     try:
         with open(OUTPUT_FILE, 'w', encoding="utf-8") as file_o:
             file_o.write(final_output_content)
         return f"✅ Processing complete. Output saved to '{OUTPUT_FILE}'. You can download it below."
     except Exception as e:
         return f"❌ Error writing output to '{OUTPUT_FILE}': {e}"
+        
+        
 
 # The original script's direct execution block (for command line usage)
 if __name__ == '__main__':

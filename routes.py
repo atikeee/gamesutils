@@ -9,7 +9,7 @@ from flask import Flask, request, render_template, redirect, url_for,jsonify,ren
 import sqlite3
 from datetime import datetime,timedelta
 import requests
-from ppp import process_links,OUTPUT_FILE
+from ppp import process_links,OUTPUT_FILE,INPUT_FILE,ERROR_FILE
 DB = "flights.db"
 
 
@@ -919,8 +919,46 @@ def configure_routes(app,socketio):
         return render_template('ppp_tool.html', result=result, download_link_available=download_link_available, view_link_available=view_link_available, output_filename=OUTPUT_FILE)
     # END NEW ROUTE
 
-    # NEW ROUTE TO SERVE THE GENERATED OUTPUT FILE FOR DIRECT VIEWING
-    @app.route(f'/{OUTPUT_FILE}') # Use f-string for dynamic filename
+    @app.route(f'/ppp_input')
+    def view_ppp_input():
+        """
+        Displays the content of _input.txt with line numbers prepended to each line.
+        """
+        if os.path.exists(INPUT_FILE):
+            try:
+                with open(INPUT_FILE, 'r', encoding='utf-8') as f:
+                    lines = f.readlines() # Read all lines, including empty ones
+                
+                formatted_content = []
+                for i, line in enumerate(lines):
+                    # Remove newline character first, then prepend line number and two spaces
+                    stripped_line = line.rstrip('\n')
+                    formatted_content.append(f"{i+1:04d}  {stripped_line}")
+                
+                # Join with newline characters to preserve line breaks
+                return Response("\n".join(formatted_content), mimetype='text/plain')
+            except Exception as e:
+                return f"Error reading input file: {e}", 500
+        else:
+            return "Error: Input file `_input.txt` not found on the server.", 404
+
+    @app.route(f'/ppp_error') # Use f-string for dynamic filename
+    def view_ppp_error():
+        """
+        Allows users to view the zzz.m3u file directly in the browser without styling.
+        """
+        if os.path.exists(ERROR_FILE):
+            try:
+                with open(ERROR_FILE, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                # Return the content with text/plain MIME type
+                return Response(content, mimetype='text/plain')
+            except Exception as e:
+                return f"Error reading output file: {e}", 500
+        else:
+            return "Error: Output file not found. Please process the URLs first.", 404
+
+    @app.route(f'/ppp_output') # Use f-string for dynamic filename
     def view_ppp_output():
         """
         Allows users to view the zzz.m3u file directly in the browser without styling.
@@ -935,9 +973,7 @@ def configure_routes(app,socketio):
                 return f"Error reading output file: {e}", 500
         else:
             return "Error: Output file not found. Please process the URLs first.", 404
-    # END NEW VIEW ROUTE
 
-    # EXISTING ROUTE TO SERVE THE GENERATED OUTPUT FILE FOR DOWNLOAD
     @app.route('/download_ppp_output')
     def download_ppp_output():
         """
