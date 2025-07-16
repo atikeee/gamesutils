@@ -32,7 +32,8 @@ def configure_routes_catan(app,socketio):
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    @app.route('/catan_game')
+    @app.route("/catan_game")
     def catan_game():
-        """Renders the Catan game page."""
-        return render_template('catan_game.html')
+        #board_json = load_latest_catan_board_state_from_json()
+        
+        return render_template("catan_game.html")
