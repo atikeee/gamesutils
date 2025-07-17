@@ -95,3 +95,36 @@ def load_latest_catan_board_state_from_json():
     except Exception as e:
         print(f"Error loading Catan board state from JSON file: {e}")
         return None
+
+def get_player_state_file_path(player_id):
+    """Generates the file path for a player's state JSON file."""
+    if not os.path.exists(PLAYER_STATE_DIR):
+        os.makedirs(PLAYER_STATE_DIR)
+    return os.path.join(PLAYER_STATE_DIR, f"player_{player_id}_state.json")
+
+def save_player_state_to_json(player_id, player_state_json):
+    """Saves a player's current state to a JSON file."""
+    file_path = get_player_state_file_path(player_id)
+    try:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(player_state_json)
+        return True
+    except Exception as e:
+        print(f"Error saving player {player_id} state to JSON file: {e}")
+        return False
+
+def load_player_state_from_json(player_id):
+    """Loads a player's state from a JSON file."""
+    file_path = get_player_state_file_path(player_id)
+    if not os.path.exists(file_path):
+        return None
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+            if content:
+                return content
+            return None
+    except Exception as e:
+        print(f"Error loading player {player_id} state from JSON file: {e}")
+        return None
+

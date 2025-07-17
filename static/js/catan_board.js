@@ -2,14 +2,30 @@
         const ctx = canvas.getContext('2d');
         const messageBox = document.getElementById('messageBox');
 
-        // Constants for board drawing
-        const HEX_SIZE = 80; // Size of a hexagon (distance from center to a vertex)
-        const TILE_RADIUS = HEX_SIZE; // Cells now touch each other
-        const NUMBER_RADIUS = HEX_SIZE * 0.3; // Radius for the number circles
+        // Determine if this is the game page or the board builder page
+        const isGamePage = window.location.pathname === '/catan_game';
+        // Determine if this is a player page
+        const isPlayerPage = window.location.pathname.startsWith('/catan_player/');
+
+        // Get PLAYER_ID if on a player page
+        const PLAYER_ID = isPlayerPage ? window.PLAYER_ID : null;
+
+        // Constants for board drawing (same for all pages)
+        const HEX_SIZE = 80;
+        const TILE_RADIUS = HEX_SIZE;
+        const NUMBER_RADIUS = HEX_SIZE * 0.3;
         const ROAD_WIDTH = 12;
         const HOUSE_SIZE = 20;
         const CITY_SIZE = 30;
-        const PORT_SIZE = HEX_SIZE * 0.3; // Increased size for port icons/text
+        const PORT_SIZE = HEX_SIZE * 0.3;
+
+        // Player Colors (used for drawing player-owned elements)
+        const PLAYER_COLORS = {
+            'player1': '#FF6347', // Tomato
+            'player2': '#4682B4', // SteelBlue
+            'player3': '#32CD32', // LimeGreen
+            'player4': '#FFD700'  // Gold
+        };
 
         // Colors (fallback if images don't load)
         const RESOURCE_COLORS = {
@@ -21,7 +37,7 @@
             'desert': '#F4A460', // SandyBrown
         };
         const NUMBER_COLOR = '#333';
-        const ROBBER_COLOR = '#333'; // Robber is not used on this page, but kept for consistency
+        const ROBBER_COLOR = '#333';
 
         // Image paths for resources (using placehold.co for placeholders)
         const resourceImagePaths = {
@@ -32,52 +48,22 @@
             'ore': 'https://placehold.co/200x200/708090/ffffff?text=Rocky+Mountain',
             'desert': 'https://placehold.co/200x200/F4A460/ffffff?text=Desert'
         };
-        const loadedResourceImages = {}; // Stores loaded Image objects
+        const loadedResourceImages = {};
 
-        // Game state (only relevant parts for main page map setup)
-        let selectedTool = 'swap'; // Default tool for this page
-        let placedRoads = []; // Not used on this page, but kept for consistency with history structure
-        let placedStructures = []; // Not used on this page, but kept for consistency with history structure
-        let robberTile = null; // Not used on this page, but kept for consistency with history structure
+        // Board state (common to all pages, loaded from backend or default)
+        let boardTiles = [];
+        let PORT_DATA = [];
+        let robberTile = null; // Robber position is global to the board
 
-        // History stack for undo functionality
-        let historyStack = [];
-
-        // State for swap functionality
-        let selectedSwapItem1 = null; // { type: 'number' | 'tile', tile: {q, r} }
-        let selectedSwapItem2 = null;
-
-        // Board layout (axial coordinates q, r) and resource types/numbers
-        const boardTiles = [
-            // Row 0
-            { q: 0, r: -2, type: 'ore', number: 10 },
-            { q: 1, r: -2, type: 'sheep', number: 2 },
-            { q: 2, r: -2, type: 'wood', number: 9 },
-
-            // Row 1
-            { q: -1, r: -1, type: 'brick', number: 12 },
-            { q: 0, r: -1, type: 'wheat', number: 6 },
-            { q: 1, r: -1, type: 'ore', number: 4 },
-            { q: 2, r: -1, type: 'wood', number: 10 },
-
-            // Row 2
-            { q: -2, r: 0, type: 'wood', number: 9 },
-            { q: -1, r: 0, type: 'sheep', number: 11 },
-            { q: 0, r: 0, type: 'desert', number: null }, // Desert tile
-            { q: 1, r: 0, type: 'brick', number: 3 },
-            { q: 2, r: 0, type: 'wheat', number: 8 },
-
-            // Row 3
-            { q: -2, r: 1, type: 'ore', number: 8 },
-            { q: -1, r: 1, type: 'wheat', number: 3 },
-            { q: 0, r: 1, type: 'wood', number: 4 },
-            { q: 1, r: 1, type: 'sheep', number: 5 },
-
-            // Row 4
-            { q: -2, r: 2, type: 'brick', number: 5 },
-            { q: -1, r: 2, type: 'sheep', number: 6 },
-            { q: 0, r: 2, type: 'wheat', number: 11 }
-        ];
+        // Player-specific state (loaded from backend)
+        let currentPlayerState = {
+            playerName: `Player ${PLAYER_ID || 'Unknown'}`,
+            roads: [],
+            structures: [], // {type: 'house'|'city', junction: {x,y,id}, owner: 'playerX'}
+            hand: {}, // {resourceType: count}
+            devCards: [], // ['knight', 'monopoly', ...]
+            history: [] // Player-specific undo history
+        };
 
         // Global offset to center the board
         let offsetX = 0;
@@ -87,42 +73,21 @@
         let boardCenterRawX = 0;
         let boardCenterRawY = 0;
 
-        // Array/list for defining port text and background. Each entry corresponds to a perimeter junction.
-        // There are typically 30 junctions around a standard Catan board.
-        // Format: ['resource_type' (e.g., 'wood', 'brick', 'any'), 'ratio_text' (e.g., '2:1', '3:1')]
-        // Use null or an empty array for invisible ports.
-        const PORT_DATA = [
-            null, // Placeholder for first few junctions, make them invisible
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            ['wood', '2:1'], // Example specific port
-            ['brick', '2:1'], // Example specific port
-            ['sheep', '2:1'], // Example specific port
-            null,
-            null,
-            ['any', '3:1'], // Example generic 3:1 port
-            null,
-            null,
-            ['wheat', '2:1'], // Example specific port
-            null,
-            null,
-            ['any', '3:1'],
-            null,
-            null,
-            ['ore', '2:1'], // Example specific port
-            null,
-            ['any', '3:1'],
-            null,
-            null,
-            ['any', '3:1'],
-            null,
-            null
-        ];
+        // Builder-specific state
+        let selectedTool = 'swap'; // Default tool for builder page
+        let selectedSwapItem1 = null;
+        let selectedSwapItem2 = null;
+        let builderHistoryStack = []; // History for undo on builder page
+
+        // Player-specific tool selection
+        let selectedPlayerTool = null; // 'house', 'city', 'road', 'robber'
+        let selectedRoadStartJunction = null; // For placing roads (not fully implemented in this version)
+
+
+        // Initialize allJunctions and allEdges as 'let' so they can be reassigned
+        // They will be populated after boardTiles is loaded/initialized.
+        let allJunctions = [];
+        let allEdges = [];
 
 
         /**
@@ -136,17 +101,18 @@
             messageBox.classList.remove('hidden');
             setTimeout(() => {
                 messageBox.classList.add('hidden');
-            }, 3000); // Hide after 3 seconds
+            }, 3000);
         }
 
         /**
          * Preloads all resource images.
-         * Calls drawBoard once all images are loaded.
+         * Calls loadBoardFromBackend once all images are loaded.
          */
         function preloadImages() {
             let imagesToLoad = Object.keys(resourceImagePaths).length;
             if (imagesToLoad === 0) {
-                resizeCanvas(); // Draw immediately if no images
+                // If no images to load, directly load board data
+                loadBoardFromBackend();
                 return;
             }
 
@@ -157,16 +123,15 @@
                     loadedResourceImages[type] = img;
                     imagesToLoad--;
                     if (imagesToLoad === 0) {
-                        resizeCanvas(); // All images loaded, draw the board
+                        loadBoardFromBackend(); // All images loaded, now load board data
                     }
                 };
                 img.onerror = () => {
                     console.error(`Failed to load image for ${type}: ${resourceImagePaths[type]}`);
-                    // Fallback to solid color if image fails to load
-                    loadedResourceImages[type] = null;
+                    loadedResourceImages[type] = null; // Fallback to solid color if image fails
                     imagesToLoad--;
                     if (imagesToLoad === 0) {
-                        resizeCanvas();
+                        loadBoardFromBackend();
                     }
                 };
             }
@@ -270,27 +235,25 @@
             }
             ctx.closePath();
 
-            ctx.save(); // Save context state before clipping
-            ctx.clip(); // Clip subsequent drawing to the hexagon path
+            ctx.save();
+            ctx.clip();
 
             if (image && image.complete && image.naturalWidth > 0) {
-                // Calculate scale to cover the hexagon
-                const hexWidth = size * 2; // Approximate diameter
-                const hexHeight = size * Math.sqrt(3); // Approximate height
+                const hexWidth = size * 2;
+                const hexHeight = size * Math.sqrt(3);
                 const scaleX = hexWidth / image.naturalWidth;
                 const scaleY = hexHeight / image.naturalHeight;
-                const scale = Math.max(scaleX, scaleY); // Use max to ensure it covers the hex
+                const scale = Math.max(scaleX, scaleY);
 
                 const imgWidth = image.naturalWidth * scale;
                 const imgHeight = image.naturalHeight * scale;
 
-                // Center the image within the hexagon
                 ctx.drawImage(image, x - imgWidth / 2, y - imgHeight / 2, imgWidth, imgHeight);
             } else {
                 ctx.fillStyle = fillColor;
                 ctx.fill();
             }
-            ctx.restore(); // Restore context to remove clipping
+            ctx.restore();
 
             ctx.strokeStyle = strokeColor;
             ctx.lineWidth = lineWidth;
@@ -305,66 +268,48 @@
          * @param {number} number - The number to draw.
          */
         function drawNumber(ctx, x, y, number) {
-            if (number === null) return; // No number for desert
+            if (number === null) return;
 
             ctx.beginPath();
             ctx.arc(x, y, NUMBER_RADIUS, 0, Math.PI * 2);
 
-            // Change background and text color for 6 and 8
             if (number === 6 || number === 8) {
                 ctx.fillStyle = 'red';
                 ctx.fill();
                 ctx.strokeStyle = '#666';
                 ctx.lineWidth = 1;
                 ctx.stroke();
-                ctx.fillStyle = 'white'; // White text for red background
+                ctx.fillStyle = 'white';
             } else {
-                ctx.fillStyle = '#FFFAF0'; // Ivory background for other numbers
+                ctx.fillStyle = '#FFFAF0';
                 ctx.fill();
                 ctx.strokeStyle = '#666';
                 ctx.lineWidth = 1;
                 ctx.stroke();
-                ctx.fillStyle = NUMBER_COLOR; // Default text color
+                ctx.fillStyle = NUMBER_COLOR;
             }
 
             ctx.font = `bold ${NUMBER_RADIUS * 0.8}px Inter`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(number, x, y - NUMBER_RADIUS * 0.25); // Adjust Y to make space for dots
+            ctx.fillText(number, x, y - NUMBER_RADIUS * 0.25);
 
-            // Draw pips (dots) based on probability
             let numDots = 0;
             switch (number) {
-                case 2:
-                case 12:
-                    numDots = 1;
-                    break;
-                case 3:
-                case 11:
-                    numDots = 2;
-                    break;
-                case 4:
-                case 10:
-                    numDots = 3;
-                    break;
-                case 5:
-                case 9:
-                    numDots = 4;
-                    break;
-                case 6:
-                case 8:
-                    numDots = 5;
-                    break;
-                default:
-                    numDots = 0; // Desert or other numbers
+                case 2: case 12: numDots = 1; break;
+                case 3: case 11: numDots = 2; break;
+                case 4: case 10: numDots = 3; break;
+                case 5: case 9: numDots = 4; break;
+                case 6: case 8: numDots = 5; break;
+                default: numDots = 0;
             }
 
             const dotRadius = NUMBER_RADIUS * 0.08;
             const dotSpacing = NUMBER_RADIUS * 0.2;
             const startX = x - ((numDots - 1) * dotSpacing) / 2;
-            const dotY = y + NUMBER_RADIUS * 0.35; // Position dots below the number
+            const dotY = y + NUMBER_RADIUS * 0.35;
 
-            ctx.fillStyle = (number === 6 || number === 8) ? 'white' : NUMBER_COLOR; // White dots for red background, else default
+            ctx.fillStyle = (number === 6 || number === 8) ? 'white' : NUMBER_COLOR;
             for (let i = 0; i < numDots; i++) {
                 ctx.beginPath();
                 ctx.arc(startX + i * dotSpacing, dotY, dotRadius, 0, Math.PI * 2);
@@ -376,7 +321,7 @@
          * Draws a stylized wood icon for ports.
          */
         function drawWoodPortIcon(ctx, x, y, iconSize) {
-            ctx.fillStyle = '#8B4513'; // SaddleBrown
+            ctx.fillStyle = '#8B4513';
             ctx.fillRect(x - iconSize * 0.2, y - iconSize * 0.2, iconSize * 0.4, iconSize * 0.4);
             ctx.strokeStyle = '#654321';
             ctx.lineWidth = 1;
@@ -387,7 +332,7 @@
          * Draws a stylized brick icon for ports.
          */
         function drawBrickPortIcon(ctx, x, y, iconSize) {
-            ctx.fillStyle = '#B22222'; // Firebrick
+            ctx.fillStyle = '#B22222';
             const brickWidth = iconSize * 0.4;
             const brickHeight = iconSize * 0.15;
             ctx.fillRect(x - brickWidth / 2, y - brickHeight / 2, brickWidth, brickHeight);
@@ -400,7 +345,7 @@
          * Draws a stylized sheep icon for ports.
          */
         function drawSheepPortIcon(ctx, x, y, iconSize) {
-            ctx.fillStyle = '#F0F8FF'; // AliceBlue
+            ctx.fillStyle = '#F0F8FF';
             ctx.strokeStyle = '#696969';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
@@ -413,7 +358,7 @@
          * Draws a stylized wheat icon for ports.
          */
         function drawWheatPortIcon(ctx, x, y, iconSize) {
-            ctx.fillStyle = '#FFD700'; // Gold
+            ctx.fillStyle = '#FFD700';
             ctx.strokeStyle = '#B8860B';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
@@ -429,7 +374,7 @@
          * Draws a stylized ore icon for ports.
          */
         function drawOrePortIcon(ctx, x, y, iconSize) {
-            ctx.fillStyle = '#A9A9A9'; // DarkGray
+            ctx.fillStyle = '#A9A9A9';
             ctx.strokeStyle = '#696969';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -451,21 +396,18 @@
             ctx.save();
             ctx.translate(x, y);
 
-            // Draw circle background
-            const circleRadius = PORT_SIZE; // Use PORT_SIZE directly for radius
+            const circleRadius = PORT_SIZE;
             ctx.beginPath();
             ctx.arc(0, 0, circleRadius, 0, Math.PI * 2);
 
-            // Optional: Draw background image if provided
             if (backgroundImage && backgroundImage.complete && backgroundImage.naturalWidth > 0) {
-                // Scale and draw image to cover the circle
                 const imgScale = Math.max(circleRadius * 2 / backgroundImage.naturalWidth, circleRadius * 2 / backgroundImage.naturalHeight);
                 const imgWidth = backgroundImage.naturalWidth * imgScale;
                 const imgHeight = backgroundImage.naturalHeight * imgScale;
-                ctx.clip(); // Clip to circle shape
+                ctx.clip();
                 ctx.drawImage(backgroundImage, -imgWidth / 2, -imgHeight / 2, imgWidth, imgHeight);
             } else {
-                ctx.fillStyle = '#D3D3D3'; // Light gray fallback
+                ctx.fillStyle = '#D3D3D3';
                 ctx.fill();
             }
 
@@ -473,9 +415,8 @@
             ctx.lineWidth = 1;
             ctx.stroke();
 
-            // Draw resource icon or generic icon
             const iconSize = PORT_SIZE * 0.6;
-            const iconYOffset = -circleRadius * 0.3; // Adjust icon Y position to be higher in the circle
+            const iconYOffset = -circleRadius * 0.3;
             if (type !== 'any') {
                 switch (type) {
                     case 'wood': drawWoodPortIcon(ctx, 0, iconYOffset, iconSize); break;
@@ -492,17 +433,15 @@
                 ctx.fillText('?', 0, iconYOffset);
             }
 
-            // Draw ratio text
             ctx.fillStyle = '#333';
             ctx.font = `bold ${PORT_SIZE * 0.4}px Inter`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            const ratioYOffset = circleRadius * 0.3; // Adjust ratio Y position to be lower in the circle
+            const ratioYOffset = circleRadius * 0.3;
             ctx.fillText(ratio, 0, ratioYOffset);
 
             ctx.restore();
         }
-
 
         /**
          * Draws a road on the canvas as a thick line along the hex edge.
@@ -512,12 +451,15 @@
          */
         function drawRoad(ctx, edge, color) {
             ctx.beginPath();
-            // Apply offset before drawing
-            ctx.moveTo(edge.x1 + offsetX, edge.y1 + offsetY);
-            ctx.lineTo(edge.x2 + offsetX, edge.y2 + offsetY);
+            const x1 = edge.x1 + offsetX;
+            const y1 = edge.y1 + offsetY;
+            const x2 = edge.x2 + offsetX;
+            const y2 = edge.y2 + offsetY;
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
             ctx.strokeStyle = color;
             ctx.lineWidth = ROAD_WIDTH;
-            ctx.lineCap = 'butt'; // Ensures precise alignment without rounded overhang
+            ctx.lineCap = 'butt';
             ctx.stroke();
         }
 
@@ -528,7 +470,6 @@
          * @param {string} color - Color of the house.
          */
         function drawHouse(ctx, junction, color) {
-            // Apply offset before drawing
             const x = junction.x + offsetX;
             const y = junction.y + offsetY;
             const size = HOUSE_SIZE;
@@ -537,11 +478,9 @@
             ctx.strokeStyle = '#333';
             ctx.lineWidth = 2;
 
-            // Main body
             ctx.fillRect(x - size / 2, y - size / 2, size, size);
             ctx.strokeRect(x - size / 2, y - size / 2, size, size);
 
-            // Roof
             ctx.beginPath();
             ctx.moveTo(x - size * 0.7, y - size / 2);
             ctx.lineTo(x + size * 0.7, y - size / 2);
@@ -550,8 +489,7 @@
             ctx.fill();
             ctx.stroke();
 
-            // Door
-            ctx.fillStyle = '#8B4513'; // Brown
+            ctx.fillStyle = '#8B4513';
             ctx.fillRect(x - size * 0.15, y + size * 0.05, size * 0.3, size * 0.45);
             ctx.strokeRect(x - size * 0.15, y + size * 0.05, size * 0.3, size * 0.45);
         }
@@ -563,7 +501,6 @@
          * @param {string} color - Color of the city.
          */
         function drawCity(ctx, junction, color) {
-            // Apply offset before drawing
             const x = junction.x + offsetX;
             const y = junction.y + offsetY;
             const size = CITY_SIZE;
@@ -572,18 +509,15 @@
             ctx.strokeStyle = '#333';
             ctx.lineWidth = 2;
 
-            // Main castle body
             ctx.fillRect(x - size / 2, y - size / 2, size, size);
             ctx.strokeRect(x - size / 2, y - size / 2, size, size);
 
-            // Towers
-            ctx.fillRect(x - size * 0.4, y - size * 1.1, size * 0.3, size * 0.6); // Left tower
+            ctx.fillRect(x - size * 0.4, y - size * 1.1, size * 0.3, size * 0.6);
             ctx.strokeRect(x - size * 0.4, y - size * 1.1, size * 0.3, size * 0.6);
 
-            ctx.fillRect(x + size * 0.1, y - size * 1.1, size * 0.3, size * 0.6); // Right tower
+            ctx.fillRect(x + size * 0.1, y - size * 1.1, size * 0.3, size * 0.6);
             ctx.strokeRect(x + size * 0.1, y - size * 1.1, size * 0.3, size * 0.6);
 
-            // Battlements on main body
             ctx.fillRect(x - size / 2, y - size / 2 - 5, size / 5, 5);
             ctx.fillRect(x - size / 10, y - size / 2 - 5, size / 5, 5);
             ctx.fillRect(x + size / 5, y - size / 2 - 5, size / 5, 5);
@@ -595,7 +529,7 @@
          * @param {object} tile - The tile object where the robber is.
          */
         function drawRobber(ctx, tile) {
-            const pixel = hexToPixel(tile.q, tile.r); // hexToPixel already applies offset
+            const pixel = hexToPixel(tile.q, tile.r);
             const x = pixel.x;
             const y = pixel.y;
             const robberSize = HEX_SIZE * 0.3;
@@ -605,12 +539,10 @@
             ctx.lineWidth = 2;
 
             ctx.beginPath();
-            // Base
             ctx.arc(x, y + robberSize * 0.4, robberSize * 0.5, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
 
-            // Body
             ctx.beginPath();
             ctx.moveTo(x - robberSize * 0.3, y + robberSize * 0.4);
             ctx.lineTo(x - robberSize * 0.3, y - robberSize * 0.1);
@@ -620,7 +552,6 @@
             ctx.fill();
             ctx.stroke();
 
-            // Head
             ctx.beginPath();
             ctx.arc(x, y - robberSize * 0.4, robberSize * 0.25, 0, Math.PI * 2);
             ctx.fill();
@@ -637,7 +568,6 @@
             boardTiles.forEach(tile => {
                 const rawPixel = hexToRawPixel(tile.q, tile.r);
                 const vertices = getHexVertices(rawPixel.x, rawPixel.y, TILE_RADIUS);
-                // Check if the junction's raw coordinates are approximately equal to any of the tile's raw vertex coordinates
                 if (vertices.some(v => Math.abs(v.x - junction.x) < 1 && Math.abs(v.y - junction.y) < 1)) {
                     count++;
                 }
@@ -649,148 +579,146 @@
          * Redraws the entire Catan board and all placed elements.
          */
         function drawBoard() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw all board tiles
             boardTiles.forEach(tile => {
                 const pixel = hexToPixel(tile.q, tile.r);
-                const image = loadedResourceImages[tile.type]; // Get the loaded image
-                drawHex(ctx, pixel.x, pixel.y, TILE_RADIUS, RESOURCE_COLORS[tile.type], image); // Pass image
-                // Only draw number on tiles with numbers
+                const image = loadedResourceImages[tile.type];
+                drawHex(ctx, pixel.x, pixel.y, TILE_RADIUS, RESOURCE_COLORS[tile.type], image);
                 if (tile.number !== null) {
                     drawNumber(ctx, pixel.x, pixel.y, tile.number);
                 }
             });
 
-            // Draw all placed roads (not relevant for this page, but kept for history structure)
-            placedRoads.forEach(road => {
-                drawRoad(ctx, road.edge, road.color);
+            // Draw roads from all players (currently only current player's roads are in state)
+            // In a full multi-player setup, you'd fetch and iterate through all players' road arrays
+            currentPlayerState.roads.forEach(road => {
+                drawRoad(ctx, road.edge, PLAYER_COLORS[road.owner]); // Use road's owner color
             });
 
-            // Draw all placed structures (not relevant for this page, but kept for history structure)
-            placedStructures.forEach(structure => {
+            // Draw structures from all players (currently only current player's structures are in state)
+            // Similarly, in a full multi-player setup, iterate through all players' structure arrays
+            currentPlayerState.structures.forEach(structure => {
+                const ownerColor = PLAYER_COLORS[structure.owner];
                 if (structure.type === 'house') {
-                    drawHouse(ctx, structure.junction, structure.color);
+                    drawHouse(ctx, structure.junction, ownerColor);
                 } else if (structure.type === 'city') {
-                    drawCity(ctx, structure.junction, structure.color);
+                    drawCity(ctx, structure.junction, ownerColor);
                 }
             });
 
-            // Draw robber if placed (not relevant for this page, but kept for consistency with history structure)
             if (robberTile) {
                 drawRobber(ctx, robberTile);
             }
 
-            // Draw circular ports for all perimeter junctions
+            // Ensure allJunctions is populated before filtering
+            if (allJunctions.length === 0 && boardTiles.length > 0) {
+                allJunctions = getAllJunctions();
+            }
+
             const perimeterJunctions = allJunctions.filter(junction => countTilesForJunction(junction) < 3);
 
             perimeterJunctions.forEach((junction, index) => {
-                // Get port data from the PORT_DATA array
                 const portInfo = PORT_DATA[index];
 
-                // Only draw the port if portInfo exists and is not null/empty
                 if (portInfo && portInfo.length === 2) {
                     const [type, ratio] = portInfo;
 
-                    // Convert raw junction coords to canvas coords
                     const junctionX = junction.x + offsetX;
                     const junctionY = junction.y + offsetY;
 
-                    // Vector from board center to this junction
                     const vecX = junctionX - (boardCenterRawX + offsetX);
                     const vecY = junctionY - (boardCenterRawY + offsetY);
                     const vecMagnitude = Math.sqrt(vecX * vecX + vecY * vecY);
 
-                    const offsetDistance = HEX_SIZE * 0.4; // How far out to push the circle
+                    const offsetDistance = HEX_SIZE * 0.4;
                     const portDrawX = junctionX + (vecX / vecMagnitude) * offsetDistance;
                     const portDrawY = junctionY + (vecY / vecMagnitude) * offsetDistance;
 
-                    // Draw the circular port
-                    // You can pass an optional background image here if you implement loading them.
                     drawCirclePort(ctx, portDrawX, portDrawY, type, ratio, null);
                 }
             });
 
+            // Draw highlights for selected tiles/numbers during swap (builder page only)
+            if (!isGamePage && !isPlayerPage) { // Only on builder page
+                if (selectedTool === 'swap') {
+                    if (selectedSwapItem1) {
+                        const pixel = hexToPixel(selectedSwapItem1.tile.q, selectedSwapItem1.tile.r);
+                        ctx.strokeStyle = 'cyan'; // Highlight color for first selection
+                        ctx.lineWidth = 4;
 
-            // Draw highlights for selected tiles/numbers during swap
-            if (selectedTool === 'swap') {
-                if (selectedSwapItem1) {
-                    const pixel = hexToPixel(selectedSwapItem1.tile.q, selectedSwapItem1.tile.r);
-                    ctx.strokeStyle = 'cyan'; // Highlight color for first selection
-                    ctx.lineWidth = 4;
-
-                    if (selectedSwapItem1.type === 'tile') {
-                        // Highlight the entire tile
-                        ctx.beginPath();
-                        const vertices = getHexVertices(pixel.x, pixel.y, TILE_RADIUS);
-                        ctx.moveTo(vertices[0].x, vertices[0].y);
-                        for (let i = 1; i < 6; i++) {
-                            ctx.lineTo(vertices[i].x, vertices[i].y);
+                        if (selectedSwapItem1.type === 'tile') {
+                            // Highlight the entire tile
+                            ctx.beginPath();
+                            const vertices = getHexVertices(pixel.x, pixel.y, TILE_RADIUS);
+                            ctx.moveTo(vertices[0].x, vertices[0].y);
+                            for (let i = 1; i < 6; i++) {
+                                ctx.lineTo(vertices[i].x, vertices[i].y);
+                            }
+                            ctx.closePath();
+                            ctx.stroke();
+                        } else if (selectedSwapItem1.type === 'number') {
+                            // Highlight the number circle
+                            ctx.beginPath();
+                            ctx.arc(pixel.x, pixel.y, NUMBER_RADIUS + 2, 0, Math.PI * 2); // Slightly larger circle
+                            ctx.stroke();
                         }
-                        ctx.closePath();
-                        ctx.stroke();
-                    } else if (selectedSwapItem1.type === 'number') {
-                        // Highlight the number circle
-                        ctx.beginPath();
-                        ctx.arc(pixel.x, pixel.y, NUMBER_RADIUS + 2, 0, Math.PI * 2); // Slightly larger circle
-                        ctx.stroke();
                     }
-                }
-                if (selectedSwapItem2) {
-                    const pixel = hexToPixel(selectedSwapItem2.tile.q, selectedSwapItem2.tile.r);
-                    ctx.strokeStyle = 'magenta'; // Different highlight color for second selection
-                    ctx.lineWidth = 4;
+                    if (selectedSwapItem2) {
+                        const pixel = hexToPixel(selectedSwapItem2.tile.q, selectedSwapItem2.tile.r);
+                        ctx.strokeStyle = 'magenta'; // Different highlight color for second selection
+                        ctx.lineWidth = 4;
 
-                    if (selectedSwapItem2.type === 'tile') {
-                        // Highlight the entire tile
-                        ctx.beginPath();
-                        const vertices = getHexVertices(pixel.x, pixel.y, TILE_RADIUS);
-                        ctx.moveTo(vertices[0].x, vertices[0].y);
-                        for (let i = 1; i < 6; i++) {
-                            ctx.lineTo(vertices[i].x, vertices[i].y);
+                        if (selectedSwapItem2.type === 'tile') {
+                            // Highlight the entire tile
+                            ctx.beginPath();
+                            const vertices = getHexVertices(pixel.x, pixel.y, TILE_RADIUS);
+                            ctx.moveTo(vertices[0].x, vertices[0].y);
+                            for (let i = 1; i < 6; i++) {
+                                ctx.lineTo(vertices[i].x, vertices[i].y);
+                            }
+                            ctx.closePath();
+                            ctx.stroke();
+                        } else if (selectedSwapItem2.type === 'number') {
+                            // Highlight the number circle
+                            ctx.beginPath();
+                            ctx.arc(pixel.x, pixel.y, NUMBER_RADIUS + 2, 0, Math.PI * 2); // Slightly larger circle
+                            ctx.stroke();
                         }
-                        ctx.closePath();
-                        ctx.stroke();
-                    } else if (selectedSwapItem2.type === 'number') {
-                        // Highlight the number circle
-                        ctx.beginPath();
-                        ctx.arc(pixel.x, pixel.y, NUMBER_RADIUS + 2, 0, Math.PI * 2); // Slightly larger circle
-                        ctx.stroke();
                     }
                 }
             }
         }
 
         /**
-         * Saves the current state of the board to the history stack.
+         * Saves the current state of the board to the history stack (builder page only).
          */
-        function saveState() {
-            // Deep copy the arrays and objects to prevent direct reference issues
-            historyStack.push({
-                roads: JSON.parse(JSON.stringify(placedRoads)),
-                structures: JSON.parse(JSON.stringify(placedStructures)),
+        function saveBuilderState() {
+            if (isGamePage || isPlayerPage) return; // Only save state on the builder page
+
+            builderHistoryStack.push({
+                // Deep copy the arrays and objects to prevent direct reference issues
+                tileStates: boardTiles.map(tile => ({ q: tile.q, r: tile.r, type: tile.type, number: tile.number })),
+                portData: JSON.parse(JSON.stringify(PORT_DATA)),
                 robber: robberTile ? JSON.parse(JSON.stringify(robberTile)) : null,
-                // Save the full state of all boardTiles (type and number) for swap undo
-                tileStates: boardTiles.map(tile => ({ q: tile.q, r: tile.r, type: tile.type, number: tile.number }))
             });
             // Optional: Limit history stack size if it grows too large
-            // if (historyStack.length > 50) {
-            //     historyStack.shift(); // Remove the oldest state
+            // if (builderHistoryStack.length > 50) {
+            //     builderHistoryStack.shift(); // Remove the oldest state
             // }
         }
 
         /**
-         * Undoes the last action by restoring the previous state from the history stack.
+         * Undoes the last action by restoring the previous state from the history stack (builder page only).
          */
-        function undoLastAction() {
-            if (historyStack.length > 1) { // Keep at least one state (the initial empty board)
-                historyStack.pop(); // Remove the current state
-                const prevState = historyStack[historyStack.length - 1]; // Get the previous state
-                placedRoads = JSON.parse(JSON.stringify(prevState.roads));
-                placedStructures = JSON.parse(JSON.stringify(prevState.structures));
-                robberTile = prevState.robber ? JSON.parse(JSON.stringify(prevState.robber)) : null;
+        function undoBuilderLastAction() {
+            if (isGamePage || isPlayerPage) return; // Only undo on the builder page
 
-                // Restore tile types and numbers
+            if (builderHistoryStack.length > 1) { // Keep at least one state (the initial board)
+                builderHistoryStack.pop(); // Remove the current state
+                const prevState = builderHistoryStack[builderHistoryStack.length - 1]; // Get the previous state
+
+                // Restore board tiles
                 prevState.tileStates.forEach(prevTile => {
                     const currentTile = boardTiles.find(t => t.q === prevTile.q && t.r === prevTile.r);
                     if (currentTile) {
@@ -798,6 +726,8 @@
                         currentTile.number = prevTile.number;
                     }
                 });
+                PORT_DATA.splice(0, PORT_DATA.length, ...JSON.parse(JSON.stringify(prevState.portData)));
+                robberTile = prevState.robber ? JSON.parse(JSON.stringify(prevState.robber)) : null;
 
                 // Clear any active swap selections
                 selectedSwapItem1 = null;
@@ -811,6 +741,46 @@
         }
 
         /**
+         * Saves the current player's state to their history stack (player page only).
+         */
+        function savePlayerStateToHistory() {
+            if (!isPlayerPage) return; // Only save player state on player page
+
+            currentPlayerState.history.push({
+                roads: JSON.parse(JSON.stringify(currentPlayerState.roads)),
+                structures: JSON.parse(JSON.stringify(currentPlayerState.structures)),
+                // Robber position is global, but saving it with player history for undo consistency
+                robber: robberTile ? JSON.parse(JSON.stringify(robberTile)) : null
+            });
+            // Optional: Limit history stack size
+            // if (currentPlayerState.history.length > 20) {
+            //     currentPlayerState.history.shift();
+            // }
+        }
+
+        /**
+         * Undoes the last action for the current player (player page only).
+         */
+        function undoPlayerLastAction() {
+            if (!isPlayerPage) return; // Only undo on player page
+
+            if (currentPlayerState.history.length > 1) {
+                currentPlayerState.history.pop();
+                const prevState = currentPlayerState.history[currentPlayerState.history.length - 1];
+                currentPlayerState.roads = JSON.parse(JSON.stringify(prevState.roads));
+                currentPlayerState.structures = JSON.parse(JSON.stringify(prevState.structures));
+                robberTile = prevState.robber ? JSON.parse(JSON.stringify(prevState.robber)) : null;
+
+                showMessage('Your last action undone.');
+                drawBoard();
+                savePlayerStateToBackend(); // Save updated player state to backend
+            } else {
+                showMessage('No more actions to undo for this player.', 'error');
+            }
+        }
+
+
+        /**
          * Shuffles an array in place (Fisher-Yates algorithm).
          * @param {Array} array - The array to shuffle.
          */
@@ -822,18 +792,17 @@
         }
 
         /**
-         * Shuffles the resource types (cells) on the board, keeping the desert tile fixed.
+         * Shuffles the resource types (cells) on the board, keeping the desert tile fixed (builder page only).
          */
         function shuffleCells() {
-            saveState(); // Save state before shuffling
+            if (isGamePage || isPlayerPage) return; // Only on builder page
+
+            saveBuilderState();
 
             const nonDesertTiles = boardTiles.filter(tile => tile.type !== 'desert');
-            // No need to get desertTile separately, as it's filtered out
-
             const resourceTypes = nonDesertTiles.map(tile => tile.type);
             shuffleArray(resourceTypes);
 
-            // Reassign shuffled types to non-desert tiles
             nonDesertTiles.forEach((tile, index) => {
                 tile.type = resourceTypes[index];
             });
@@ -843,16 +812,17 @@
         }
 
         /**
-         * Shuffles the numbers on the board, keeping the desert tile's number null.
+         * Shuffles the numbers on the board, keeping the desert tile's number null (builder page only).
          */
         function shuffleNumbers() {
-            saveState(); // Save state before shuffling
+            if (isGamePage || isPlayerPage) return; // Only on builder page
+
+            saveBuilderState();
 
             const nonDesertTiles = boardTiles.filter(tile => tile.type !== 'desert');
             const numbers = nonDesertTiles.map(tile => tile.number);
             shuffleArray(numbers);
 
-            // Reassign shuffled numbers to non-desert tiles
             nonDesertTiles.forEach((tile, index) => {
                 tile.number = numbers[index];
             });
@@ -862,16 +832,22 @@
         }
 
         /**
-         * Saves the current board state to the Flask backend.
+         * Saves the current board state to the Flask backend (builder page only).
          */
         async function saveBoardToBackend() {
+            if (isGamePage || isPlayerPage) return; // Only on builder page
+
             try {
-                const boardState = boardTiles.map(tile => ({
-                    q: tile.q,
-                    r: tile.r,
-                    type: tile.type,
-                    number: tile.number
-                }));
+                const boardState = {
+                    boardTiles: boardTiles.map(tile => ({
+                        q: tile.q,
+                        r: tile.r,
+                        type: tile.type,
+                        number: tile.number
+                    })),
+                    portData: PORT_DATA,
+                    robberTile: robberTile ? { q: robberTile.q, r: robberTile.r } : null // Save robber position with the board
+                };
                 const response = await fetch('/save_board', {
                     method: 'POST',
                     headers: {
@@ -892,33 +868,248 @@
         }
 
         /**
-         * Loads the board state from the Flask backend.
+         * Loads the board state from the Flask backend (common to all pages).
          */
         async function loadBoardFromBackend() {
             try {
                 const response = await fetch('/load_board');
                 const result = await response.json();
                 if (result.status === 'success' && result.board_state) {
-                    saveState(); // Save current state before loading a new one for undo
-                    const loadedTiles = result.board_state;
-                    // Update boardTiles with loaded data
-                    loadedTiles.forEach(loadedTile => {
-                        const currentTile = boardTiles.find(t => t.q === loadedTile.q && t.r === loadedTile.r);
-                        if (currentTile) {
-                            currentTile.type = loadedTile.type;
-                            currentTile.number = loadedTile.number;
-                        }
-                    });
+                    boardTiles = result.board_state.boardTiles;
+                    PORT_DATA = result.board_state.portData;
+                    robberTile = result.board_state.robberTile; // Load robber position
+                    // If on builder page, save this loaded state to its history
+                    if (!isGamePage && !isPlayerPage) {
+                        saveBuilderState();
+                    }
                     showMessage('Board state loaded successfully!');
-                    drawBoard();
-                } else if (result.status === 'info') {
-                    showMessage(result.message, 'info');
                 } else {
-                    showMessage('Error loading board state: ' + result.message, 'error');
+                    // If no saved board state, or an error, initialize with default values
+                    showMessage((result.message || "No saved board state found.") + ' Displaying default board.', 'info');
+                    boardTiles = [
+                        // Row 0
+                        { q: 0, r: -2, type: 'ore', number: 10 },
+                        { q: 1, r: -2, type: 'sheep', number: 2 },
+                        { q: 2, r: -2, type: 'wood', number: 9 },
+
+                        // Row 1
+                        { q: -1, r: -1, type: 'brick', number: 12 },
+                        { q: 0, r: -1, type: 'wheat', number: 6 },
+                        { q: 1, r: -1, type: 'ore', number: 4 },
+                        { q: 2, r: -1, type: 'wood', number: 10 },
+
+                        // Row 2
+                        { q: -2, r: 0, type: 'wood', number: 9 },
+                        { q: -1, r: 0, type: 'sheep', number: 11 },
+                        { q: 0, r: 0, type: 'desert', number: null }, // Desert tile
+                        { q: 1, r: 0, type: 'brick', number: 3 },
+                        { q: 2, r: 0, type: 'wheat', number: 8 },
+
+                        // Row 3
+                        { q: -2, r: 1, type: 'ore', number: 8 },
+                        { q: -1, r: 1, type: 'wheat', number: 3 },
+                        { q: 0, r: 1, type: 'wood', number: 4 },
+                        { q: 1, r: 1, type: 'sheep', number: 5 },
+
+                        // Row 4
+                        { q: -2, r: 2, type: 'brick', number: 5 },
+                        { q: -1, r: 2, type: 'sheep', number: 6 },
+                        { q: 0, r: 2, type: 'wheat', number: 11 }
+                    ];
+
+                    PORT_DATA = [
+                        null, null, null, null, null, null, null, null,
+                        ['wood', '2:1'], ['brick', '2:1'], ['sheep', '2:1'],
+                        null, null,
+                        ['any', '3:1'],
+                        null, null,
+                        ['wheat', '2:1'],
+                        null, null,
+                        ['any', '3:1'],
+                        null, null,
+                        ['ore', '2:1'],
+                        null,
+                        ['any', '3:1'],
+                        null, null,
+                        ['any', '3:1'],
+                        null, null
+                    ];
+                    robberTile = boardTiles.find(tile => tile.type === 'desert'); // Default robber on desert
+                    // If on builder page, save this default state to its history
+                    if (!isGamePage && !isPlayerPage) {
+                        saveBuilderState();
+                    }
+                }
+                // Always re-initialize allJunctions and allEdges after boardTiles is set
+                allJunctions = getAllJunctions();
+                allEdges = getAllEdges();
+                resizeCanvas(); // Resize and draw after board data is ready
+            } catch (e) {
+                showMessage('Network error loading board state: ' + e.message + '. Displaying default board.', 'error');
+                console.error('Error loading board state from backend:', e);
+                // On network error, ensure default board is still displayed
+                boardTiles = [
+                    // Row 0
+                    { q: 0, r: -2, type: 'ore', number: 10 },
+                    { q: 1, r: -2, type: 'sheep', number: 2 },
+                    { q: 2, r: -2, type: 'wood', number: 9 },
+
+                    // Row 1
+                    { q: -1, r: -1, type: 'brick', number: 12 },
+                    { q: 0, r: -1, type: 'wheat', number: 6 },
+                    { q: 1, r: -1, type: 'ore', number: 4 },
+                    { q: 2, r: -1, type: 'wood', number: 10 },
+
+                    // Row 2
+                    { q: -2, r: 0, type: 'wood', number: 9 },
+                    { q: -1, r: 0, type: 'sheep', number: 11 },
+                    { q: 0, r: 0, type: 'desert', number: null }, // Desert tile
+                    { q: 1, r: 0, type: 'brick', number: 3 },
+                    { q: 2, r: 0, type: 'wheat', number: 8 },
+
+                    // Row 3
+                    { q: -2, r: 1, type: 'ore', number: 8 },
+                    { q: -1, r: 1, type: 'wheat', number: 3 },
+                    { q: 0, r: 1, type: 'wood', number: 4 },
+                    { q: 1, r: 1, type: 'sheep', number: 5 },
+
+                    // Row 4
+                    { q: -2, r: 2, type: 'brick', number: 5 },
+                    { q: -1, r: 2, type: 'sheep', number: 6 },
+                    { q: 0, r: 2, type: 'wheat', number: 11 }
+                ];
+
+                PORT_DATA = [
+                    null, null, null, null, null, null, null, null,
+                    ['wood', '2:1'], ['brick', '2:1'], ['sheep', '2:1'],
+                    null, null,
+                    ['any', '3:1'],
+                    null, null,
+                    ['wheat', '2:1'],
+                    null, null,
+                    ['any', '3:1'],
+                    null, null,
+                    ['ore', '2:1'],
+                    null,
+                    ['any', '3:1'],
+                    null, null,
+                    ['any', '3:1'],
+                    null, null
+                ];
+                robberTile = boardTiles.find(tile => tile.type === 'desert'); // Default robber on desert
+                allJunctions = getAllJunctions();
+                allEdges = getAllEdges();
+                resizeCanvas(); // Always attempt to resize and draw
+            }
+        }
+
+        /**
+         * Saves the current player's state to the Flask backend.
+         */
+        async function savePlayerStateToBackend() {
+            if (!PLAYER_ID) return; // Only save if a player ID is available
+
+            try {
+                const playerStateToSave = {
+                    playerName: currentPlayerState.playerName,
+                    roads: currentPlayerState.roads.map(road => ({ edge: road.edge.id, owner: road.owner })), // Save only edge ID
+                    structures: currentPlayerState.structures.map(s => ({ type: s.type, junction: s.junction.id, owner: s.owner })), // Save only junction ID
+                    hand: currentPlayerState.hand,
+                    devCards: currentPlayerState.devCards,
+                    // Note: history is not saved to backend to avoid large files,
+                    // it's for client-side undo only.
+                    robberTile: robberTile ? { q: robberTile.q, r: robberTile.r } : null // Robber position is saved with player state for simplicity for now
+                };
+
+                const response = await fetch(`/save_player_state/${PLAYER_ID}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(playerStateToSave),
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    // showMessage(result.message); // Commented out to reduce message spam
+                } else {
+                    showMessage('Error saving player state: ' + result.message, 'error');
                 }
             } catch (e) {
-                showMessage('Network error loading board state: ' + e.message, 'error');
-                console.error('Error loading board state from backend:', e);
+                showMessage('Network error saving player state: ' + e.message, 'error');
+                console.error('Error saving player state to backend:', e);
+            }
+        }
+
+        /**
+         * Loads the current player's state from the Flask backend.
+         */
+        async function loadPlayerStateFromBackend() {
+            if (!PLAYER_ID) return; // Only load if a player ID is available
+
+            try {
+                const response = await fetch(`/load_player_state/${PLAYER_ID}`);
+                const result = await response.json();
+                if (result.status === 'success' && result.player_state) {
+                    const loadedState = result.player_state;
+                    currentPlayerState.playerName = loadedState.playerName || `Player ${PLAYER_ID}`;
+                    currentPlayerState.hand = loadedState.hand || {};
+                    currentPlayerState.devCards = loadedState.devCards || [];
+
+                    // Reconstruct roads and structures from IDs
+                    // Ensure allEdges and allJunctions are populated BEFORE this step
+                    currentPlayerState.roads = (loadedState.roads || []).map(r => ({
+                        edge: allEdges.find(edge => edge.id === r.edge),
+                        owner: r.owner
+                    })).filter(r => r.edge); // Filter out any roads whose edges couldn't be found
+                    currentPlayerState.structures = (loadedState.structures || []).map(s => ({
+                        type: s.type,
+                        junction: allJunctions.find(j => j.id === s.junction),
+                        owner: s.owner
+                    })).filter(s => s.junction); // Filter out any structures whose junctions couldn't be found
+
+                    // Load robber position if present in player state (for simplicity, assuming one robber)
+                    if (loadedState.robberTile) {
+                        robberTile = boardTiles.find(t => t.q === loadedState.robberTile.q && t.r === loadedState.robberTile.r);
+                    } else {
+                        robberTile = boardTiles.find(tile => tile.type === 'desert'); // Default robber on desert
+                    }
+
+                    // Re-initialize player history after loading state
+                    currentPlayerState.history = [];
+                    savePlayerStateToHistory(); // Save the newly loaded state as the first history entry
+
+                    updatePlayerUI(); // Update UI elements
+                    showMessage(`Player ${PLAYER_ID} state loaded successfully!`);
+                } else {
+                    showMessage(`No saved state found for Player ${PLAYER_ID}. Initializing new player state.`, 'info');
+                    // Initialize default state for new player
+                    currentPlayerState = {
+                        playerName: `Player ${PLAYER_ID}`,
+                        roads: [],
+                        structures: [],
+                        hand: { 'wood': 0, 'brick': 0, 'sheep': 0, 'wheat': 0, 'ore': 0 }, // Example initial hand
+                        devCards: [],
+                        history: []
+                    };
+                    savePlayerStateToHistory(); // Save initial state to history
+                    savePlayerStateToBackend(); // Save initial state to backend
+                }
+                drawBoard(); // Redraw board after player state is loaded/initialized
+            } catch (e) {
+                showMessage('Network error loading player state: ' + e.message, 'error');
+                console.error('Error loading player state from backend:', e);
+                // Even on error, ensure default player state is set and UI updated
+                currentPlayerState = {
+                    playerName: `Player ${PLAYER_ID}`,
+                    roads: [],
+                    structures: [],
+                    hand: { 'wood': 0, 'brick': 0, 'sheep': 0, 'wheat': 0, 'ore': 0 },
+                    devCards: [],
+                    history: []
+                };
+                savePlayerStateToHistory();
+                drawBoard();
+                updatePlayerUI();
             }
         }
 
@@ -928,13 +1119,12 @@
          * @returns {Array<{x: number, y: number, id: string}>} Array of junction objects.
          */
         function getAllJunctions() {
-            const junctions = new Map(); // Use Map to store unique junctions by a string key
+            const junctions = new Map();
 
-            boardTiles.forEach(tile => { // Iterate over all tiles (inner and border)
-                const rawPixel = hexToRawPixel(tile.q, tile.r); // Use raw pixel for consistent junction calculation
+            boardTiles.forEach(tile => {
+                const rawPixel = hexToRawPixel(tile.q, tile.r);
                 const vertices = getHexVertices(rawPixel.x, rawPixel.y, TILE_RADIUS);
                 vertices.forEach(v => {
-                    // Create a unique ID for each junction based on rounded coordinates
                     const id = `${Math.round(v.x)},${Math.round(v.y)}`;
                     if (!junctions.has(id)) {
                         junctions.set(id, { x: v.x, y: v.y, id: id });
@@ -949,19 +1139,17 @@
          * @returns {Array<{x1: number, y1: number, x2: number, y2: number, id: string}>} Array of edge objects.
          */
         function getAllEdges() {
-            const edges = new Map(); // Use Map to store unique edges
+            const edges = new Map();
 
-            boardTiles.forEach(tile => { // Iterate over all tiles (inner and border)
-                const rawPixel = hexToRawPixel(tile.q, tile.r); // Use raw pixel for consistent edge calculation
+            boardTiles.forEach(tile => {
+                const rawPixel = hexToRawPixel(tile.q, tile.r);
                 const vertices = getHexVertices(rawPixel.x, rawPixel.y, TILE_RADIUS);
                 for (let i = 0; i < 6; i++) {
                     const v1 = vertices[i];
                     const v2 = vertices[(i + 1) % 6];
-                    // Create a canonical ID for each edge to avoid duplicates
-                    // Sort coordinates to ensure (x1,y1)-(x2,y2) is same as (x2,y2)-(x1,y1)
                     const id1 = `${Math.round(v1.x)},${Math.round(v1.y)}`;
                     const id2 = `${Math.round(v2.x)},${Math.round(v2.y)}`;
-                    const edgeId = [id1, id2].sort().join('-'); // Canonical ID
+                    const edgeId = [id1, id2].sort().join('-');
 
                     if (!edges.has(edgeId)) {
                         edges.set(edgeId, { x1: v1.x, y1: v1.y, x2: v2.x, y2: v2.y, id: edgeId });
@@ -970,10 +1158,6 @@
             });
             return Array.from(edges.values());
         }
-
-        // Initialize allJunctions and allEdges after hexToRawPixel is defined
-        const allJunctions = getAllJunctions();
-        const allEdges = getAllEdges();
 
         /**
          * Finds the closest junction to a given pixel coordinate.
@@ -1081,102 +1265,221 @@
             const mouseX = (event.clientX - rect.left) * scaleX;
             const mouseY = (event.clientY - rect.top) * scaleY;
 
-            let actionSuccessful = false; // Flag to track if a valid action occurred
+            let actionSuccessful = false;
 
-            // Only swap functionality is active for clicks on the board
-            if (selectedTool === 'swap') {
-                const clickedHex = pixelToHex(mouseX, mouseY);
-                const clickedTile = boardTiles.find(t => t.q === clickedHex.q && t.r === clickedHex.r);
+            if (!isGamePage && !isPlayerPage) { // Builder page logic
+                if (selectedTool === 'swap') {
+                    const clickedHex = pixelToHex(mouseX, mouseY);
+                    const clickedTile = boardTiles.find(t => t.q === clickedHex.q && t.r === clickedHex.r);
 
-                if (clickedTile) { // Can swap on any board tile
-                    const isNumberClick = isPointInNumberCircle(mouseX, mouseY, clickedTile);
-                    const currentSelectionType = isNumberClick ? 'number' : 'tile';
+                    if (clickedTile) {
+                        const isNumberClick = isPointInNumberCircle(mouseX, mouseY, clickedTile);
+                        const currentSelectionType = isNumberClick ? 'number' : 'tile';
 
-                    if (clickedTile.type === 'desert' && isNumberClick) {
-                        showMessage('Cannot swap numbers on a desert tile.', 'error');
-                        // Do not proceed with selection
-                    } else if (!selectedSwapItem1) {
-                        // First selection
-                        selectedSwapItem1 = { type: currentSelectionType, tile: clickedTile };
-                        showMessage(`First ${currentSelectionType} selected. Click another ${currentSelectionType} to swap.`);
-                    } else if (selectedSwapItem1.tile.q === clickedTile.q && selectedSwapItem1.tile.r === clickedTile.r) {
-                        // Deselect if clicking the same item again
-                        showMessage(`${selectedSwapItem1.type} deselected. Start new selection.`, 'info');
+                        if (clickedTile.type === 'desert' && isNumberClick) {
+                            showMessage('Cannot swap numbers on a desert tile.', 'error');
+                        } else if (!selectedSwapItem1) {
+                            selectedSwapItem1 = { type: currentSelectionType, tile: clickedTile };
+                            showMessage(`First ${currentSelectionType} selected. Click another ${currentSelectionType} to swap.`);
+                        } else if (selectedSwapItem1.tile.q === clickedTile.q && selectedSwapItem1.tile.r === clickedTile.r) {
+                            showMessage(`${selectedSwapItem1.type} deselected. Start new selection.`, 'info');
+                            selectedSwapItem1 = null;
+                            selectedSwapItem2 = null;
+                        } else if (selectedSwapItem1.type !== currentSelectionType) {
+                            showMessage(`Cannot swap a ${selectedSwapItem1.type} with a ${currentSelectionType}. Please select two of the same type.`, 'error');
+                            selectedSwapItem1 = { type: currentSelectionType, tile: clickedTile };
+                            selectedSwapItem2 = null;
+                        } else {
+                            selectedSwapItem2 = { type: currentSelectionType, tile: clickedTile };
+
+                            if (selectedSwapItem1.type === 'number') {
+                                const tempNumber = selectedSwapItem1.tile.number;
+                                selectedSwapItem1.tile.number = selectedSwapItem2.tile.number;
+                                selectedSwapItem2.tile.number = tempNumber;
+                                showMessage('Numbers swapped successfully!');
+                            } else if (selectedSwapItem1.type === 'tile') {
+                                const tempType = selectedSwapItem1.tile.type;
+                                const tempNumber = selectedSwapItem1.tile.number;
+
+                                selectedSwapItem1.tile.type = selectedSwapItem2.tile.type;
+                                selectedSwapItem1.tile.number = selectedSwapItem2.tile.number;
+
+                                selectedSwapItem2.tile.type = tempType;
+                                selectedSwapItem2.tile.number = tempNumber;
+                                showMessage('Tiles swapped successfully!');
+                            }
+                            actionSuccessful = true;
+                            selectedSwapItem1 = null;
+                            selectedSwapItem2 = null;
+                        }
+                    } else {
+                        showMessage('Click on a resource tile to select for swap.', 'error');
                         selectedSwapItem1 = null;
                         selectedSwapItem2 = null;
-                    } else if (selectedSwapItem1.type !== currentSelectionType) {
-                        // Mismatch in selection type, restart selection
-                        showMessage(`Cannot swap a ${selectedSwapItem1.type} with a ${currentSelectionType}. Please select two of the same type.`, 'error');
-                        selectedSwapItem1 = { type: currentSelectionType, tile: clickedTile }; // Start new selection
-                        selectedSwapItem2 = null;
                     }
-                    else {
-                        // Second selection, perform swap
-                        selectedSwapItem2 = { type: currentSelectionType, tile: clickedTile };
+                }
+            } else if (isPlayerPage) { // Player page logic for placing elements
+                // savePlayerStateToHistory(); // Save state before potential modification - moved inside specific actions
 
-                        if (selectedSwapItem1.type === 'number') {
-                            // Swap numbers
-                            const tempNumber = selectedSwapItem1.tile.number;
-                            selectedSwapItem1.tile.number = selectedSwapItem2.tile.number;
-                            selectedSwapItem2.tile.number = tempNumber;
-                            showMessage('Numbers swapped successfully!');
-                        } else if (selectedSwapItem1.type === 'tile') {
-                            // Swap entire tiles (type and number)
-                            const tempType = selectedSwapItem1.tile.type;
-                            const tempNumber = selectedSwapItem1.tile.number;
-
-                            selectedSwapItem1.tile.type = selectedSwapItem2.tile.type;
-                            selectedSwapItem1.tile.number = selectedSwapItem2.tile.number;
-
-                            selectedSwapItem2.tile.type = tempType;
-                            selectedSwapItem2.tile.number = tempNumber;
-                            showMessage('Tiles swapped successfully!');
+                if (selectedPlayerTool === 'house') {
+                    const clickedJunction = getClosestJunction(mouseX, mouseY);
+                    if (clickedJunction) {
+                        // Check if a structure already exists at this junction (any player)
+                        const existingStructure = currentPlayerState.structures.find(s => s.junction.id === clickedJunction.id); // This needs to check ALL players' structures
+                        // For now, it only checks current player's structures, which is fine for initial single player
+                        if (existingStructure) {
+                            showMessage('A structure already exists here.', 'error');
+                        } else {
+                            savePlayerStateToHistory(); // Save state before modifying
+                            currentPlayerState.structures.push({ type: 'house', junction: clickedJunction, owner: PLAYER_ID });
+                            showMessage('House placed!');
+                            actionSuccessful = true;
                         }
-                        actionSuccessful = true;
-                        selectedSwapItem1 = null; // Clear selections after successful swap
-                        selectedSwapItem2 = null;
+                    } else {
+                        showMessage('Click near a junction to place a house.', 'error');
                     }
-                } else {
-                    showMessage('Click on a resource tile to select for swap.', 'error');
-                    selectedSwapItem1 = null; // Clear any partial selection
-                    selectedSwapItem2 = null;
+                } else if (selectedPlayerTool === 'city') {
+                    const clickedJunction = getClosestJunction(mouseX, mouseY);
+                    if (clickedJunction) {
+                        // Check if a house exists at this junction, owned by current player
+                        const existingHouse = currentPlayerState.structures.find(s => s.junction.id === clickedJunction.id && s.type === 'house' && s.owner === PLAYER_ID);
+                        if (existingHouse) {
+                            savePlayerStateToHistory(); // Save state before modifying
+                            existingHouse.type = 'city'; // Upgrade house to city
+                            showMessage('City placed!');
+                            actionSuccessful = true;
+                        } else {
+                            showMessage('You must have a house here to build a city.', 'error');
+                        }
+                    } else {
+                        showMessage('Click near a junction with your house to build a city.', 'error');
+                    }
+                } else if (selectedPlayerTool === 'road') {
+                    const clickedEdge = getClosestEdge(mouseX, mouseY);
+                    if (clickedEdge) {
+                        // Check if a road already exists on this edge (any player)
+                        const existingRoad = currentPlayerState.roads.find(r => r.edge.id === clickedEdge.id); // This needs to check ALL players' roads
+                        // For now, it only checks current player's roads, which is fine for initial single player
+                        if (existingRoad) {
+                            showMessage('A road already exists here.', 'error');
+                        } else {
+                            savePlayerStateToHistory(); // Save state before modifying
+                            currentPlayerState.roads.push({ edge: clickedEdge, owner: PLAYER_ID });
+                            showMessage('Road placed!');
+                            actionSuccessful = true;
+                        }
+                    } else {
+                        showMessage('Click near an edge to place a road.', 'error');
+                    }
+                } else if (selectedPlayerTool === 'robber') {
+                    const clickedHex = pixelToHex(mouseX, mouseY);
+                    const clickedTile = boardTiles.find(t => t.q === clickedHex.q && t.r === clickedHex.r);
+                    if (clickedTile) {
+                        if (clickedTile.type === 'desert') {
+                            showMessage('Cannot place robber on desert tile. Robber is already there by default.', 'error');
+                        } else if (robberTile && robberTile.q === clickedTile.q && robberTile.r === clickedTile.r) {
+                            showMessage('Robber is already on this tile.', 'info');
+                        } else {
+                            savePlayerStateToHistory(); // Save state before modifying
+                            robberTile = clickedTile;
+                            showMessage(`Robber moved to ${clickedTile.type} tile.`);
+                            actionSuccessful = true;
+                        }
+                    } else {
+                        showMessage('Click on a tile to move the robber.', 'error');
+                    }
                 }
             }
 
             if (actionSuccessful) {
-                saveState(); // Save state only if a valid action was performed
+                if (isPlayerPage) {
+                    savePlayerStateToBackend(); // Save player state to backend after action
+                } else if (!isGamePage && !isPlayerPage) { // Builder page
+                    // saveBuilderState() is called by individual builder functions like shuffle, undo
+                    // No need to call here for click actions like swap, as it's handled within swap logic
+                }
             }
             drawBoard(); // Redraw board after any change
         });
 
-        // Event listeners for control buttons
-        document.getElementById('tool-select').addEventListener('click', (event) => {
-            const target = event.target;
-            if (target.classList.contains('btn-tool')) {
-                // Deselect all tool buttons first
-                document.querySelectorAll('.btn-tool').forEach(btn => btn.classList.remove('selected'));
-                // Add 'selected' to the clicked button
-                target.classList.add('selected');
 
-                selectedTool = target.dataset.tool; // Update selectedTool for click handler
+        // Event listeners for control buttons (Builder Page)
+        if (!isGamePage && !isPlayerPage) { // Only attach these listeners on the builder page
+            document.getElementById('tool-select').addEventListener('click', (event) => {
+                const target = event.target;
+                if (target.classList.contains('btn-tool')) {
+                    document.querySelectorAll('.btn-tool').forEach(btn => btn.classList.remove('selected'));
+                    target.classList.add('selected');
 
-                // Handle specific button actions
-                if (selectedTool === 'undo') {
-                    undoLastAction();
-                } else if (selectedTool === 'shuffle-cells') {
-                    shuffleCells();
-                } else if (selectedTool === 'shuffle-numbers') {
-                    shuffleNumbers();
-                } else if (selectedTool === 'save-board') {
-                    saveBoardToBackend(); // Call backend save
-                } else if (selectedTool === 'load-board') {
-                    loadBoardFromBackend(); // Call backend load
+                    selectedTool = target.dataset.tool;
+
+                    if (selectedTool === 'undo') {
+                        undoBuilderLastAction();
+                    } else if (selectedTool === 'shuffle-cells') {
+                        shuffleCells();
+                    } else if (selectedTool === 'shuffle-numbers') {
+                        shuffleNumbers();
+                    } else if (selectedTool === 'save-board') {
+                        saveBoardToBackend();
+                    } else if (selectedTool === 'load-board') {
+                        loadBoardFromBackend();
+                    }
+                    showMessage(`Selected tool: ${selectedTool}`);
+                    drawBoard();
                 }
-                // For 'swap', just update selectedTool and redraw
-                showMessage(`Selected tool: ${selectedTool}`);
-                drawBoard(); // Redraw to clear swap highlights if tool changes or for new state
-            }
-        });
+            });
+        }
+
+        // Event listeners for player page specific controls
+        if (isPlayerPage) { // Only attach these listeners on player pages
+            document.getElementById('savePlayerNameBtn').addEventListener('click', () => {
+                const newName = document.getElementById('playerNameInput').value.trim();
+                if (newName) {
+                    currentPlayerState.playerName = newName;
+                    updatePlayerUI();
+                    savePlayerStateToBackend();
+                    showMessage('Player name saved!');
+                } else {
+                    showMessage('Player name cannot be empty.', 'error');
+                }
+            });
+
+            document.getElementById('player-tool-select').addEventListener('click', (event) => {
+                const target = event.target;
+                if (target.classList.contains('btn-tool')) {
+                    document.querySelectorAll('#player-tool-select .btn-tool').forEach(btn => btn.classList.remove('selected'));
+                    target.classList.add('selected');
+                    selectedPlayerTool = target.dataset.tool;
+
+                    if (selectedPlayerTool === 'undo-player') {
+                        undoPlayerLastAction();
+                    } else {
+                        // For other tools like house, city, road, robber, the click handler on canvas will take over
+                        showMessage(`Selected tool: ${selectedPlayerTool}. Click on the board to place.`);
+                    }
+                }
+            });
+
+            // Card action buttons (for future implementation, just show message for now)
+            document.querySelector('.card-buttons').addEventListener('click', (event) => {
+                const target = event.target;
+                if (target.classList.contains('btn-tool')) {
+                    const action = target.dataset.tool;
+                    showMessage(`Action: ${action} (To be implemented)`);
+                    // Example: Add a resource card for testing
+                    if (action === 'get-dev-card') {
+                        // For demonstration, let's add a random resource
+                        const resources = ['wood', 'brick', 'sheep', 'wheat', 'ore'];
+                        const randomResource = resources[Math.floor(Math.random() * resources.length)];
+                        currentPlayerState.hand[randomResource] = (currentPlayerState.hand[randomResource] || 0) + 1;
+                        updatePlayerUI();
+                        savePlayerStateToBackend();
+                        showMessage(`Got 1 ${randomResource} card.`);
+                    }
+                }
+            });
+        }
+
 
         /**
          * Resizes the canvas and recalculates offsets to center the board.
@@ -1200,34 +1503,114 @@
 
             // Calculate raw bounding box of the hex tiles to determine true board dimensions
             let minRawX = Infinity, maxRawX = -Infinity, minRawY = Infinity, maxRawY = -Infinity;
-            boardTiles.forEach(tile => {
-                const rawPixel = hexToRawPixel(tile.q, tile.r);
-                const vertices = getHexVertices(rawPixel.x, rawPixel.y, TILE_RADIUS);
-                vertices.forEach(v => {
-                    minRawX = Math.min(minRawX, v.x);
-                    maxRawX = Math.max(maxRawX, v.x);
-                    minRawY = Math.min(minRawY, v.y);
-                    maxRawY = Math.max(maxRawY, v.y);
+            if (boardTiles.length > 0) { // Only calculate if boardTiles has data
+                boardTiles.forEach(tile => {
+                    const rawPixel = hexToRawPixel(tile.q, tile.r);
+                    const vertices = getHexVertices(rawPixel.x, rawPixel.y, TILE_RADIUS);
+                    vertices.forEach(v => {
+                        minRawX = Math.min(minRawX, v.x);
+                        maxRawX = Math.max(maxRawX, v.x);
+                        minRawY = Math.min(minRawY, v.y);
+                        maxRawY = Math.max(maxRawY, v.y);
+                    });
                 });
-            });
 
-            const boardActualWidth = maxRawX - minRawX;
-            const boardActualHeight = maxRawY - minRawY;
+                const boardActualWidth = maxRawX - minRawX;
+                const boardActualHeight = maxRawY - minRawY;
 
-            // Calculate offset to center the board within the canvas
-            offsetX = (canvas.width / 2) - (minRawX + boardActualWidth / 2);
-            offsetY = (canvas.height / 2) - (minRawY + boardActualHeight / 2);
+                // Calculate offset to center the board within the canvas
+                offsetX = (canvas.width / 2) - (minRawX + boardActualWidth / 2);
+                offsetY = (canvas.height / 2) - (minRawY + boardActualHeight / 2);
 
-            // Store global board center for port calculations
-            boardCenterRawX = minRawX + boardActualWidth / 2;
-            boardCenterRawY = minRawY + boardActualHeight / 2;
+                // Store global board center for port calculations
+                boardCenterRawX = minRawX + boardActualWidth / 2;
+                boardCenterRawY = minRawY + boardActualHeight / 2;
+            } else {
+                // If no tiles, center at 0,0 and set offsets to canvas center
+                offsetX = canvas.width / 2;
+                offsetY = canvas.height / 2;
+                boardCenterRawX = 0;
+                boardCenterRawY = 0;
+            }
 
             drawBoard();
         }
 
-        // Initial setup and resize on load
-        window.addEventListener('load', () => {
-            preloadImages(); // Start preloading images and then call resizeCanvas/drawBoard
-            saveState(); // Save the initial empty board state
+        /**
+         * Updates the player-specific UI elements (name, hand, dev cards).
+         */
+        function updatePlayerUI() {
+            if (!isPlayerPage) return;
+
+            // Update player name display
+            const playerNameInput = document.getElementById('playerNameInput');
+            const playerNameDisplay = document.getElementById('playerNameDisplay');
+            if (playerNameInput) playerNameInput.value = currentPlayerState.playerName;
+            if (playerNameDisplay) playerNameDisplay.textContent = currentPlayerState.playerName;
+
+
+            // Update hand cards display
+            const handCardsDiv = document.getElementById('handCards');
+            if (handCardsDiv) {
+                handCardsDiv.innerHTML = ''; // Clear existing cards
+                let handCount = 0;
+                for (const resourceType in currentPlayerState.hand) {
+                    const count = currentPlayerState.hand[resourceType];
+                    if (count > 0) {
+                        const cardItem = document.createElement('div');
+                        cardItem.classList.add('card-item');
+                        cardItem.textContent = `${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)}: ${count}`;
+                        handCardsDiv.appendChild(cardItem);
+                        handCount += count;
+                    }
+                }
+                document.getElementById('handCardCount').textContent = handCount;
+            }
+
+
+            // Update dev cards display
+            const devCardsDiv = document.getElementById('devCards');
+            if (devCardsDiv) {
+                devCardsDiv.innerHTML = ''; // Clear existing cards
+                currentPlayerState.devCards.forEach(card => {
+                    const cardItem = document.createElement('div');
+                    cardItem.classList.add('card-item');
+                    cardItem.textContent = card.charAt(0).toUpperCase() + card.slice(1);
+                    devCardsDiv.appendChild(cardItem);
+                });
+                document.getElementById('devCardCount').textContent = currentPlayerState.devCards.length;
+            }
+        }
+
+
+        /**
+         * Function to be called specifically when a Catan Player page loads.
+         * This ensures player-specific data is loaded after the board map.
+         */
+        async function onCatanPlayerPageLoad() {
+            console.log(`Catan Player ${PLAYER_ID} page has loaded.`);
+            // Load player-specific state AFTER the main board data is available
+            await loadPlayerStateFromBackend();
+            updatePlayerUI(); // Update UI with loaded player data
+            // Initial save of player state to history (after loading from backend or initializing)
+            // This ensures the first "undo" works correctly if no prior state was saved
+            savePlayerStateToHistory();
+        }
+
+
+        // Initial setup and resize on load (common to all pages)
+        window.addEventListener('load', async () => {
+            // First, preload images and load the main board state (tiles, ports, robber)
+            await preloadImages();
+            // loadBoardFromBackend() is called by preloadImages() once images are ready.
+            // After loadBoardFromBackend completes, allJunctions and allEdges are initialized.
+
+            if (!isGamePage && !isPlayerPage) { // Builder page specific actions
+                // saveBuilderState() is already called within loadBoardFromBackend for builder page
+                // to save the initial state for undo.
+            } else if (isPlayerPage) { // Player page specific actions
+                onCatanPlayerPageLoad(); // Call player-specific load function
+            }
+            // No specific action needed for isGamePage (viewer) here, as loadBoardFromBackend already draws it.
         });
         window.addEventListener('resize', resizeCanvas);

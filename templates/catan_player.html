@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catan Player {{ player_id }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css') }}">
+</head>
+<body>
+    <div class="container player-page-container">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">Catan Player: <span id="playerNameDisplay">Player {{ player_id }}</span></h1>
+        <p class="text-gray-600 text-center mb-6">Manage your turns and build your empire!</p>
+
+        <div class="player-info-section">
+            <div class="player-name-input-group">
+                <label for="playerNameInput" class="text-gray-700 font-semibold">Your Name:</label>
+                <input type="text" id="playerNameInput" placeholder="Enter your name" class="input-field">
+                <button id="savePlayerNameBtn" class="btn btn-tool">Save Name</button>
+            </div>
+        </div>
+
+        <div class="game-actions-section">
+            <div class="button-group tool-buttons" id="player-tool-select">
+                <button class="btn btn-tool" data-tool="house">Add House</button>
+                <button class="btn btn-tool" data-tool="city">Add City</button>
+                <button class="btn btn-tool" data-tool="road">Add Road</button>
+                <button class="btn btn-tool" data-tool="robber">Move Robber</button>
+                <button class="btn btn-tool" data-tool="undo-player">Undo My Last Action</button>
+            </div>
+
+            <div class="button-group card-buttons">
+                <button class="btn btn-tool" data-tool="play-dev-card">Play Dev Card</button>
+                <button class="btn btn-tool" data-tool="get-dev-card">Get Dev Card</button>
+                <button class="btn btn-tool" data-tool="discard-card">Discard Card</button>
+                <button class="btn btn-tool" data-tool="give-card">Give Card</button>
+            </div>
+        </div>
+
+        <canvas id="catanBoard"></canvas>
+        <div id="messageBox" class="message-box hidden"></div>
+
+        <div class="player-decks-section">
+            <div class="deck-display">
+                <h3 class="text-xl font-semibold text-gray-700">Your Hand (<span id="handCardCount">0</span>)</h3>
+                <div id="handCards" class="card-list">
+                    <!-- Resource cards will be displayed here -->
+                </div>
+            </div>
+            <div class="deck-display">
+                <h3 class="text-xl font-semibold text-gray-700">Development Cards (<span id="devCardCount">0</span>)</h3>
+                <div id="devCards" class="card-list">
+                    <!-- Development cards will be displayed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/catan_board.js') }}">
+    </script>
+</body>
+</html>
