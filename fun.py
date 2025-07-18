@@ -11,7 +11,7 @@ from storage import *
 #CATAN_DB_FILE = "catan.db"
 JSON_STATE_FILE = "catan_board_state.json"
 DB = "flights.db"
-
+PLAYER_STATE_DIR = "catan_player_states" # Define the directory for player states
 
 
 def is_request_from_localhost():

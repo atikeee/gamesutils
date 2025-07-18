@@ -1,11 +1,11 @@
-const canvas = document.getElementById('catanBoard');
+        const canvas = document.getElementById('catanBoard');
         const ctx = canvas.getContext('2d');
         const messageBox = document.getElementById('messageBox');
 
         const isGamePage = window.location.pathname === '/catan_game';
         const isPlayerPage = window.location.pathname.startsWith('/catan_player/');
 
-        const PLAYER_ID = isPlayerPage ? window.PLAYER_ID : null;
+        const PLAYER_ID = isPlayerPage ? 'player' + window.PLAYER_ID : null;
 
         const HEX_SIZE = 80;
         const TILE_RADIUS = HEX_SIZE;
@@ -47,6 +47,13 @@ const canvas = document.getElementById('catanBoard');
         let PORT_DATA = [];
         let robberTile = null;
 
+        let allPlayersData = {
+            'player1': { roads: [], structures: [] },
+            'player2': { roads: [], structures: [] },
+            'player3': { roads: [], structures: [] },
+            'player4': { roads: [], structures: [] }
+        };
+
         let currentPlayerState = {
             playerName: `Player ${PLAYER_ID || 'Unknown'}`,
             roads: [],
@@ -55,6 +62,8 @@ const canvas = document.getElementById('catanBoard');
             devCards: [],
             history: []
         };
+
+        let globalDevCardDeck = [];
 
         let offsetX = 0;
         let offsetY = 0;
@@ -70,10 +79,14 @@ const canvas = document.getElementById('catanBoard');
         let selectedPlayerTool = null;
         let selectedRoadStartJunction = null;
 
-
         let allJunctions = [];
         let allEdges = [];
 
+        const confirmationModal = document.getElementById('confirmationModal');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+        const modalCancelBtn = document.getElementById('modalCancelBtn');
+        let modalResolve;
 
         function showMessage(message, type = 'info') {
             messageBox.textContent = message;
@@ -82,6 +95,30 @@ const canvas = document.getElementById('catanBoard');
             setTimeout(() => {
                 messageBox.classList.add('hidden');
             }, 3000);
+        }
+
+        function showConfirmation(message) {
+            modalMessage.textContent = message;
+            confirmationModal.classList.remove('hidden');
+            return new Promise(resolve => {
+                modalResolve = resolve;
+            });
+        }
+
+        function hideConfirmation() {
+            confirmationModal.classList.add('hidden');
+        }
+
+        if (modalConfirmBtn && modalCancelBtn) {
+            modalConfirmBtn.addEventListener('click', () => {
+                hideConfirmation();
+                if (modalResolve) modalResolve(true);
+            });
+
+            modalCancelBtn.addEventListener('click', () => {
+                hideConfirmation();
+                if (modalResolve) modalResolve(false);
+            });
         }
 
         function preloadImages() {
@@ -464,18 +501,22 @@ const canvas = document.getElementById('catanBoard');
                 }
             });
 
-            currentPlayerState.roads.forEach(road => {
-                drawRoad(ctx, road.edge, PLAYER_COLORS[road.owner]);
-            });
-
-            currentPlayerState.structures.forEach(structure => {
-                const ownerColor = PLAYER_COLORS[structure.owner];
-                if (structure.type === 'house') {
-                    drawHouse(ctx, structure.junction, ownerColor);
-                } else if (structure.type === 'city') {
-                    drawCity(ctx, structure.junction, ownerColor);
+            for (const playerId in allPlayersData) {
+                const playerData = allPlayersData[playerId];
+                if (playerData) {
+                    playerData.roads.forEach(road => {
+                        drawRoad(ctx, road.edge, PLAYER_COLORS[road.owner]);
+                    });
+                    playerData.structures.forEach(structure => {
+                        const ownerColor = PLAYER_COLORS[structure.owner];
+                        if (structure.type === 'house') {
+                            drawHouse(ctx, structure.junction, ownerColor);
+                        } else if (structure.type === 'city') {
+                            drawCity(ctx, structure.junction, ownerColor);
+                        }
+                    });
                 }
-            });
+            }
 
             if (robberTile) {
                 drawRobber(ctx, robberTile);
@@ -558,7 +599,7 @@ const canvas = document.getElementById('catanBoard');
             if (isGamePage || isPlayerPage) return;
 
             builderHistoryStack.push({
-                tileStates: boardTiles.map(tile => ({ q: tile.q, r: tile.r, type: tile.type, number: tile.number })),
+                tileStates: JSON.parse(JSON.stringify(boardTiles.map(tile => ({ q: tile.q, r: tile.r, type: tile.type, number: tile.number })))),
                 portData: JSON.parse(JSON.stringify(PORT_DATA)),
                 robber: robberTile ? JSON.parse(JSON.stringify(robberTile)) : null,
             });
@@ -595,8 +636,8 @@ const canvas = document.getElementById('catanBoard');
             if (!isPlayerPage) return;
 
             currentPlayerState.history.push({
-                roads: JSON.parse(JSON.stringify(currentPlayerState.roads)),
-                structures: JSON.parse(JSON.stringify(currentPlayerState.structures)),
+                roads: JSON.parse(JSON.stringify(allPlayersData[PLAYER_ID].roads)),
+                structures: JSON.parse(JSON.stringify(allPlayersData[PLAYER_ID].structures)),
                 robber: robberTile ? JSON.parse(JSON.stringify(robberTile)) : null
             });
         }
@@ -607,9 +648,13 @@ const canvas = document.getElementById('catanBoard');
             if (currentPlayerState.history.length > 1) {
                 currentPlayerState.history.pop();
                 const prevState = currentPlayerState.history[currentPlayerState.history.length - 1];
-                currentPlayerState.roads = JSON.parse(JSON.stringify(prevState.roads));
-                currentPlayerState.structures = JSON.parse(JSON.stringify(prevState.structures));
+
+                allPlayersData[PLAYER_ID].roads = JSON.parse(JSON.stringify(prevState.roads));
+                allPlayersData[PLAYER_ID].structures = JSON.parse(JSON.stringify(prevState.structures));
                 robberTile = prevState.robber ? JSON.parse(JSON.stringify(prevState.robber)) : null;
+
+                currentPlayerState.roads = JSON.parse(JSON.stringify(allPlayersData[PLAYER_ID].roads));
+                currentPlayerState.structures = JSON.parse(JSON.stringify(allPlayersData[PLAYER_ID].structures));
 
                 showMessage('Your last action undone.');
                 drawBoard();
@@ -618,7 +663,6 @@ const canvas = document.getElementById('catanBoard');
                 showMessage('No more actions to undo for this player.', 'error');
             }
         }
-
 
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
@@ -712,23 +756,19 @@ const canvas = document.getElementById('catanBoard');
                         { q: 0, r: -2, type: 'ore', number: 10 },
                         { q: 1, r: -2, type: 'sheep', number: 2 },
                         { q: 2, r: -2, type: 'wood', number: 9 },
-
                         { q: -1, r: -1, type: 'brick', number: 12 },
                         { q: 0, r: -1, type: 'wheat', number: 6 },
                         { q: 1, r: -1, type: 'ore', number: 4 },
                         { q: 2, r: -1, type: 'wood', number: 10 },
-
                         { q: -2, r: 0, type: 'wood', number: 9 },
                         { q: -1, r: 0, type: 'sheep', number: 11 },
                         { q: 0, r: 0, type: 'desert', number: null },
                         { q: 1, r: 0, type: 'brick', number: 3 },
                         { q: 2, r: 0, type: 'wheat', number: 8 },
-
                         { q: -2, r: 1, type: 'ore', number: 8 },
                         { q: -1, r: 1, type: 'wheat', number: 3 },
                         { q: 0, r: 1, type: 'wood', number: 4 },
                         { q: 1, r: 1, type: 'sheep', number: 5 },
-
                         { q: -2, r: 2, type: 'brick', number: 5 },
                         { q: -1, r: 2, type: 'sheep', number: 6 },
                         { q: 0, r: 2, type: 'wheat', number: 11 }
@@ -766,23 +806,19 @@ const canvas = document.getElementById('catanBoard');
                     { q: 0, r: -2, type: 'ore', number: 10 },
                     { q: 1, r: -2, type: 'sheep', number: 2 },
                     { q: 2, r: -2, type: 'wood', number: 9 },
-
                     { q: -1, r: -1, type: 'brick', number: 12 },
                     { q: 0, r: -1, type: 'wheat', number: 6 },
                     { q: 1, r: -1, type: 'ore', number: 4 },
                     { q: 2, r: -1, type: 'wood', number: 10 },
-
                     { q: -2, r: 0, type: 'wood', number: 9 },
                     { q: -1, r: 0, type: 'sheep', number: 11 },
                     { q: 0, r: 0, type: 'desert', number: null },
                     { q: 1, r: 0, type: 'brick', number: 3 },
                     { q: 2, r: 0, type: 'wheat', number: 8 },
-
                     { q: -2, r: 1, type: 'ore', number: 8 },
                     { q: -1, r: 1, type: 'wheat', number: 3 },
                     { q: 0, r: 1, type: 'wood', number: 4 },
                     { q: 1, r: 1, type: 'sheep', number: 5 },
-
                     { q: -2, r: 2, type: 'brick', number: 5 },
                     { q: -1, r: 2, type: 'sheep', number: 6 },
                     { q: 0, r: 2, type: 'wheat', number: 11 }
@@ -818,8 +854,8 @@ const canvas = document.getElementById('catanBoard');
             try {
                 const playerStateToSave = {
                     playerName: currentPlayerState.playerName,
-                    roads: currentPlayerState.roads.map(road => ({ edge: road.edge.id, owner: road.owner })),
-                    structures: currentPlayerState.structures.map(s => ({ type: s.type, junction: s.junction.id, owner: s.owner })),
+                    roads: allPlayersData[PLAYER_ID].roads.map(road => ({ edge: road.edge.id, owner: road.owner })),
+                    structures: allPlayersData[PLAYER_ID].structures.map(s => ({ type: s.type, junction: s.junction.id, owner: s.owner })),
                     hand: currentPlayerState.hand,
                     devCards: currentPlayerState.devCards,
                     robberTile: robberTile ? { q: robberTile.q, r: robberTile.r } : null
@@ -835,11 +871,12 @@ const canvas = document.getElementById('catanBoard');
                 const result = await response.json();
                 if (result.status === 'success') {
                 } else {
+                    console.error('Error saving player state:', result.message);
                     showMessage('Error saving player state: ' + result.message, 'error');
                 }
             } catch (e) {
+                console.error('Network error saving player state:', e);
                 showMessage('Network error saving player state: ' + e.message, 'error');
-                console.error('Error saving player state to backend:', e);
             }
         }
 
@@ -855,15 +892,18 @@ const canvas = document.getElementById('catanBoard');
                     currentPlayerState.hand = loadedState.hand || {};
                     currentPlayerState.devCards = loadedState.devCards || [];
 
-                    currentPlayerState.roads = (loadedState.roads || []).map(r => ({
+                    allPlayersData[PLAYER_ID].roads = (loadedState.roads || []).map(r => ({
                         edge: allEdges.find(edge => edge.id === r.edge),
                         owner: r.owner
                     })).filter(r => r.edge);
-                    currentPlayerState.structures = (loadedState.structures || []).map(s => ({
+                    allPlayersData[PLAYER_ID].structures = (loadedState.structures || []).map(s => ({
                         type: s.type,
                         junction: allJunctions.find(j => j.id === s.junction),
                         owner: s.owner
                     })).filter(s => s.junction);
+
+                    currentPlayerState.roads = JSON.parse(JSON.stringify(allPlayersData[PLAYER_ID].roads));
+                    currentPlayerState.structures = JSON.parse(JSON.stringify(allPlayersData[PLAYER_ID].structures));
 
                     if (loadedState.robberTile) {
                         robberTile = boardTiles.find(t => t.q === loadedState.robberTile.q && t.r === loadedState.robberTile.r);
@@ -886,6 +926,10 @@ const canvas = document.getElementById('catanBoard');
                         devCards: [],
                         history: []
                     };
+                    allPlayersData[PLAYER_ID] = {
+                        roads: [],
+                        structures: []
+                    };
                     savePlayerStateToHistory();
                     savePlayerStateToBackend();
                 }
@@ -901,12 +945,15 @@ const canvas = document.getElementById('catanBoard');
                     devCards: [],
                     history: []
                 };
+                allPlayersData[PLAYER_ID] = {
+                    roads: [],
+                    structures: []
+                };
                 savePlayerStateToHistory();
                 drawBoard();
                 updatePlayerUI();
             }
         }
-
 
         function getAllJunctions() {
             const junctions = new Map();
@@ -1015,7 +1062,6 @@ const canvas = document.getElementById('catanBoard');
             return dist < NUMBER_RADIUS;
         }
 
-
         canvas.addEventListener('click', (event) => {
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
@@ -1080,12 +1126,20 @@ const canvas = document.getElementById('catanBoard');
                 if (selectedPlayerTool === 'house') {
                     const clickedJunction = getClosestJunction(mouseX, mouseY);
                     if (clickedJunction) {
-                        const existingStructure = currentPlayerState.structures.find(s => s.junction.id === clickedJunction.id);
+                        let existingStructure = false;
+                        for (const pId in allPlayersData) {
+                            if (allPlayersData[pId].structures.some(s => s.junction.id === clickedJunction.id)) {
+                                existingStructure = true;
+                                break;
+                            }
+                        }
+
                         if (existingStructure) {
                             showMessage('A structure already exists here.', 'error');
                         } else {
                             savePlayerStateToHistory();
-                            currentPlayerState.structures.push({ type: 'house', junction: clickedJunction, owner: PLAYER_ID });
+                            allPlayersData[PLAYER_ID].structures.push({ type: 'house', junction: clickedJunction, owner: PLAYER_ID });
+                            currentPlayerState.structures = JSON.parse(JSON.stringify(allPlayersData[PLAYER_ID].structures));
                             showMessage('House placed!');
                             actionSuccessful = true;
                         }
@@ -1095,10 +1149,11 @@ const canvas = document.getElementById('catanBoard');
                 } else if (selectedPlayerTool === 'city') {
                     const clickedJunction = getClosestJunction(mouseX, mouseY);
                     if (clickedJunction) {
-                        const existingHouse = currentPlayerState.structures.find(s => s.junction.id === clickedJunction.id && s.type === 'house' && s.owner === PLAYER_ID);
+                        const existingHouse = allPlayersData[PLAYER_ID].structures.find(s => s.junction.id === clickedJunction.id && s.type === 'house' && s.owner === PLAYER_ID);
                         if (existingHouse) {
                             savePlayerStateToHistory();
                             existingHouse.type = 'city';
+                            currentPlayerState.structures = JSON.parse(JSON.stringify(allPlayersData[PLAYER_ID].structures));
                             showMessage('City placed!');
                             actionSuccessful = true;
                         } else {
@@ -1110,12 +1165,20 @@ const canvas = document.getElementById('catanBoard');
                 } else if (selectedPlayerTool === 'road') {
                     const clickedEdge = getClosestEdge(mouseX, mouseY);
                     if (clickedEdge) {
-                        const existingRoad = currentPlayerState.roads.find(r => r.edge.id === clickedEdge.id);
+                        let existingRoad = false;
+                        for (const pId in allPlayersData) {
+                            if (allPlayersData[pId].roads.some(r => r.edge.id === clickedEdge.id)) {
+                                existingRoad = true;
+                                break;
+                            }
+                        }
+
                         if (existingRoad) {
                             showMessage('A road already exists here.', 'error');
                         } else {
                             savePlayerStateToHistory();
-                            currentPlayerState.roads.push({ edge: clickedEdge, owner: PLAYER_ID });
+                            allPlayersData[PLAYER_ID].roads.push({ edge: clickedEdge, owner: PLAYER_ID });
+                            currentPlayerState.roads = JSON.parse(JSON.stringify(allPlayersData[PLAYER_ID].roads));
                             showMessage('Road placed!');
                             actionSuccessful = true;
                         }
@@ -1126,9 +1189,7 @@ const canvas = document.getElementById('catanBoard');
                     const clickedHex = pixelToHex(mouseX, mouseY);
                     const clickedTile = boardTiles.find(t => t.q === clickedHex.q && t.r === clickedHex.r);
                     if (clickedTile) {
-                        if (clickedTile.type === 'desert') {
-                            showMessage('Cannot place robber on desert tile. Robber is already there by default.', 'error');
-                        } else if (robberTile && robberTile.q === clickedTile.q && robberTile.r === clickedTile.r) {
+                        if (robberTile && robberTile.q === clickedTile.q && robberTile.r === clickedTile.r) {
                             showMessage('Robber is already on this tile.', 'info');
                         } else {
                             savePlayerStateToHistory();
@@ -1149,7 +1210,6 @@ const canvas = document.getElementById('catanBoard');
             }
             drawBoard();
         });
-
 
         if (!isGamePage && !isPlayerPage) {
             document.getElementById('tool-select').addEventListener('click', (event) => {
@@ -1210,18 +1270,66 @@ const canvas = document.getElementById('catanBoard');
                 if (target.classList.contains('btn-tool')) {
                     const action = target.dataset.tool;
                     showMessage(`Action: ${action} (To be implemented)`);
-                    if (action === 'get-dev-card') {
-                        const resources = ['wood', 'brick', 'sheep', 'wheat', 'ore'];
-                        const randomResource = resources[Math.floor(Math.random() * resources.length)];
-                        currentPlayerState.hand[randomResource] = (currentPlayerState.hand[randomResource] || 0) + 1;
+                }
+            });
+
+            const resourceCardButtons = document.querySelectorAll('.resource-card-btn');
+            resourceCardButtons.forEach(button => {
+                button.addEventListener('click', async (event) => {
+                    const resourceType = event.target.dataset.resourceType;
+                    const confirmed = await showConfirmation(`Do you want to take 1 ${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)} card?`);
+                    if (confirmed) {
+                        savePlayerStateToHistory();
+                        currentPlayerState.hand[resourceType] = (currentPlayerState.hand[resourceType] || 0) + 1;
                         updatePlayerUI();
                         savePlayerStateToBackend();
-                        showMessage(`Got 1 ${randomResource} card.`);
+                        showMessage(`You took 1 ${resourceType} card!`);
+                    } else {
+                        showMessage(`Cancelled taking ${resourceType} card.`);
                     }
+                });
+            });
+
+            const devCardButton = document.querySelector('.dev-card-btn');
+            devCardButton.addEventListener('click', async () => {
+                const confirmed = await showConfirmation('Do you want to take 1 Development card?');
+                if (confirmed) {
+                    if (globalDevCardDeck.length === 0) {
+                        initializeDevCardDeck();
+                        showMessage('Development card deck was empty, re-initialized and shuffled.');
+                    }
+                    if (globalDevCardDeck.length > 0) {
+                        savePlayerStateToHistory();
+                        const drawnCard = globalDevCardDeck.pop();
+                        currentPlayerState.devCards.push(drawnCard);
+                        updatePlayerUI();
+                        savePlayerStateToBackend();
+                        showMessage(`You drew a ${drawnCard} Development Card!`);
+                    } else {
+                        showMessage('No Development cards left in the deck.', 'error');
+                    }
+                } else {
+                    showMessage('Cancelled taking Development card.');
                 }
             });
         }
 
+        function initializeDevCardDeck() {
+            const devCardTypes = {
+                'knight': 14,
+                'victory_point': 5,
+                'road_building': 2,
+                'year_of_plenty': 2,
+                'monopoly': 2
+            };
+            globalDevCardDeck = [];
+            for (const type in devCardTypes) {
+                for (let i = 0; i < devCardTypes[type]; i++) {
+                    globalDevCardDeck.push(type);
+                }
+            }
+            shuffleArray(globalDevCardDeck);
+        }
 
         function resizeCanvas() {
             const containerWidth = canvas.parentElement.clientWidth;
@@ -1238,6 +1346,9 @@ const canvas = document.getElementById('catanBoard');
 
             canvas.width = newWidth;
             canvas.height = newHeight;
+
+            canvas.style.width = `${newWidth}px`;
+            canvas.style.height = `${newHeight}px`;
 
             let minRawX = Infinity, maxRawX = -Infinity, minRawY = Infinity, maxRawY = -Infinity;
             if (boardTiles.length > 0) {
@@ -1278,7 +1389,6 @@ const canvas = document.getElementById('catanBoard');
             if (playerNameInput) playerNameInput.value = currentPlayerState.playerName;
             if (playerNameDisplay) playerNameDisplay.textContent = currentPlayerState.playerName;
 
-
             const handCardsDiv = document.getElementById('handCards');
             if (handCardsDiv) {
                 handCardsDiv.innerHTML = '';
@@ -1296,33 +1406,30 @@ const canvas = document.getElementById('catanBoard');
                 document.getElementById('handCardCount').textContent = handCount;
             }
 
-
             const devCardsDiv = document.getElementById('devCards');
             if (devCardsDiv) {
                 devCardsDiv.innerHTML = '';
                 currentPlayerState.devCards.forEach(card => {
                     const cardItem = document.createElement('div');
                     cardItem.classList.add('card-item');
-                    cardItem.textContent = card.charAt(0).toUpperCase() + card.slice(1);
+                    cardItem.textContent = card.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
                     devCardsDiv.appendChild(cardItem);
                 });
                 document.getElementById('devCardCount').textContent = currentPlayerState.devCards.length;
             }
         }
 
-
         async function onCatanPlayerPageLoad() {
-            console.log(`Catan Player ${PLAYER_ID} page has loaded.`);
             await loadPlayerStateFromBackend();
             updatePlayerUI();
             savePlayerStateToHistory();
         }
 
-
         window.addEventListener('load', async () => {
             await preloadImages();
 
-            if (isPlayerPage) {
+            if (!isGamePage && !isPlayerPage) {
+            } else if (isPlayerPage) {
                 onCatanPlayerPageLoad();
             }
         });
