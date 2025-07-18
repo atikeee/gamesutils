@@ -38,6 +38,21 @@
             </div>
         </div>
 
+        <!-- NEW: Card Acquisition Buttons -->
+        <div class="card-acquisition-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 w-full text-center">Acquire Cards</h2>
+            <div class="button-group resource-card-buttons">
+                <button class="btn card-btn resource-card-btn" data-card-type="resource" data-resource-type="brick" style="background-position: 0% 0%;"></button>
+                <button class="btn card-btn resource-card-btn" data-card-type="resource" data-resource-type="wood" style="background-position: 25% 0%;"></button>
+                <button class="btn card-btn resource-card-btn" data-card-type="resource" data-resource-type="sheep" style="background-position: 50% 0%;"></button>
+                <button class="btn card-btn resource-card-btn" data-card-type="resource" data-resource-type="wheat" style="background-position: 75% 0%;"></button>
+                <button class="btn card-btn resource-card-btn" data-card-type="resource" data-resource-type="ore" style="background-position: 100% 0%;"></button>
+            </div>
+            <div class="button-group dev-card-button">
+                <button class="btn card-btn dev-card-btn" data-card-type="development"></button>
+            </div>
+        </div>
+
         <canvas id="catanBoard"></canvas>
         <div id="messageBox" class="message-box hidden"></div>
 
@@ -57,7 +72,18 @@
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/catan_board.js') }}">
-    </script>
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmationModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <p id="modalMessage" class="modal-message"></p>
+            <div class="modal-buttons">
+                <button id="modalConfirmBtn" class="btn btn-confirm">Confirm</button>
+                <button id="modalCancelBtn" class="btn btn-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="{{ url_for('static', filename='js/catan_board.js') }}"></script>
 </body>
 </html>

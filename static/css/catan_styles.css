@@ -1,131 +1,441 @@
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .container {
-            background-color: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-            width: 100%;
-            max-width: 1200px;
-        }
-        canvas {
-            background-color: #e0e7ff; /* Light blue background for the sea */
-            border-radius: 12px;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
-            display: block;
-            width: 100%;
-            max-width: 900px; /* Max width for the canvas */
-            height: auto; /* Maintain aspect ratio */
-            aspect-ratio: 1.2 / 1; /* Approximate aspect ratio for a Catan board */
-            border: 2px solid #a78bfa; /* Purple border */
-        }
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            justify-content: center;
-            width: 100%;
-            max-width: 800px;
-        }
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            align-items: center;
-        }
-        .control-group label {
-            font-weight: 600;
-            color: #4b5563;
-        }
-        .button-group {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .btn {
-            padding: 10px 18px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-            border: 2px solid transparent;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
-        }
-        .btn-color {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 3px solid transparent;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .btn-color.selected {
-            border-color: #6d28d9; /* Deep purple for selected color */
-            box-shadow: 0 0 0 4px rgba(109, 40, 217, 0.4);
-        }
-        .btn-tool.selected {
-            background-color: #8b5cf6; /* Purple for selected tool */
-            color: white;
-            border-color: #8b5cf6;
-        }
-        .btn-tool {
-            background-color: #e0e7ff;
-            color: #4b5563;
-            border-color: #c7d2fe;
-        }
-        .btn-tool:hover {
-            background-color: #c7d2fe;
-        }
-        .message-box {
-            background-color: #fffbeb;
-            color: #92400e;
-            padding: 12px 20px;
-            border-radius: 8px;
-            border: 1px solid #fed7aa;
-            margin-top: 15px;
-            font-size: 0.9em;
-            text-align: center;
-            width: 100%;
-            max-width: 600px;
-        }
+/* General Body and Container Styles (Common to all Catan pages) */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f0f2f5;
+    display: flex;
+    flex-direction: column; /* Changed to column to allow content flow */
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+}
+html, body {
+    height: 100%; /* Ensure html and body take full viewport height */
+    margin: 0;
+    padding: 0;
+    overflow: auto; /* Allow scrolling if content overflows */
+}
+.container {
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 1200px;
+    min-height: 100vh; /* Ensure container takes at least full viewport height */
+}
 
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .container {
-                padding: 16px;
-            }
-            .controls {
-                flex-direction: column;
-                align-items: center;
-            }
-            .button-group {
-                flex-direction: row;
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-            .btn {
-                padding: 8px 14px;
-                font-size: 0.9em;
-            }
-            .btn-color {
-                width: 35px;
-                height: 35px;
-            }
-        }
+/* Canvas Styles (Common to all Catan pages) */
+canvas {
+    background-color: #e0e7ff; /* Light blue background for the sea */
+    border-radius: 12px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+    display: block;
+    width: 100%;
+    max-width: 900px; /* Max width for the canvas */
+    height: auto; /* Maintain aspect ratio */
+    aspect-ratio: 1.2 / 1; /* Approximate aspect ratio for a Catan board */
+    border: 2px solid #a78bfa; /* Purple border */
+    flex-grow: 1; /* Allow canvas to take available space */
+}
+
+/* Control Group for Labels and Dropdowns (Used in catan_game.html) */
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+.control-group label {
+    font-weight: 600;
+    color: #4b5563;
+}
+.dropdown {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background-color: #f9fafb;
+    font-size: 1em;
+    color: #374151;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    transition: all 0.2s ease-in-out;
+}
+.dropdown:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+/* Message Box Styles (Common to all Catan pages) */
+.message-box {
+    background-color: #fffbeb;
+    color: #92400e;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 1px solid #fed7aa;
+    margin-top: 15px;
+    font-size: 0.9em;
+    text-align: center;
+    width: 100%;
+    max-width: 600px;
+}
+
+/* Button Group Styles (Common for builder and player pages) */
+.button-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.btn {
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border: 2px solid transparent;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* Tool Button Styles (Used in builder and player pages for actions) */
+.btn-tool {
+    background-color: #6366f1; /* Indigo 500 */
+    color: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: none;
+}
+.btn-tool:hover {
+    background-color: #4f46e5; /* Indigo 600 */
+    transform: translateY(-1px);
+}
+.btn-tool.selected {
+    background-color: #4338ca; /* Indigo 700 */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: translateY(0);
+}
+.btn-tool:active {
+    background-color: #3730a3; /* Indigo 800 */
+    transform: translateY(1px);
+}
+
+/* Specific Styles for catan_game.html */
+.game-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    width: 100%;
+    max-width: 800px;
+    margin-top: 20px;
+}
+
+/* Specific Styles for catan.html (Board Builder) */
+.controls { /* This class is used in catan.html for the button group */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    width: 100%;
+    max-width: 800px;
+}
+/* Color selection buttons for the builder page (if implemented) */
+.btn-color {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.btn-color.selected {
+    border-color: #6d28d9; /* Deep purple for selected color */
+    box-shadow: 0 0 0 4px rgba(109, 40, 217, 0.4);
+}
+
+
+/* New Styles for catan_player.html */
+.player-page-container {
+    padding-top: 30px; /* Adjust padding for player page */
+    padding-bottom: 30px;
+}
+
+.player-info-section {
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.player-name-input-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.input-field {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background-color: #f9fafb;
+    font-size: 1em;
+    color: #374151;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    transition: all 0.2s ease-in-out;
+    width: 200px; /* Adjust width as needed */
+}
+.input-field:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+.game-actions-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.player-decks-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    justify-content: center;
+    width: 100%;
+    margin-top: 20px;
+}
+
+.deck-display {
+    background-color: #f8fafc;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+    padding: 15px;
+    min-width: 280px;
+    flex: 1;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+}
+
+.deck-display h3 {
+    margin-bottom: 10px;
+    color: #334155;
+}
+
+.card-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    min-height: 50px; /* Ensure some height even if empty */
+    padding: 5px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    background-color: #f0f4f8;
+}
+
+.card-item {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #475569;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* NEW: Card Acquisition Section Styles */
+.card-acquisition-section {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #e0e7ff;
+    border-radius: 12px;
+    background-color: #f9fafb;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.resource-card-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px; /* Space between resource cards */
+}
+
+.dev-card-button {
+    margin-top: 10px; /* Space between resource and dev card buttons */
+}
+
+.card-btn {
+    width: 70px; /* Fixed width for card buttons */
+    height: 100px; /* Fixed height for card buttons */
+    background-image: url('http://googleusercontent.com/file_content/7'); /* Your uploaded image */
+    background-size: 500% 100%; /* 5 cards horizontally, 100% height */
+    background-repeat: no-repeat;
+    border: 2px solid #a78bfa; /* Purple border */
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+    cursor: pointer;
+    background-color: transparent; /* Ensure background image is visible */
+    padding: 0; /* Remove default padding from button */
+}
+
+.card-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Specific background positions for resource cards */
+/* Order: Brick, Wood, Sheep, Wheat, Ore in the image */
+/* Mapping to buttons: Wood, Brick, Sheep, Wheat, Ore */
+.resource-card-btn[data-resource-type="wood"] { background-position: 25% 0%; }
+.resource-card-btn[data-resource-type="brick"] { background-position: 0% 0%; }
+.resource-card-btn[data-resource-type="sheep"] { background-position: 50% 0%; }
+.resource-card-btn[data-resource-type="wheat"] { background-position: 75% 0%; }
+.resource-card-btn[data-resource-type="ore"] { background-position: 100% 0%; }
+
+/* Style for the Development Card button */
+.dev-card-btn {
+    background-image: url('https://placehold.co/70x100/6A5ACD/ffffff?text=Dev+Card'); /* Placeholder for Dev Card back */
+    background-size: cover; /* Cover the button area */
+    background-position: center;
+    font-size: 0.8em; /* Smaller font for text */
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+/* NEW: Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.modal-message {
+    font-size: 1.1em;
+    color: #374151;
+    margin-bottom: 15px;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.btn-confirm {
+    background-color: #22c55e; /* Green */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+}
+.btn-confirm:hover {
+    background-color: #16a34a;
+}
+
+.btn-cancel {
+    background-color: #ef4444; /* Red */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+}
+.btn-cancel:hover {
+    background-color: #dc2626;
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding: 16px;
+    }
+    .game-controls, .controls, .player-info-section, .game-actions-section, .player-decks-section, .card-acquisition-section {
+        flex-direction: column;
+        align-items: center;
+    }
+    .button-group {
+        flex-direction: column; /* Stack buttons vertically on small screens */
+        width: 100%;
+    }
+    .btn, .btn-tool {
+        width: 100%; /* Make buttons full width */
+        padding: 12px 15px;
+        font-size: 1em;
+    }
+    .card-btn {
+        width: 100px; /* Adjust card button size for better touch on mobile */
+        height: 140px;
+    }
+    .resource-card-buttons {
+        flex-direction: row; /* Keep resource cards in a row, but allow wrap */
+        justify-content: center;
+        gap: 8px;
+    }
+    .input-field {
+        width: 100%; /* Make input full width */
+    }
+    .deck-display {
+        min-width: unset; /* Remove min-width on small screens */
+        width: 100%;
+    }
+}
+@media (max-width: 480px) {
+    .card-btn {
+        width: 80px; /* Even smaller for very small screens */
+        height: 110px;
+    }
+    .resource-card-buttons {
+        gap: 5px;
+    }
+}
