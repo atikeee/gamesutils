@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catan Board Builder</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css') }}">
 </head>
@@ -27,7 +28,8 @@
         <canvas id="catanBoard"></canvas>
         <div id="messageBox" class="message-box hidden"></div>
     </div>
-
-    <script src="{{ url_for('static', filename='js/catan_board.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan_game_logic.js') }}"></script>
+    
 </body>
 </html>

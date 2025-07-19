@@ -8,10 +8,7 @@ from flask import Flask, request, render_template, redirect, url_for,jsonify,ren
 from datetime import datetime,timedelta
 import requests
 from storage import *
-#CATAN_DB_FILE = "catan.db"
-JSON_STATE_FILE = "catan_board_state.json"
 DB = "flights.db"
-PLAYER_STATE_DIR = "catan_player_states" # Define the directory for player states
 
 
 def is_request_from_localhost():
@@ -70,61 +67,4 @@ def generate_letter_mapping():
         random.shuffle(shuffled)
         if all(l != s for l, s in zip(letters, shuffled)):
             return dict(zip(letters, shuffled))
-
-# --- Catan Board JSON File Functions ---
-def save_catan_board_state_to_json(board_state_json):
-    """Saves the current Catan board state to a JSON file."""
-    try:
-        with open(JSON_STATE_FILE, 'w', encoding='utf-8') as f:
-            f.write(board_state_json)
-        return True
-    except Exception as e:
-        print(f"Error saving Catan board state to JSON file: {e}")
-        return False
-
-def load_latest_catan_board_state_from_json():
-    """Loads the latest Catan board state from a JSON file."""
-    if not os.path.exists(JSON_STATE_FILE):
-        return None
-    try:
-        with open(JSON_STATE_FILE, 'r', encoding='utf-8') as f:
-            content = f.read()
-            if content:
-                return content
-            return None
-    except Exception as e:
-        print(f"Error loading Catan board state from JSON file: {e}")
-        return None
-
-def get_player_state_file_path(player_id):
-    """Generates the file path for a player's state JSON file."""
-    if not os.path.exists(PLAYER_STATE_DIR):
-        os.makedirs(PLAYER_STATE_DIR)
-    return os.path.join(PLAYER_STATE_DIR, f"player_{player_id}_state.json")
-
-def save_player_state_to_json(player_id, player_state_json):
-    """Saves a player's current state to a JSON file."""
-    file_path = get_player_state_file_path(player_id)
-    try:
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(player_state_json)
-        return True
-    except Exception as e:
-        print(f"Error saving player {player_id} state to JSON file: {e}")
-        return False
-
-def load_player_state_from_json(player_id):
-    """Loads a player's state from a JSON file."""
-    file_path = get_player_state_file_path(player_id)
-    if not os.path.exists(file_path):
-        return None
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-            if content:
-                return content
-            return None
-    except Exception as e:
-        print(f"Error loading player {player_id} state from JSON file: {e}")
-        return None
 

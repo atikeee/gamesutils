@@ -21,39 +21,27 @@
             </div>
         </div>
 
-        <div class="game-actions-section">
-            <div class="button-group tool-buttons" id="player-tool-select">
-                <button class="btn btn-tool" data-tool="house">Add House</button>
-                <button class="btn btn-tool" data-tool="city">Add City</button>
-                <button class="btn btn-tool" data-tool="road">Add Road</button>
+        <div class="controls player-controls">
+            <div class="button-group" id="player-tool-select">
+                <button class="btn btn-tool" data-tool="house">Place House</button>
+                <button class="btn btn-tool" data-tool="city">Upgrade to City</button>
+                <button class="btn btn-tool" data-tool="road">Place Road</button>
                 <button class="btn btn-tool" data-tool="robber">Move Robber</button>
-                <button class="btn btn-tool" data-tool="undo-player">Undo My Last Action</button>
+                <button class="btn btn-tool" data-tool="undo-player">Undo Last Action</button>
             </div>
-
-            <div class="button-group card-buttons">
-                <button class="btn btn-tool" data-tool="play-dev-card">Play Dev Card</button>
-                <button class="btn btn-tool" data-tool="get-dev-card">Get Dev Card</button>
-                <button class="btn btn-tool" data-tool="discard-card">Discard Card</button>
-                <button class="btn btn-tool" data-tool="give-card">Give Card</button>
-            </div>
-        </div>
-
-        <!-- NEW: Card Acquisition Buttons -->
-        <div class="card-acquisition-section">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4 w-full text-center">Acquire Cards</h2>
-            <div class="button-group resource-card-buttons">
-                <button class="btn card-btn resource-card-btn" data-card-type="resource" data-resource-type="brick" style="background-position: 0% 0%;"></button>
-                <button class="btn card-btn resource-card-btn" data-card-type="resource" data-resource-type="wood" style="background-position: 25% 0%;"></button>
-                <button class="btn card-btn resource-card-btn" data-card-type="resource" data-resource-type="sheep" style="background-position: 50% 0%;"></button>
-                <button class="btn card-btn resource-card-btn" data-card-type="resource" data-resource-type="wheat" style="background-position: 75% 0%;"></button>
-                <button class="btn card-btn resource-card-btn" data-card-type="resource" data-resource-type="ore" style="background-position: 100% 0%;"></button>
-            </div>
-            <div class="button-group dev-card-button">
-                <button class="btn card-btn dev-card-btn" data-card-type="development"></button>
+            <div class="card-buttons">
+                <button class="btn btn-tool resource-card-btn" data-resource-type="wood">Acquire Wood</button>
+                <button class="btn btn-tool resource-card-btn" data-resource-type="brick">Acquire Brick</button>
+                <button class="btn btn-tool resource-card-btn" data-resource-type="sheep">Acquire Sheep</button>
+                <button class="btn btn-tool resource-card-btn" data-resource-type="wheat">Acquire Wheat</button>
+                <button class="btn btn-tool resource-card-btn" data-resource-type="ore">Acquire Ore</button>
+                <button class="btn btn-tool dev-card-btn" data-card-type="development">Acquire Dev Card</button>
             </div>
         </div>
 
-        <!-- Moved: Player Decks Section -->
+        <canvas id="catanBoard"></canvas>
+        <div id="messageBox" class="message-box hidden"></div>
+
         <div class="player-decks-section">
             <div class="deck-display">
                 <h3 class="text-xl font-semibold text-gray-700">Your Hand (<span id="handCardCount">0</span>)</h3>
@@ -68,9 +56,6 @@
                 </div>
             </div>
         </div>
-
-        <canvas id="catanBoard"></canvas>
-        <div id="messageBox" class="message-box hidden"></div>
     </div>
 
     <!-- Custom Confirmation Modal -->
@@ -84,7 +69,13 @@
         </div>
     </div>
 
-
-    <script src="{{ url_for('static', filename='js/catan_board.js') }}"></script>
+    <!-- Removed Socket.IO client library -->
+    <script>
+        // Pass player_id from Flask to JavaScript
+        window.PLAYER_ID = {{ player_id }};
+    </script>
+    <!-- Load drawing utilities first, then game logic -->
+    <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan_game_logic.js') }}"></script>
 </body>
 </html>

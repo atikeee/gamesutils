@@ -1,6 +1,61 @@
 from storage import *
 from fun import *
 
+JSON_BOARD_STATE_FILE = "catan_board_state.json"
+JSON_PLAY_STATE_FILE = "catan_play_state.json"
+
+# --- Catan Board JSON File Functions ---
+def save_catan_board_state_to_json(board_state_json):
+    """Saves the current Catan board state to a JSON file."""
+    try:
+        with open(JSON_BOARD_STATE_FILE, 'w', encoding='utf-8') as f:
+            f.write(board_state_json)
+        return True
+    except Exception as e:
+        print(f"Error saving Catan board state to JSON file: {e}")
+        return False
+
+def load_latest_catan_board_state_from_json():
+    """Loads the latest Catan board state from a JSON file."""
+    if not os.path.exists(JSON_BOARD_STATE_FILE):
+        return None
+    try:
+        with open(JSON_BOARD_STATE_FILE, 'r', encoding='utf-8') as f:
+            content = f.read()
+            if content:
+                return content
+            return None
+    except Exception as e:
+        print(f"Error loading Catan board state from JSON file: {e}")
+        return None
+
+
+def save_play_state_to_json(player_state_json):
+    """Saves a player's current state to a JSON file."""
+
+    try:
+        with open(JSON_PLAY_STATE_FILE, 'w', encoding='utf-8') as f:
+            f.write(player_state_json)
+        return True
+    except Exception as e:
+        print(f"Error saving play state to JSON file: {e}")
+        return False
+
+def load_play_state_from_json():
+    """Loads a player's state from a JSON file."""
+    if not os.path.exists(JSON_PLAY_STATE_FILE):
+        return None
+    try:
+        with open(JSON_PLAY_STATE_FILE, 'r', encoding='utf-8') as f:
+            content = f.read()
+            if content:
+                return content
+            return None
+    except Exception as e:
+        print(f"Error loading play state from JSON file: {e}")
+        return None
+
+
 def configure_routes_catan(app,socketio):
     # --- Catan Board Routes ---
     @app.route('/catan_board')
@@ -43,27 +98,27 @@ def configure_routes_catan(app,socketio):
         """Renders a specific player's Catan game page."""
         return render_template('catan_player.html', player_id=player_id)
 
-    @app.route('/save_player_state/<player_id>', methods=['POST'])
-    def save_player_state(player_id):
+    @app.route('/save_play_state', methods=['POST'])
+    def save_play_state():
         """API endpoint to save a specific player's state."""
         try:
-            player_state = request.json
-            if player_state:
-                if save_player_state_to_json(player_id, json.dumps(player_state)):
-                    return jsonify({"status": "success", "message": f"Player {player_id} state saved successfully!"}), 200
-                return jsonify({"status": "error", "message": f"Failed to save player {player_id} state to file."}), 500
+            play_state = request.json
+            if play_state:
+                if save_play_state_to_json(json.dumps(play_state)):
+                    return jsonify({"status": "success", "message": f"Player  state saved successfully!"}), 200
+                return jsonify({"status": "error", "message": f"Failed to save player  state to file."}), 500
             return jsonify({"status": "error", "message": "No player state provided."}), 400
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    @app.route('/load_player_state/<player_id>', methods=['GET'])
-    def load_player_state(player_id):
+    @app.route('/load_play_state', methods=['GET'])
+    def load_play_state():
         """API endpoint to load a specific player's state."""
         try:
-            player_state_json = load_player_state_from_json(player_id)
-            if player_state_json:
-                return jsonify({"status": "success", "player_state": json.loads(player_state_json)}), 200
-            return jsonify({"status": "info", "message": f"No saved state found for player {player_id}."}), 200
+            play_state_json = load_play_state_from_json()
+            if play_state_json:
+                return jsonify({"status": "success", "play_state": json.loads(play_state_json)}), 200
+            return jsonify({"status": "info", "message": f"No saved state found for player ."}), 200
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
