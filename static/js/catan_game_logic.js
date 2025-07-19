@@ -453,10 +453,10 @@ async function saveAllPlayerStatesToBackend() {
 async function loadAllPlayerStatesFromBackend() {
     try {
         const response = await fetch('/load_play_state');
-        console.log(response);
+        
         const result = await response.json();
-        if (result.status === 'success' && result.play_states) {
-            const loadedStates = result.play_states;
+        if (result.status === 'success' && result.play_state) {
+            const loadedStates = result.play_state;
             for (const pId in loadedStates) {
                 if (allPlayersData[pId]) {
                     allPlayersData[pId].playerName = loadedStates[pId].playerName || `Player ${pId.replace('player', '')}`;
@@ -550,6 +550,7 @@ async function loadRobberStateFromBackend() {
 }
 */
 async function loadAllStatesFromBackend() {
+    console.log("loading data");
     await loadBoardTilesFromBackend();
     await loadAllPlayerStatesFromBackend();
     //await loadRobberStateFromBackend();
@@ -800,8 +801,9 @@ canvas.addEventListener('click', (event) => {
 
     if (actionSuccessful) {
         if (isPlayerPage) {
-            saveAllPlayerStatesToBackend(); // Manually save state to backend
-            //saveRobberStateToBackend(); // Manually save robber state to backend
+            console.log("trying to save playerstate");
+            saveAllPlayerStatesToBackend();
+            //await saveAllPlayerStatesToBackend();            
         }
     }
     drawBoard();
@@ -844,7 +846,7 @@ if (isPlayerPage) {
             if (newName) {
                 allPlayersData[PLAYER_ID].playerName = newName;
                 updatePlayerUI();
-                await saveAllPlayerStatesToBackend(); // Manually save player name change
+                await saveAllPlayerStatesToBackend(); 
                 showMessage('Player name saved!');
             } else {
                 showMessage('Player name cannot be empty.', 'error');
@@ -888,7 +890,7 @@ if (isPlayerPage) {
                 savePlayerStateToHistory();
                 allPlayersData[PLAYER_ID].hand.push(resourceType);
                 console.log(`Client: Before save, allPlayersData[${PLAYER_ID}].hand:`, JSON.stringify(allPlayersData[PLAYER_ID].hand));
-                await saveAllPlayerStatesToBackend(); // Manually save hand update
+                await saveAllPlayerStatesToBackend(); 
                 showMessage(`You took 1 ${resourceType} card!`);
                 updatePlayerUI(); // Update UI immediately after local state change
             } else {
@@ -909,7 +911,7 @@ if (isPlayerPage) {
                 savePlayerStateToHistory();
                 const drawnCard = globalDevCardDeck.pop();
                 allPlayersData[PLAYER_ID].devCards.push(drawnCard);
-                await saveAllPlayerStatesToBackend(); // Manually save dev card update
+                await saveAllPlayerStatesToBackend(); 
                 showMessage(`You drew a ${drawnCard} Development Card!`);
                 updatePlayerUI(); // Update UI immediately after local state change
             } else {
