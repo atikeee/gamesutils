@@ -389,10 +389,23 @@ canvas {
 .resource-card[data-resource-type="ore"] {
     background-image: url('https://placehold.co/100x150/708090/ffffff?text=ORE');
 }
-
-/* Background Image for Development Card */
-.dev-card[data-resource-type="development"] {
-    background-image: url('https://placehold.co/100x150/6A5ACD/ffffff?text=DEV+CARD'); /* Placeholder for Dev Card back */
+.dev-card[data-resource-type="development"] { /* This was for the button, now for the actual card */
+    background-image: url('https://placehold.co/100x150/6A5ACD/ffffff?text=DEV+CARD');
+}
+.dev-card[data-resource-type="knight"] {
+    background-image: url('https://placehold.co/100x150/4B0082/ffffff?text=KNIGHT'); /* Indigo */
+}
+.dev-card[data-resource-type="victory_point"] {
+    background-image: url('https://placehold.co/100x150/FFD700/000000?text=VICTORY+POINT'); /* Gold */
+}
+.dev-card[data-resource-type="road_building"] {
+    background-image: url('https://placehold.co/100x150/8B4513/ffffff?text=ROAD+BUILDING'); /* SaddleBrown */
+}
+.dev-card[data-resource-type="year_of_plenty"] {
+    background-image: url('https://placehold.co/100x150/32CD32/ffffff?text=YEAR+OF+PLENTY'); /* LimeGreen */
+}
+.dev-card[data-resource-type="monopoly"] {
+    background-image: url('https://placehold.co/100x150/DC143C/ffffff?text=MONOPOLY'); /* Crimson */
 }
 
 

@@ -11,15 +11,20 @@ const PLAYER_ID = isPlayerPage ? 'player' + PLAYER_ID_RAW : null;
 let loadedResourceImages = {};
 let boardTiles = [];
 
-
-let allPlayersData = {
+let init_player_data = {
     'player1': { playerName: 'Player 1', hand: [], devCards: [], roads: [], structures: [], history: [] },
     'player2': { playerName: 'Player 2', hand: [], devCards: [], roads: [], structures: [], history: [] },
     'player3': { playerName: 'Player 3', hand: [], devCards: [], roads: [], structures: [], history: [] },
     'player4': { playerName: 'Player 4', hand: [], devCards: [], roads: [], structures: [], history: [] },
     'robber':{q:100,r:100}
+}; 
+let allPlayersData = init_player_data;
+const CARD_COSTS = {
+    'road': { 'wood': 1, 'brick': 1 },
+    'house': { 'wood': 1, 'brick': 1, 'sheep': 1, 'wheat': 1 },
+    'city': { 'ore': 3, 'wheat': 2 },
+    'dev': { 'ore': 1, 'sheep': 1, 'wheat': 1 }
 };
-
 let globalDevCardDeck = [];
 
 let offsetX = 0;
@@ -274,7 +279,6 @@ function undoPlayerLastAction() {
         allPlayersData[PLAYER_ID].hand = JSON.parse(JSON.stringify(prevState.hand));
         allPlayersData[PLAYER_ID].devCards = JSON.parse(JSON.stringify(prevState.devCards));
         allPlayersData['robber'] = prevState.robber ? JSON.parse(JSON.stringify(prevState.robber)) : null;
-
         showMessage('Your last action undone.');
         // Removed socket.emit for undo action
         drawBoard();
@@ -475,13 +479,7 @@ async function loadAllPlayerStatesFromBackend() {
             showMessage('All player states loaded successfully!');
         } else {
             showMessage("No saved player states found. Initializing default player states.", 'info');
-            allPlayersData = {
-                'player1': { playerName: 'Player 1', hand: [], devCards: [], roads: [], structures: [], history: [] },
-                'player2': { playerName: 'Player 2', hand: [], devCards: [], roads: [], structures: [], history: [] },
-                'player3': { playerName: 'Player 3', hand: [], devCards: [], roads: [], structures: [], history: [] },
-                'player4': { playerName: 'Player 4', hand: [], devCards: [], roads: [], structures: [], history: [] },
-            'robber': {q:100,r:100},
-            };
+            allPlayersData = init_player_data;
             if (isPlayerPage && PLAYER_ID) {
                 savePlayerStateToHistory();
             }
@@ -490,13 +488,7 @@ async function loadAllPlayerStatesFromBackend() {
     } catch (e) {
         showMessage('Network error loading player states: ' + e.message + '. Initializing default player states.', 'error');
         console.error('Error loading player states from backend:', e);
-        allPlayersData = {
-            'player1': { playerName: 'Player 1', hand: [], devCards: [], roads: [], structures: [], history: [] },
-            'player2': { playerName: 'Player 2', hand: [], devCards: [], roads: [], structures: [], history: [] },
-            'player3': { playerName: 'Player 3', hand: [], devCards: [], roads: [], structures: [], history: [] },
-            'player4': { playerName: 'Player 4', hand: [], devCards: [], roads: [], structures: [], history: [] },
-            'robber': {q:100,r:100},
-        };
+        allPlayersData = init_player_data;
         if (isPlayerPage && PLAYER_ID) {
             savePlayerStateToHistory();
         }
@@ -718,12 +710,12 @@ canvas.addEventListener('click', (event) => {
         }
     } else if (isPlayerPage) {
         if (selectedPlayerTool === 'house') {
+            
             const clickedJunction = getClosestJunction(mouseX, mouseY);
             if (clickedJunction) {
                 let existingStructure = false;
                 for (const pId in allPlayersData) {
                     if (pId.startsWith('player')){
-                        console.log(pId);
                         if (allPlayersData[pId].structures.some(s => s.junction.id === clickedJunction.id)) {
                             existingStructure = true;
                             break;
@@ -734,10 +726,15 @@ canvas.addEventListener('click', (event) => {
                 if (existingStructure) {
                     showMessage('A structure already exists here.', 'error');
                 } else {
-                    savePlayerStateToHistory();
-                    allPlayersData[PLAYER_ID].structures.push({ type: 'house', junction: clickedJunction, owner: PLAYER_ID });
-                    showMessage('House placed!');
-                    actionSuccessful = true;
+                    //function to add items to the board
+                    if(checkAndDeductCards(PLAYER_ID,selectedPlayerTool))
+                    {
+                        savePlayerStateToHistory();
+                        allPlayersData[PLAYER_ID].structures.push({ type: selectedPlayerTool, junction: clickedJunction, owner: PLAYER_ID });
+                        showMessage(`${selectedPlayerTool} placed!`);
+                        updatePlayerUI();
+                        actionSuccessful = true;
+                    }
                 }
             } else {
                 showMessage('Click near a junction to place a house.', 'error');
@@ -747,10 +744,15 @@ canvas.addEventListener('click', (event) => {
             if (clickedJunction) {
                 const existingHouse = allPlayersData[PLAYER_ID].structures.find(s => s.junction.id === clickedJunction.id && s.type === 'house' && s.owner === PLAYER_ID);
                 if (existingHouse) {
-                    savePlayerStateToHistory();
-                    existingHouse.type = 'city';
-                    showMessage('City placed!');
-                    actionSuccessful = true;
+                    if(checkAndDeductCards(PLAYER_ID,selectedPlayerTool))
+                    {
+                        savePlayerStateToHistory();
+                        allPlayersData[PLAYER_ID].structures.push({ type: selectedPlayerTool, junction: clickedJunction, owner: PLAYER_ID });
+                        showMessage(`${selectedPlayerTool} placed!`);
+                        updatePlayerUI();
+                        existingHouse.type = 'city';
+                        actionSuccessful = true;
+                    }
                 } else {
                     showMessage('You must have a house here to build a city.', 'error');
                 }
@@ -773,10 +775,14 @@ canvas.addEventListener('click', (event) => {
                 if (existingRoad) {
                     showMessage('A road already exists here.', 'error');
                 } else {
-                    savePlayerStateToHistory();
-                    allPlayersData[PLAYER_ID].roads.push({ edge: clickedEdge, owner: PLAYER_ID });
-                    showMessage('Road placed!');
-                    actionSuccessful = true;
+                    if(checkAndDeductCards(PLAYER_ID,selectedPlayerTool))
+                    {
+                        savePlayerStateToHistory();
+                        allPlayersData[PLAYER_ID].roads.push({ edge: clickedEdge, owner: PLAYER_ID });
+                        showMessage(`${selectedPlayerTool} placed!`);
+                        updatePlayerUI();
+                        actionSuccessful = true;
+                    }
                 }
             } else {
                 showMessage('Click near an edge to place a road.', 'error');
@@ -838,7 +844,6 @@ if (!isGamePage && !isPlayerPage) {
 if (isPlayerPage) {
     const playerNameInput = document.getElementById('playerNameInput');
     const savePlayerNameBtn = document.getElementById('savePlayerNameBtn');
-    const endTurnBtn = document.getElementById('endTurnBtn');
 
     if (savePlayerNameBtn) {
         savePlayerNameBtn.addEventListener('click', async () => {
@@ -854,9 +859,6 @@ if (isPlayerPage) {
         });
     }
 
-    if (endTurnBtn) {
-        endTurnBtn.style.display = 'none';
-    }
 
     document.getElementById('player-tool-select').addEventListener('click', (event) => {
         const target = event.target;
@@ -900,28 +902,72 @@ if (isPlayerPage) {
     });
 
     const devCardButton = document.querySelector('.dev-card');
+        
     devCardButton.addEventListener('click', async () => {
         const confirmed = await showConfirmation('Do you want to take 1 Development card?');
+        
         if (confirmed) {
-            if (globalDevCardDeck.length === 0) {
-                initializeDevCardDeck();
-                showMessage('Development card deck was empty, re-initialized and shuffled.');
-            }
-            if (globalDevCardDeck.length > 0) {
-                savePlayerStateToHistory();
-                const drawnCard = globalDevCardDeck.pop();
-                allPlayersData[PLAYER_ID].devCards.push(drawnCard);
-                await saveAllPlayerStatesToBackend(); 
-                showMessage(`You drew a ${drawnCard} Development Card!`);
-                updatePlayerUI(); // Update UI immediately after local state change
+            if(checkAndDeductCards(PLAYER_ID,'dev')){
+                if (globalDevCardDeck.length === 0) {
+                    initializeDevCardDeck();
+                    showMessage('Development card deck was empty, re-initialized and shuffled.');
+                }
+                if (globalDevCardDeck.length > 0) {
+                    savePlayerStateToHistory();
+                    const drawnCard = globalDevCardDeck.pop();
+                    allPlayersData[PLAYER_ID].devCards.push(drawnCard);
+                    await saveAllPlayerStatesToBackend(); 
+                    showMessage(`You drew a ${drawnCard} Development Card!`);
+                    updatePlayerUI(); // Update UI immediately after local state change
+                }
             } else {
-                showMessage('No Development cards left in the deck.', 'error');
+                showMessage('Required card not available. ');
             }
-        } else {
-            showMessage('Cancelled taking Development card.');
         }
+        
     });
+    
 }
+
+function checkAndDeductCards(playerId, actionType) {
+    const playerHand = allPlayersData[playerId].hand;
+    const requiredCards = CARD_COSTS[actionType];
+
+    if (!requiredCards) {
+        console.error(`Unknown action type: ${actionType}`);
+        return false;
+    }
+
+    // Create a temporary count of cards in the player's hand
+    const currentHandCounts = {};
+    playerHand.forEach(card => {
+        currentHandCounts[card] = (currentHandCounts[card] || 0) + 1;
+    });
+
+    // Check if player has enough cards
+    for (const resourceType in requiredCards) {
+        const requiredCount = requiredCards[resourceType];
+        const availableCount = currentHandCounts[resourceType] || 0;
+        if (availableCount < requiredCount) {
+            showMessage(`Missing ${requiredCount - availableCount} ${resourceType} for ${actionType}.`, 'error');
+            return false; // Not enough cards
+        }
+    }
+
+    // If all checks pass, deduct the cards
+    for (const resourceType in requiredCards) {
+        const countToDeduct = requiredCards[resourceType];
+        for (let i = 0; i < countToDeduct; i++) {
+            const index = playerHand.indexOf(resourceType);
+            if (index > -1) {
+                playerHand.splice(index, 1); // Remove one instance of the card
+            }
+        }
+    }
+    console.log(`Deducted cards for ${actionType}. New hand:`, playerHand);
+    return true; // Cards deducted successfully
+}
+
 
 function initializeDevCardDeck() {
     const devCardTypes = {
@@ -998,32 +1044,41 @@ function updatePlayerUI() {
     const handCardsDiv = document.getElementById('handCards');
     if (handCardsDiv) {
         handCardsDiv.innerHTML = '';
-        let handCount = 0;
-        for (const resourceType in allPlayersData[PLAYER_ID].hand) {
-            
+        
+        // Iterate directly over the hand array to create individual cards
+        allPlayersData[PLAYER_ID].hand.forEach(resourceType => {
             const cardItem = document.createElement('div');
             cardItem.classList.add('card-item');
-            cardItem.textContent = `${resourceType.charAt(0).toUpperCase()}`;
+            cardItem.classList.add('resource-card'); // Add resource-card class for background image styling
+            cardItem.classList.add('animate-in'); // Keep animation
+            cardItem.dataset.resourceType = resourceType; // Set data-resource-type for CSS background image
+            // No textContent needed for resource cards as per CSS (display: none for .card-text)
             handCardsDiv.appendChild(cardItem);
-            handCount += 1;
-            
-        }
-        document.getElementById('handCardCount').textContent = handCount;
+        });
+        document.getElementById('handCardCount').textContent = allPlayersData[PLAYER_ID].hand.length;
         console.log(`Client: updatePlayerUI - Hand cards rendered. Current hand: ${JSON.stringify(allPlayersData[PLAYER_ID].hand)}`);
     }
 
     const devCardsDiv = document.getElementById('devCards');
     if (devCardsDiv) {
-        devCardsDiv.innerHTML = '';
-        allPlayersData[PLAYER_ID].devCards.forEach(card => {
-            const cardItem = document.createElement('div');
-            cardItem.classList.add('card-item');
-            cardItem.textContent = card.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-            devCardsDiv.appendChild(cardItem);
-        });
-        document.getElementById('devCardCount').textContent = allPlayersData[PLAYER_ID].devCards.length;
-        console.log(`Client: updatePlayerUI - Dev cards rendered. Current dev cards: ${JSON.stringify(allPlayersData[PLAYER_ID].devCards)}`);
-    }
+            devCardsDiv.innerHTML = '';
+            allPlayersData[PLAYER_ID].devCards.forEach(cardType => { // Changed 'card' to 'cardType' for clarity
+                const cardItem = document.createElement('div');
+                cardItem.classList.add('card-item');
+                cardItem.classList.add('dev-card'); // Add dev-card class for background image styling
+                cardItem.classList.add('animate-in'); // Add animation for dev cards too
+                cardItem.dataset.resourceType = cardType; // Set data-resource-type based on the card type
+                // No textContent needed for dev cards as per CSS (display: none for .card-text)
+                devCardsDiv.appendChild(cardItem);
+            }
+        );
+        document.getElementById('devCardCount').textContent = allPlayersData[PLAYER_ID].devCards.length;}
+        const playerNameInputGroup = document.querySelector('.player-info-section');
+        if (playerNameInput.value && !playerNameInput.value.startsWith('Player')) {
+            if (playerNameInputGroup) {
+                playerNameInputGroup.classList.add('hidden');
+            }
+        }
 }
 
 async function onCatanPlayerPageLoad() {
