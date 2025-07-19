@@ -312,14 +312,6 @@ canvas {
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* Specific background positions for resource cards */
-/* Order: Brick, Wood, Sheep, Wheat, Ore in the image */
-/* Mapping to buttons: Wood, Brick, Sheep, Wheat, Ore */
-.resource-card-btn[data-resource-type="wood"] { background-position: 25% 0%; }
-.resource-card-btn[data-resource-type="brick"] { background-position: 0% 0%; }
-.resource-card-btn[data-resource-type="sheep"] { background-position: 50% 0%; }
-.resource-card-btn[data-resource-type="wheat"] { background-position: 75% 0%; }
-.resource-card-btn[data-resource-type="ore"] { background-position: 100% 0%; }
 
 /* Style for the Development Card button */
 .dev-card-btn {
@@ -334,7 +326,91 @@ canvas {
     justify-content: center;
     font-weight: bold;
 }
+.resource-card-group {
+    display: flex;
+    flex-wrap: nowrap; /* Forces cards into a single row */
+    gap: 10px;
+    margin-bottom: 15px;
+    overflow-x: auto; /* Enables horizontal scrolling if content overflows */
+    padding-bottom: 5px; /* Space for scrollbar */
+    justify-content: center; /* Center the cards if there's space */
+}
 
+/* Base Card Styles for both resource and dev cards */
+.resource-card, .dev-card {
+    width: 80px; /* Card width */
+    height: 110px; /* Card height */
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+    transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+    background-size: cover;
+    background-position: center;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    flex-shrink: 0; /* Prevent cards from shrinking */
+}
+
+.resource-card:hover, .dev-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+}
+
+.resource-card:active, .dev-card:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Hide card text as background images are used */
+.card-text {
+    display: none; /* Hide the text */
+}
+
+/* Background Images for Resource Cards */
+.resource-card[data-resource-type="wood"] {
+    background-image: url('https://placehold.co/100x150/3CB371/ffffff?text=WOOD');
+}
+.resource-card[data-resource-type="brick"] {
+    background-image: url('https://placehold.co/100x150/CD5C5C/ffffff?text=BRICK');
+}
+.resource-card[data-resource-type="sheep"] {
+    background-image: url('https://placehold.co/100x150/90EE90/000000?text=SHEEP');
+}
+.resource-card[data-resource-type="wheat"] {
+    background-image: url('https://placehold.co/100x150/DAA520/ffffff?text=WHEAT');
+}
+.resource-card[data-resource-type="ore"] {
+    background-image: url('https://placehold.co/100x150/708090/ffffff?text=ORE');
+}
+
+/* Background Image for Development Card */
+.dev-card[data-resource-type="development"] {
+    background-image: url('https://placehold.co/100x150/6A5ACD/ffffff?text=DEV+CARD'); /* Placeholder for Dev Card back */
+}
+
+
+/* Animation for "getting card" effect */
+@keyframes card-animate-in {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.card-item.animate-in {
+    animation: card-animate-in 0.3s ease-out forwards;
+}
 /* NEW: Modal Styles */
 .modal-overlay {
     position: fixed;

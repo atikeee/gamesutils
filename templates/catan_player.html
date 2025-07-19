@@ -30,13 +30,31 @@
                 <button class="btn btn-tool" data-tool="playdev">Play Dev Card</button>
                 <button class="btn btn-tool" data-tool="undo-player">Undo Last Action</button>
             </div>
-            <div class="card-buttons">
-                <button class="btn btn-tool resource-card-btn" data-resource-type="wood">Wood</button>
-                <button class="btn btn-tool resource-card-btn" data-resource-type="brick">Brick</button>
-                <button class="btn btn-tool resource-card-btn" data-resource-type="sheep">Sheep</button>
-                <button class="btn btn-tool resource-card-btn" data-resource-type="wheat">Wheat</button>
-                <button class="btn btn-tool resource-card-btn" data-resource-type="ore">Ore</button>
-                <button class="btn btn-tool dev-card-btn" data-card-type="development">Dev Card</button>
+            <div class="card-buttons mt-4">
+                <h3 class="text-xl font-semibold text-gray-700 mb-2">Take Resources:</h3>
+                <div class="resource-card-group">
+                    <!-- Resource Cards -->
+                    <div class="resource-card" data-resource-type="wood">
+                        <span class="card-text">Wood</span>
+                    </div>
+                    <div class="resource-card" data-resource-type="brick">
+                        <span class="card-text">Brick</span>
+                    </div>
+                    <div class="resource-card" data-resource-type="sheep">
+                        <span class="card-text">Sheep</span>
+                    </div>
+                    <div class="resource-card" data-resource-type="wheat">
+                        <span class="card-text">Hay</span>
+                    </div>
+                    <div class="resource-card" data-resource-type="ore">
+                        <span class="card-text">Rock</span>
+                    </div>
+                    <!-- Development Card - Moved inside resource-card-group for single row layout -->
+                    <div class="dev-card" data-resource-type="development">
+                        <span class="card-text">Dev Card</span>
+                    </div>
+                </div>
+                <!-- The original dev card button is removed as it's now a div within the group -->
             </div>
         </div>
 

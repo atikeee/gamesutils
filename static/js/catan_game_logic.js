@@ -873,7 +873,7 @@ if (isPlayerPage) {
         }
     });
 
-    document.querySelector('.card-buttons').addEventListener('click', (event) => {
+    document.querySelector('.resource-card').addEventListener('click', (event) => {
         const target = event.target;
         if (target.classList.contains('btn-tool')) {
             const action = target.dataset.tool;
@@ -881,11 +881,11 @@ if (isPlayerPage) {
         }
     });
 
-    const resourceCardButtons = document.querySelectorAll('.resource-card-btn');
+    const resourceCardButtons = document.querySelectorAll('.resource-card');
     resourceCardButtons.forEach(button => {
         button.addEventListener('click', async (event) => {
             const resourceType = event.target.dataset.resourceType;
-            const confirmed = await showConfirmation(`Do you want to take 1 ${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)} card?`);
+            const confirmed = await showConfirmation(`Do you want to take 1 ${resourceType} card?`);
             if (confirmed) {
                 savePlayerStateToHistory();
                 allPlayersData[PLAYER_ID].hand.push(resourceType);
@@ -899,7 +899,7 @@ if (isPlayerPage) {
         });
     });
 
-    const devCardButton = document.querySelector('.dev-card-btn');
+    const devCardButton = document.querySelector('.dev-card');
     devCardButton.addEventListener('click', async () => {
         const confirmed = await showConfirmation('Do you want to take 1 Development card?');
         if (confirmed) {
