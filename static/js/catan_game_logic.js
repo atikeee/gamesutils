@@ -17,7 +17,7 @@ let allPlayersData = {
     'player2': { playerName: 'Player 2', hand: [], devCards: [], roads: [], structures: [], history: [] },
     'player3': { playerName: 'Player 3', hand: [], devCards: [], roads: [], structures: [], history: [] },
     'player4': { playerName: 'Player 4', hand: [], devCards: [], roads: [], structures: [], history: [] },
-    'robber':{q:null,r:null}
+    'robber':{q:100,r:100}
 };
 
 let globalDevCardDeck = [];
@@ -137,7 +137,7 @@ function drawBoard() {
         }
     }
 
-    if (allPlayersData['robber'].q) {
+    if (allPlayersData['robber'].q!=100 & allPlayersData['robber'].r!=100) {
         drawRobber(ctx, allPlayersData['robber'], offsetX, offsetY);
     }
 
@@ -467,7 +467,7 @@ async function loadAllPlayerStatesFromBackend() {
                     allPlayersData[pId].history = loadedStates[pId].history || [];
                 }
             }
-            allPlayersData['robber']=loadedStates['robber'] || {q:null,r:null};
+            allPlayersData['robber']=loadedStates['robber'] || {q:100,r:100};
 
             if (isPlayerPage && PLAYER_ID && allPlayersData[PLAYER_ID].history.length === 0) {
                 savePlayerStateToHistory();
@@ -480,7 +480,7 @@ async function loadAllPlayerStatesFromBackend() {
                 'player2': { playerName: 'Player 2', hand: [], devCards: [], roads: [], structures: [], history: [] },
                 'player3': { playerName: 'Player 3', hand: [], devCards: [], roads: [], structures: [], history: [] },
                 'player4': { playerName: 'Player 4', hand: [], devCards: [], roads: [], structures: [], history: [] },
-            'robber': {q:null,r:null},
+            'robber': {q:100,r:100},
             };
             if (isPlayerPage && PLAYER_ID) {
                 savePlayerStateToHistory();
@@ -495,7 +495,7 @@ async function loadAllPlayerStatesFromBackend() {
             'player2': { playerName: 'Player 2', hand: [], devCards: [], roads: [], structures: [], history: [] },
             'player3': { playerName: 'Player 3', hand: [], devCards: [], roads: [], structures: [], history: [] },
             'player4': { playerName: 'Player 4', hand: [], devCards: [], roads: [], structures: [], history: [] },
-            'robber': {q:null,r:null},
+            'robber': {q:100,r:100},
         };
         if (isPlayerPage && PLAYER_ID) {
             savePlayerStateToHistory();
