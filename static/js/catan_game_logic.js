@@ -10,7 +10,7 @@ const PLAYER_ID = isPlayerPage ? 'player' + PLAYER_ID_RAW : null;
 
 let loadedResourceImages = {};
 let boardTiles = [];
-let robberTile = null;
+
 
 let allPlayersData = {
     'player1': { playerName: 'Player 1', hand: [], devCards: [], roads: [], structures: [], history: [] },
@@ -137,8 +137,8 @@ function drawBoard() {
         }
     }
 
-    if (robberTile) {
-        drawRobber(ctx, robberTile, offsetX, offsetY);
+    if (allPlayersData['robber'].q) {
+        drawRobber(ctx, allPlayersData['robber'], offsetX, offsetY);
     }
 
     if (allJunctions.length === 0 && boardTiles.length > 0) {
@@ -219,7 +219,7 @@ function saveBuilderState() {
 
     builderHistoryStack.push({
         tileStates: JSON.parse(JSON.stringify(boardTiles.map(tile => ({ q: tile.q, r: tile.r, type: tile.type, number: tile.number })))),
-        robber: robberTile ? JSON.parse(JSON.stringify(robberTile)) : null,
+        robber: allPlayersData['robber'] ? JSON.parse(JSON.stringify(allPlayersData['robber'])) : null,
     });
 }
 
@@ -237,7 +237,7 @@ function undoBuilderLastAction() {
                 currentTile.number = prevTile.number;
             }
         });
-        robberTile = prevState.robber ? JSON.parse(JSON.stringify(prevState.robber)) : null;
+        allPlayersData['robber'] = prevState.robber ? JSON.parse(JSON.stringify(prevState.robber)) : null;
 
         selectedSwapItem1 = null;
         selectedSwapItem2 = null;
@@ -257,7 +257,7 @@ function savePlayerStateToHistory() {
         structures: JSON.parse(JSON.stringify(allPlayersData[PLAYER_ID].structures)),
         hand: JSON.parse(JSON.stringify(allPlayersData[PLAYER_ID].hand)),
         devCards: JSON.parse(JSON.stringify(allPlayersData[PLAYER_ID].devCards)),
-        robber: robberTile ? JSON.parse(JSON.stringify(robberTile)) : null
+        robber: allPlayersData['robber'] ? JSON.parse(JSON.stringify(allPlayersData['robber'])) : null
     });
     console.log(`Client: Saved player state to history. History length: ${allPlayersData[PLAYER_ID].history.length}`);
 }
@@ -273,7 +273,7 @@ function undoPlayerLastAction() {
         allPlayersData[PLAYER_ID].structures = JSON.parse(JSON.stringify(prevState.structures));
         allPlayersData[PLAYER_ID].hand = JSON.parse(JSON.stringify(prevState.hand));
         allPlayersData[PLAYER_ID].devCards = JSON.parse(JSON.stringify(prevState.devCards));
-        robberTile = prevState.robber ? JSON.parse(JSON.stringify(prevState.robber)) : null;
+        allPlayersData['robber'] = prevState.robber ? JSON.parse(JSON.stringify(prevState.robber)) : null;
 
         showMessage('Your last action undone.');
         // Removed socket.emit for undo action
@@ -508,7 +508,7 @@ async function saveRobberStateToBackend() {
     if (isGamePage || isPlayerPage) return;
 
     try {
-        const robberStateToSave = robberTile ? { q: robberTile.q, r: robberTile.r } : { q: 0, r: 0 };
+        const robberStateToSave = allPlayersData['robber'] ? { q: allPlayersData['robber'].q, r: allPlayersData['robber'].r } : { q: 0, r: 0 };
         const response = await fetch('/save_robber_state', {
             method: 'POST',
             headers: {
@@ -534,17 +534,17 @@ async function loadRobberStateFromBackend() {
         const response = await fetch('/load_robber_state');
         const result = await response.json();
         if (result.status === 'success' && result.robber_state) {
-            robberTile = result.robber_state;
+            allPlayersData['robber'] = result.robber_state;
             showMessage('Robber state loaded successfully!');
         } else {
             showMessage("No saved robber state found. Initializing default robber position.", 'info');
-            robberTile = { q: 0, r: 0 };
+            allPlayersData['robber'] = { q: 0, r: 0 };
         }
         drawBoard();
     } catch (e) {
         showMessage('Network error loading robber state: ' + e.message + '. Initializing default robber position.', 'error');
         console.error('Error loading robber state from backend:', e);
-        robberTile = { q: 0, r: 0 };
+        allPlayersData['robber'] = { q: 0, r: 0 };
         drawBoard();
     }
 }
@@ -785,11 +785,11 @@ canvas.addEventListener('click', (event) => {
             const clickedHex = pixelToHex(mouseX, mouseY, offsetX, offsetY);
             const clickedTile = boardTiles.find(t => t.q === clickedHex.q && t.r === clickedHex.r);
             if (clickedTile) {
-                if (robberTile && robberTile.q === clickedTile.q && robberTile.r === clickedTile.r) {
+                if (allPlayersData['robber'] && allPlayersData['robber'].q === clickedTile.q && allPlayersData['robber'].r === clickedTile.r) {
                     showMessage('Robber is already on this tile.', 'info');
                 } else {
                     savePlayerStateToHistory();
-                    robberTile = clickedTile;
+                    allPlayersData['robber'] = clickedTile;
                     showMessage(`Robber moved to ${clickedTile.type} tile.`);
                     actionSuccessful = true;
                 }
