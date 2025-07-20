@@ -203,56 +203,6 @@ function drawNumber(ctx, x, y, number) {
     }
 }
 
-function drawWoodPortIcon(ctx, x, y, iconSize) {
-    ctx.fillStyle = '#8B4513';
-    ctx.fillRect(x - iconSize * 0.2, y - iconSize * 0.2, iconSize * 0.4, iconSize * 0.4);
-    ctx.strokeStyle = '#654321';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x - iconSize * 0.2, y - iconSize * 0.2, iconSize * 0.4, iconSize * 0.4);
-}
-
-function drawBrickPortIcon(ctx, x, y, iconSize) {
-    ctx.fillStyle = '#B22222';
-    const brickWidth = iconSize * 0.4;
-    const brickHeight = iconSize * 0.15;
-    ctx.fillRect(x - brickWidth / 2, y - brickHeight / 2, brickWidth, brickHeight);
-    ctx.strokeStyle = '#8B0000';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x - brickWidth / 2, y - brickHeight / 2, brickWidth, brickHeight);
-}
-
-function drawSheepPortIcon(ctx, x, y, iconSize) {
-    ctx.fillStyle = '#F0F8FF';
-    ctx.strokeStyle = '#696969';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(x, y, iconSize * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-}
-
-function drawhayPortIcon(ctx, x, y, iconSize) {
-    ctx.fillStyle = '#FFD700';
-    ctx.strokeStyle = '#B8860B';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(x, y - iconSize * 0.3);
-    ctx.lineTo(x - iconSize * 0.1, y + iconSize * 0.1);
-    ctx.lineTo(x + iconSize * 0.1, y + iconSize * 0.1);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-}
-
-function drawOrePortIcon(ctx, x, y, iconSize) {
-    ctx.fillStyle = '#A9A9A9';
-    ctx.strokeStyle = '#696969';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y, iconSize * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-}
 
 function drawCirclePort(ctx, x, y, type, ratio) {
     ctx.save();
@@ -283,24 +233,17 @@ function drawCirclePort(ctx, x, y, type, ratio) {
 
     const iconSize = PORT_SIZE * 0.6;
     const iconYOffset = -circleRadius * 0.3;
-    if (type !== 'any') {
-        switch (type) {
-            case 'wood': drawWoodPortIcon(ctx, 0, iconYOffset, iconSize); break;
-            case 'brick': drawBrickPortIcon(ctx, 0, iconYOffset, iconSize); break;
-            case 'sheep': drawSheepPortIcon(ctx, 0, iconYOffset, iconSize); break;
-            case 'hay': drawhayPortIcon(ctx, 0, iconYOffset, iconSize); break;
-            case 'rock': drawOrePortIcon(ctx, 0, iconYOffset, iconSize); break;
-        }
-    } else {
+    if (type === 'any') {
         ctx.fillStyle = '#333';
         ctx.font = `bold ${iconSize * 1.2}px Inter`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('?', 0, iconYOffset);
     }
-
-    ctx.fillStyle = '#333';
-    ctx.font = `bold ${PORT_SIZE * 0.4}px Inter`;
+    
+    ctx.fillStyle = '#eef';
+    ctx.font = `${PORT_SIZE * 0.8}px Inter`;
+    
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const ratioYOffset = circleRadius * 0.3;
@@ -371,7 +314,7 @@ function drawRobber(ctx, tile, offsetX, offsetY) {
     const pixel = hexToPixel(tile.q, tile.r, offsetX, offsetY);
     const x = pixel.x;
     const y = pixel.y;
-    const robberSize = HEX_SIZE * 0.3;
+    const robberSize = HEX_SIZE * 0.5;
 
     ctx.fillStyle = ROBBER_COLOR;
     ctx.strokeStyle = 'white';

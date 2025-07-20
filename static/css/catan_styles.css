@@ -255,7 +255,12 @@ canvas {
     border-color: #6d28d9; /* Deep purple for selected color */
     box-shadow: 0 0 0 4px rgba(109, 40, 217, 0.4);
 }
-
+.card-item.selected {
+    border: 5px solid #a78bfa; /* Optional: A slightly stronger border */
+    box-shadow: 0 0 15px rgba(237, 039, 20, 0.8); /* Blue-purple glow */
+    /* You can adjust the color (RGBA value), blur radius (15px), and spread (0) as desired. */
+    /* The last value (0.8) is the opacity. */
+}
 
 /* New Styles for catan_player.html */
 .player-page-container {

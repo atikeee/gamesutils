@@ -1041,6 +1041,7 @@ function initializeDevCardDeck() {
 }
 
 function resizeCanvas() {
+    
     const containerWidth = canvas.parentElement.clientWidth;
     const containerHeight = canvas.parentElement.clientHeight;
 
