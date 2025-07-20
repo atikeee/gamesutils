@@ -157,3 +157,6 @@ def configure_routes_catan(app,socketio):
         # Broadcast the played card information to all clients
         socketio.emit('card_pick_log_broadcast', {'pid': pid, 'log': log})
         
+    @socketio.on('roll_dice')
+    def handle_roll_dice():
+        socketio.emit('roll_dice_broadcast')

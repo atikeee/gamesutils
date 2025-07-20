@@ -579,6 +579,66 @@ canvas {
 }
 
 
+/* roll dice */
+.dice-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem; /* Space between dice */
+    font-size: 10rem; /* Large dice display */
+    min-height: 120px; /* Ensure container has height during animation */
+    transition: transform 0.2s ease-out;
+}
+
+.dice-face {
+    width: 120px;
+    height: 120px;
+    font-size: 10rem;
+    background-color: #f00fff;
+    color: #224455;
+    border: 2px solid #333;
+    border-radius: 18px; /* Rounded corners for dice */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    animation: roll-animation 0.5s ease-in-out infinite alternate; /* Initial animation */
+}
+
+/* Keyframes for a simple rolling animation */
+@keyframes roll-animation {
+    0% { transform: rotateY(0deg); opacity: 1; }
+    50% { transform: rotateY(180deg); opacity: 0.7; }
+    100% { transform: rotateY(360deg); opacity: 1; }
+}
+
+.rolling .dice-face {
+    animation: roll-animation 0.1s ease-in-out infinite alternate; /* Faster animation during roll */
+}
+
+.final-roll .dice-face {
+    animation: none; /* Stop animation after final roll */
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .dice-container {
+        font-size: 6rem;
+        gap: 1.5rem;
+    }
+    .dice-face {
+        width: 750px;
+        height: 75px;
+        border-radius: 12px;
+    }
+    .roll-button {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+    }
+}
+        
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .container {

@@ -852,7 +852,6 @@ if (isPlayerPage) {
             document.querySelectorAll('#player-tool-select .btn-tool').forEach(btn => btn.classList.remove('selected'));
             target.classList.add('selected');
             selectedPlayerTool = target.dataset.tool;
-
             if (selectedPlayerTool === 'undo-player') {
                 undoPlayerLastAction();
             } else {
@@ -1208,20 +1207,70 @@ async function stealCards(currentPlayerId, targetPlayerId) {
 }
 
 function addDisappearingTag(containerDiv, text) {
-            const tag = document.createElement('span');
-            tag.className = 'tag';
-            tag.textContent = text;
-            containerDiv.appendChild(tag);
-            setTimeout(() => {
-                tag.classList.add('fade-out');
-                setTimeout(() => {
-                    if (tag.parentNode) {
-                        tag.parentNode.removeChild(tag);
-                    }
-                }, 300); 
-            }, 60000); 
-        }
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = text;
+    containerDiv.appendChild(tag);
+    setTimeout(() => {
+        tag.classList.add('fade-out');
+        setTimeout(() => {
+            if (tag.parentNode) {
+                tag.parentNode.removeChild(tag);
+            }
+        }, 300); 
+    }, 60000); 
+}
 
+/**
+ * Rolls two dice 
+ */
+function getRandomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getDiceFaceHTML(value) {
+    // Using emoji for dice faces for simplicity and broad compatibility
+    const diceEmojis = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+    return `<div class="dice-face">${diceEmojis[value - 1]}</div>`;
+}
+
+
+function rolldice()
+{
+   socket.emit('roll_dice');
+
+}
+socket.on('roll_dice_broadcast', () => {
+    if (isGamePage) {
+        const displayElement = document.getElementById('diceroll');
+        displayElement.classList.remove('final-roll');
+        displayElement.classList.add('rolling');
+
+        let animationCounter = 0;
+        const animationInterval = setInterval(() => {
+            // Show temporary random numbers during animation
+            const tempDice1 = getRandomInt(1, 6);
+            const tempDice2 = getRandomInt(1, 6);
+            displayElement.innerHTML = getDiceFaceHTML(tempDice1) + getDiceFaceHTML(tempDice2);
+
+            animationCounter++;
+            if (animationCounter > 10) { // Run temporary rolls for a short duration
+                clearInterval(animationInterval);
+                // Generate final dice values
+                const dice1 = getRandomInt(1, 6);
+                const dice2 = getRandomInt(1, 6);
+
+                // Update the div with the final dice values
+                displayElement.innerHTML = getDiceFaceHTML(dice1) + getDiceFaceHTML(dice2);
+                displayElement.classList.remove('rolling');
+                displayElement.classList.add('final-roll');
+            }
+        }, 100);
+
+    }
+});
 async function playdevcard(currentPlayerId, item) {
     const confirmed = await showConfirmation(`Are you sure you want to play the ${item} card?`);
     if (confirmed) {

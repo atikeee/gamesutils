@@ -6,6 +6,7 @@
     <title>Catan Player {{ player_id }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css') }}">
 </head>
 <body>
@@ -27,6 +28,7 @@
                 <button class="btn btn-tool" data-tool="road">Place Road</button>
                 <button class="btn btn-tool" data-tool="robber">Move Robber</button>
                 <button class="btn btn-tool" data-tool="undo-player">Undo Last Action</button>
+                <button class="btn btn-tool" value="roll-dice" id='rolldice' onclick="rolldice()">Roll Dice</button>
             </div>
             <div class="card-buttons mt-4">
                 <h3 class="text-xl font-semibold text-gray-700 mb-2">Take Resources:</h3>
@@ -98,7 +100,7 @@
     <script>
         // Pass player_id from Flask to JavaScript
         window.PLAYER_ID = {{ player_id }};
-            
+
     </script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}"></script>
