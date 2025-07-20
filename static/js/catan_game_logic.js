@@ -167,7 +167,7 @@ function drawBoard() {
             const portDrawX = junctionX + (vecX / vecMagnitude) * offsetDistance;
             const portDrawY = junctionY + (vecY / vecMagnitude) * offsetDistance;
 
-            drawCirclePort(ctx, portDrawX, portDrawY, type, ratio, null);
+            drawCirclePort(ctx, portDrawX, portDrawY, type, ratio);
         }
     });
 

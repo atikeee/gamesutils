@@ -7,10 +7,10 @@ const CITY_SIZE = 30;
 const PORT_SIZE = HEX_SIZE * 0.3;
 
 const PLAYER_COLORS = {
-    'player1': '#FF6347',
-    'player2': '#4682B4',
-    'player3': '#32CD32',
-    'player4': '#FFD700'
+    'player1': '#F80000',
+    'player2': '#0000CC',
+    'player3': '#663300',
+    'player4': '#FFFF00'
 };
 
 const RESOURCE_COLORS = {
@@ -34,21 +34,37 @@ const resourceImagePaths = {
 };
 
 const PORT_DATA = [
-    null, null, null, null, null, null, null, null,
-    ['wood', '2:1'], ['brick', '2:1'], ['sheep', '2:1'],
-    null, null,
+    ['any', '3:1'], 
+    ['hay', '2:1'], 
+    0, 
+    0, 
+    0, 
+    ['any', '3:1'], 
+    0, 
+    ['rock', '2:1'], 
+    0, 
+    0, 
+    ['hay', '2:1'], 
+    ['rock', '2:1'], 
+    0, 
+    ['brick', '2:1'], 
+    ['any', '3:1'], 
+    ['any', '3:1'], 
+    0, 
+    0, 
+    ['wood', '2:1'], 
+    0, 
+    ['brick', '2:1'], 
+    ['wood', '2:1'], 
+    0, 
+    ['sheep', '2:1'],
+    ['any', '3:1'],    
+    ['any', '3:1'],       
+    0,
+    ['sheep', '2:1'],    
+    ['any', '3:1'],    
     ['any', '3:1'],
-    null, null,
-    ['hay', '2:1'],
-    null, null,
-    ['any', '3:1'],
-    null, null,
-    ['rock', '2:1'],
-    null,
-    ['any', '3:1'],
-    null, null,
-    ['any', '3:1'],
-    null, null
+    
 ];
 
 function hexToPixel(q, r, offsetX, offsetY) {
@@ -102,6 +118,7 @@ function getHexVertices(centerX, centerY, size) {
 }
 
 function drawHex(ctx, x, y, size, fillColor, image = null, strokeColor = '#333', lineWidth = 2) {
+    ctx.globalAlpha = 0.7;
     ctx.beginPath();
     const vertices = getHexVertices(x, y, size);
     ctx.moveTo(vertices[0].x, vertices[0].y);
@@ -133,6 +150,7 @@ function drawHex(ctx, x, y, size, fillColor, image = null, strokeColor = '#333',
     ctx.strokeStyle = strokeColor;
     ctx.lineWidth = lineWidth;
     ctx.stroke();
+    ctx.globalAlpha = 1;
 }
 
 function drawNumber(ctx, x, y, number) {
@@ -236,14 +254,18 @@ function drawOrePortIcon(ctx, x, y, iconSize) {
     ctx.stroke();
 }
 
-function drawCirclePort(ctx, x, y, type, ratio, backgroundImage = null) {
+function drawCirclePort(ctx, x, y, type, ratio) {
     ctx.save();
     ctx.translate(x, y);
 
     const circleRadius = PORT_SIZE;
     ctx.beginPath();
     ctx.arc(0, 0, circleRadius, 0, Math.PI * 2);
-
+    backgroundImage = null;
+    if (type != 'any')
+    {
+        backgroundImage = loadedResourceImages[type];
+    }
     if (backgroundImage && backgroundImage.complete && backgroundImage.naturalWidth > 0) {
         const imgScale = Math.max(circleRadius * 2 / backgroundImage.naturalWidth, circleRadius * 2 / backgroundImage.naturalHeight);
         const imgWidth = backgroundImage.naturalWidth * imgScale;
@@ -271,7 +293,7 @@ function drawCirclePort(ctx, x, y, type, ratio, backgroundImage = null) {
         }
     } else {
         ctx.fillStyle = '#333';
-        ctx.font = `bold ${iconSize * 0.7}px Inter`;
+        ctx.font = `bold ${iconSize * 1.2}px Inter`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('?', 0, iconYOffset);
