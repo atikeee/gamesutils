@@ -516,6 +516,24 @@ async function loadAllStatesFromBackend() {
     //await loadRobberStateFromBackend();
     drawBoard();
 }
+async function resetgame()
+{
+    try {
+            const response = await fetch('/catan_reset_game', {
+
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                showMessage(result.message);
+            } else {
+                console.error('Error reseting game:', result.message);
+                showMessage('Error reseting game: ' + result.message, 'error');
+            }
+        } catch (e) {
+            console.error('Network error:', e);
+            showMessage('Network error reseting game: ' + e.message, 'error');
+        }
+}
 
 function getAllJunctions() {
     const junctions = new Map();
@@ -802,7 +820,11 @@ if (!isGamePage && !isPlayerPage) {
                 saveBoardTilesToBackend();
             } else if (selectedTool === 'load-board') {
                 loadAllStatesFromBackend();
+            } else if (selectedTool === 'reset-game') {
+                resetgame();
             }
+            
+            
             showMessage(`Selected tool: ${selectedTool}`);
             drawBoard();
         }
@@ -883,6 +905,10 @@ if (isPlayerPage) {
                     savePlayerStateToHistory();
                     const drawnCard = globalDevCardDeck.pop();
                     allPlayersData[PLAYER_ID].devCards.push(drawnCard);
+                    socket.emit('card_pick_log', { 
+                        pid: PLAYER_ID, 
+                        log: "Dev Card"
+                    });
                     await saveAllPlayerStatesToBackend(); 
                     showMessage(`You drew a ${drawnCard} Development Card!`);
                     updatePlayerUI(); // Update UI immediately after local state change
@@ -898,24 +924,40 @@ if (isPlayerPage) {
         if (target.classList.contains('transfer-btn') || target.classList.contains('drop-btn')) {
             const targetPlayerId = target.dataset.targetPlayer;
             if (selectedHandCards.length === 0) {
-                showMessage('Please select cards from your hand first.', 'error');
-                return;
+                if(target.classList.contains('transfer-btn')){
+                    let confirmationMessage = '';
+                    const targetPlayerName = allPlayersData[targetPlayerId] ? allPlayersData[targetPlayerId].playerName : targetPlayerId;
+                    confirmationMessage = `Are you sure you want to steal from ${targetPlayerName}?`;
+                    const confirmed = await showConfirmation(confirmationMessage);
+                    if (confirmed) {
+                        await stealCards(PLAYER_ID, targetPlayerId);
+                    } else {
+                        showMessage('No stealing done.');
+                    }
+                }else
+                {
+                    showMessage('Please select cards to drop from your hand.', 'error');
+                }
+                
+            }
+            else{
+                let confirmationMessage = '';
+                if (targetPlayerId === 'NA') {
+                    confirmationMessage = `Are you sure you want to drop ${selectedHandCards.length} selected card(s)?`;
+                } else {
+                    const targetPlayerName = allPlayersData[targetPlayerId] ? allPlayersData[targetPlayerId].playerName : targetPlayerId;
+                    confirmationMessage = `Are you sure you want to transfer ${selectedHandCards.length} selected card(s) to ${targetPlayerName}?`;
+                }
+
+                const confirmed = await showConfirmation(confirmationMessage);
+                if (confirmed) {
+                    await transferOrDropSelectedCards(PLAYER_ID, targetPlayerId);
+                } else {
+                    showMessage('Card transfer/drop cancelled.');
+                }
             }
 
-            let confirmationMessage = '';
-            if (targetPlayerId === 'NA') {
-                confirmationMessage = `Are you sure you want to drop ${selectedHandCards.length} selected card(s)?`;
-            } else {
-                const targetPlayerName = allPlayersData[targetPlayerId] ? allPlayersData[targetPlayerId].playerName : targetPlayerId;
-                confirmationMessage = `Are you sure you want to transfer ${selectedHandCards.length} selected card(s) to ${targetPlayerName}?`;
-            }
-
-            const confirmed = await showConfirmation(confirmationMessage);
-            if (confirmed) {
-                await transferOrDropSelectedCards(PLAYER_ID, targetPlayerId);
-            } else {
-                showMessage('Card transfer/drop cancelled.');
-            }
+            
         }
     });
 
@@ -1154,6 +1196,20 @@ async function transferOrDropSelectedCards(currentPlayerId, targetPlayerId) {
     updatePlayerUI(); 
     showMessage('Card operation completed.');
 }
+async function stealCards(currentPlayerId, targetPlayerId) {
+    savePlayerStateToHistory(); // Save current state before modification
+    targetHandCards = allPlayersData[targetPlayerId].hand;
+    if (targetHandCards.length > 0) {
+        const randomIndex = Math.floor(Math.random() * targetHandCards.length);
+        const stolenCard = targetHandCards[randomIndex];
+        allPlayersData[targetPlayerId].hand.splice(randomIndex, 1);
+        allPlayersData[currentPlayerId].hand.push(stolenCard);
+    }
+    
+    await saveAllPlayerStatesToBackend(); // Save changes to backend
+    updatePlayerUI(); 
+    showMessage('Card steal completed.');
+}
 
 function addDisappearingTag(containerDiv, text) {
             const tag = document.createElement('span');
@@ -1171,7 +1227,6 @@ function addDisappearingTag(containerDiv, text) {
         }
 
 async function playdevcard(currentPlayerId, item) {
-    alert(item);
     const confirmed = await showConfirmation(`Are you sure you want to play the ${item} card?`);
     if (confirmed) {
         savePlayerStateToHistory(); // Save state before playing
@@ -1185,11 +1240,10 @@ async function playdevcard(currentPlayerId, item) {
             playerName: allPlayersData[currentPlayerId].playerName 
         });
             
-            await saveAllPlayerStatesToBackend(); // Save changes to backend
-            updatePlayerUI(); // Update UI immediately
+        await saveAllPlayerStatesToBackend(); // Save changes to backend
+        updatePlayerUI(); // Update UI immediately
         } else {
             showMessage('Error: Could not find the specific card to play.', 'error');
-            undoPlayerLastAction(); 
         }
 }
 

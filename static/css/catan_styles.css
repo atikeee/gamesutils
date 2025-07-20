@@ -389,39 +389,40 @@ canvas {
     display: none; /* Hide the text */
 }
 
+
 /* Background Images for Resource Cards */
 .resource-card[data-resource-type="wood"] {
-    background-image: url('https://placehold.co/100x150/3CB371/ffffff?text=WOOD');
+    background-image: url('/static/images/catan/wood.jpg');
 }
 .resource-card[data-resource-type="brick"] {
-    background-image: url('https://placehold.co/100x150/CD5C5C/ffffff?text=BRICK');
+    background-image: url('/static/images/catan/brick.jpg');
 }
 .resource-card[data-resource-type="sheep"] {
-    background-image: url('https://placehold.co/100x150/90EE90/000000?text=SHEEP');
+    background-image: url('/static/images/catan/sheep.jpg');
 }
 .resource-card[data-resource-type="wheat"] {
-    background-image: url('https://placehold.co/100x150/DAA520/ffffff?text=WHEAT');
+    background-image: url('/static/images/catan/hay.jpg');
 }
 .resource-card[data-resource-type="ore"] {
-    background-image: url('https://placehold.co/100x150/708090/ffffff?text=ORE');
+    background-image: url('/static/images/catan/rock.jpg');
 }
 .dev-card[data-resource-type="development"] { /* This was for the button, now for the actual card */
-    background-image: url('https://placehold.co/100x150/6A5ACD/ffffff?text=DEV+CARD');
+    background-image: url('/static/images/catan/dev_card.jpg');
 }
-.dev-card[data-resource-type="knight"] {
-    background-image: url('https://placehold.co/100x150/4B0082/ffffff?text=KNIGHT'); /* Indigo */
+.dev-card[data-card-type="knight"] {
+    background-image: url('/static/images/catan/Knight.jpg');
 }
-.dev-card[data-resource-type="victory_point"] {
-    background-image: url('https://placehold.co/100x150/FFD700/000000?text=VICTORY+POINT'); /* Gold */
+.dev-card[data-card-type="victory_point"] {
+    background-image: url('/static/images/catan/victory_point.jpg');
 }
-.dev-card[data-resource-type="road_building"] {
-    background-image: url('https://placehold.co/100x150/8B4513/ffffff?text=ROAD+BUILDING'); /* SaddleBrown */
+.dev-card[data-card-type="road_building"] {
+    background-image: url('/static/images/catan/Road_Building.jpg');
 }
-.dev-card[data-resource-type="year_of_plenty"] {
-    background-image: url('https://placehold.co/100x150/32CD32/ffffff?text=YEAR+OF+PLENTY'); /* LimeGreen */
+.dev-card[data-card-type="year_of_plenty"] {
+    background-image: url('/static/images/catan/Year_of_Plenty.jpg');
 }
-.dev-card[data-resource-type="monopoly"] {
-    background-image: url('https://placehold.co/100x150/DC143C/ffffff?text=MONOPOLY'); /* Crimson */
+.dev-card[data-card-type="monopoly"] {
+    background-image: url('/static/images/catan/Monopoly.jpg');
 }
 
 

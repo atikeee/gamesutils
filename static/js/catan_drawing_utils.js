@@ -25,12 +25,12 @@ const NUMBER_COLOR = '#333';
 const ROBBER_COLOR = '#333';
 
 const resourceImagePaths = {
-    'wood': 'https://placehold.co/200x200/3CB371/ffffff?text=Forest',
-    'brick': 'https://placehold.co/200x200/CD5C5C/ffffff?text=Brickfield',
-    'sheep': 'https://placehold.co/200x200/90EE90/000000?text=Sheep+Field',
-    'wheat': 'https://placehold.co/200x200/DAA520/ffffff?text=Hay+Field',
-    'ore': 'https://placehold.co/200x200/708090/ffffff?text=Rocky+Mountain',
-    'desert': 'https://placehold.co/200x200/F4A460/ffffff?text=Desert'
+    'wood': '/static/images/catan/wood.jpg',
+    'brick': '/static/images/catan/brick.jpg',
+    'sheep': '/static/images/catan/sheep.jpg',
+    'wheat': '/static/images/catan/hay.jpg',
+    'ore': '/static/images/catan/rock.jpg',
+    'desert': '/static/images/catan/desert.jpg',
 };
 
 const PORT_DATA = [

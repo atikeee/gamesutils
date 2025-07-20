@@ -122,7 +122,19 @@ def configure_routes_catan(app,socketio):
             return jsonify({"status": "info", "message": f"No saved state found for player ."}), 200
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
-
+    
+    @app.route('/catan_reset_game')
+    def reset_game():
+        if os.path.exists(JSON_PLAY_STATE_FILE):
+            try:
+                os.remove(JSON_PLAY_STATE_FILE)
+                print(f"File {JSON_PLAY_STATE_FILE} removed successfully.")
+                return jsonify({"status": "success"}), 200
+            except Exception as e:
+                return jsonify({"status": "error", "message": str(e)}), 500
+        else:
+            print(f"File {JSON_PLAY_STATE_FILE} does not exist.")
+            return jsonify({"status": "info", "message": f"No play state file."}), 200
 
     @socketio.on('dev_card_played')
     def handle_dev_card_played(data):
