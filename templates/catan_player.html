@@ -26,8 +26,6 @@
                 <button class="btn btn-tool" data-tool="city">Upgrade to City</button>
                 <button class="btn btn-tool" data-tool="road">Place Road</button>
                 <button class="btn btn-tool" data-tool="robber">Move Robber</button>
-                <button class="btn btn-tool" data-tool="playdev">Play Dev Card</button>
-                <button class="btn btn-tool" data-tool="dropcard">Undo Last Action</button>
                 <button class="btn btn-tool" data-tool="undo-player">Undo Last Action</button>
             </div>
             <div class="card-buttons mt-4">
@@ -101,6 +99,7 @@
         window.PLAYER_ID = {{ player_id }};
             
     </script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/catan_game_logic.js') }}"></script>
 </body>

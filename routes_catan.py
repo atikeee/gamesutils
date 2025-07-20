@@ -105,6 +105,7 @@ def configure_routes_catan(app,socketio):
             play_state = request.json
             if play_state:
                 if save_play_state_to_json(json.dumps(play_state)):
+                    socketio.emit('catan_update')
                     return jsonify({"status": "success", "message": f"Player  state saved successfully!"}), 200
                 return jsonify({"status": "error", "message": f"Failed to save player  state to file."}), 500
             return jsonify({"status": "error", "message": "No player state provided."}), 400

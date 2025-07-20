@@ -8,9 +8,11 @@ const isPlayerPage = window.location.pathname.startsWith('/catan_player/');
 const PLAYER_ID_RAW = isPlayerPage ? window.location.pathname.split('/').pop() : null;
 const PLAYER_ID = isPlayerPage ? 'player' + PLAYER_ID_RAW : null;
 
+
 let loadedResourceImages = {};
 let boardTiles = [];
 let selectedHandCards  = [];
+const socket = io();
 let init_player_data = {
     'player1': { playerName: 'Player 1', hand: ["wood", "brick", "sheep", "wheat", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "wheat"], devCards: [], roads: [], structures: [], history: [] },
     'player2': { playerName: 'Player 2', hand: ["wood", "brick", "sheep", "wheat", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "wheat"], devCards: [], roads: [], structures: [], history: [] },
@@ -431,27 +433,39 @@ async function loadBoardTilesFromBackend() {
 }
 
 async function saveAllPlayerStatesToBackend() {
-    if (isGamePage) return;
-
-    try {
-        const response = await fetch('/save_play_state', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(allPlayersData),
-        });
-        const result = await response.json();
-        if (result.status === 'success') {
-            showMessage(result.message);
-        } else {
-            console.error('Error saving all player states:', result.message);
-            showMessage('Error saving all player states: ' + result.message, 'error');
-        }
-    } catch (e) {
-        console.error('Network error saving all player states:', e);
-        showMessage('Network error saving all player states: ' + e.message, 'error');
+    if (isGamePage){
+        
     }
+    else{
+        try {
+            const response = await fetch('/save_play_state', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(allPlayersData),
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                showMessage(result.message);
+
+                
+            } else {
+                console.error('Error saving all player states:', result.message);
+                showMessage('Error saving all player states: ' + result.message, 'error');
+            }
+        } catch (e) {
+            console.error('Network error saving all player states:', e);
+            showMessage('Network error saving all player states: ' + e.message, 'error');
+        }
+    }
+    console.log('sending signal');
+    socket.emit('catan_update');
+    console.log('sent signal');
+
+    
+    
+    
 }
 
 async function loadAllPlayerStatesFromBackend() {
@@ -808,8 +822,8 @@ canvas.addEventListener('click', (event) => {
     if (actionSuccessful) {
         if (isPlayerPage) {
             console.log("trying to save playerstate");
-            saveAllPlayerStatesToBackend();
-            //await saveAllPlayerStatesToBackend();            
+            //await saveAllPlayerStatesToBackend();
+            saveAllPlayerStatesToBackend();            
         }
     }
     drawBoard();
@@ -1205,7 +1219,13 @@ async function onCatanPlayerPageLoad() {
     }
 }
 
-// Removed Socket.IO related code
+socket.on('catan_update', async () => {
+    console.log('Received catan_update from server. Reloading state...');
+    // Reload all states from the backend and update the UI
+    await loadAllStatesFromBackend();
+    updatePlayerUI();
+    showMessage('Game state updated by another player!');
+});
 
 window.addEventListener('load', async () => {
     await preloadImages();
