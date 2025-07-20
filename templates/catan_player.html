@@ -27,6 +27,7 @@
                 <button class="btn btn-tool" data-tool="road">Place Road</button>
                 <button class="btn btn-tool" data-tool="robber">Move Robber</button>
                 <button class="btn btn-tool" data-tool="playdev">Play Dev Card</button>
+                <button class="btn btn-tool" data-tool="dropcard">Undo Last Action</button>
                 <button class="btn btn-tool" data-tool="undo-player">Undo Last Action</button>
             </div>
             <div class="card-buttons mt-4">
@@ -65,6 +66,12 @@
                 <h3 class="text-xl font-semibold text-gray-700">Your Hand (<span id="handCardCount">0</span>)</h3>
                 <div id="handCards" class="card-list">
                     <!-- Resource cards will be displayed here -->
+                </div>
+                <div class="selected-cards-info text-gray-700 font-medium mb-3">
+                        Selected: <span id="selectedCardCount">0</span> cards
+                </div>
+                <div id="transferDropButtons" class="button-group transfer-buttons flex-col md:flex-row">
+                        <!-- Buttons will be dynamically generated here by JavaScript -->
                 </div>
             </div>
             <div class="deck-display">

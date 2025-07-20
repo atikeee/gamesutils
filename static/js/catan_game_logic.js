@@ -10,12 +10,12 @@ const PLAYER_ID = isPlayerPage ? 'player' + PLAYER_ID_RAW : null;
 
 let loadedResourceImages = {};
 let boardTiles = [];
-
+let selectedHandCards  = [];
 let init_player_data = {
-    'player1': { playerName: 'Player 1', hand: [], devCards: [], roads: [], structures: [], history: [] },
-    'player2': { playerName: 'Player 2', hand: [], devCards: [], roads: [], structures: [], history: [] },
-    'player3': { playerName: 'Player 3', hand: [], devCards: [], roads: [], structures: [], history: [] },
-    'player4': { playerName: 'Player 4', hand: [], devCards: [], roads: [], structures: [], history: [] },
+    'player1': { playerName: 'Player 1', hand: ["wood", "brick", "sheep", "wheat", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "wheat"], devCards: [], roads: [], structures: [], history: [] },
+    'player2': { playerName: 'Player 2', hand: ["wood", "brick", "sheep", "wheat", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "wheat"], devCards: [], roads: [], structures: [], history: [] },
+    'player3': { playerName: 'Player 3', hand: ["wood", "brick", "sheep", "wheat", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "wheat"], devCards: [], roads: [], structures: [], history: [] },
+    'player4': { playerName: 'Player 4', hand: ["wood", "brick", "sheep", "wheat", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "wheat"], devCards: [], roads: [], structures: [], history: [] },
     'robber':{q:100,r:100}
 }; 
 let allPlayersData = init_player_data;
@@ -926,6 +926,32 @@ if (isPlayerPage) {
         }
         
     });
+    document.querySelector('.player-decks-section').addEventListener('click', async (event) => {
+        const target = event.target;
+        if (target.classList.contains('transfer-btn') || target.classList.contains('drop-btn')) {
+            const targetPlayerId = target.dataset.targetPlayer;
+            if (selectedHandCards.length === 0) {
+                showMessage('Please select cards from your hand first.', 'error');
+                return;
+            }
+
+            let confirmationMessage = '';
+            if (targetPlayerId === 'NA') {
+                confirmationMessage = `Are you sure you want to drop ${selectedHandCards.length} selected card(s)?`;
+            } else {
+                const targetPlayerName = allPlayersData[targetPlayerId] ? allPlayersData[targetPlayerId].playerName : targetPlayerId;
+                confirmationMessage = `Are you sure you want to transfer ${selectedHandCards.length} selected card(s) to ${targetPlayerName}?`;
+            }
+
+            const confirmed = await showConfirmation(confirmationMessage);
+            if (confirmed) {
+                await transferOrDropSelectedCards(PLAYER_ID, targetPlayerId);
+            } else {
+                showMessage('Card transfer/drop cancelled.');
+            }
+        }
+    });
+
     
 }
 
@@ -968,7 +994,31 @@ function checkAndDeductCards(playerId, actionType) {
     return true; // Cards deducted successfully
 }
 
+function renderTransferDropButtons() {
+    const transferDropButtonsDiv = document.getElementById('transferDropButtons');
+    if (!transferDropButtonsDiv) return; // Exit if the container doesn't exist
 
+    transferDropButtonsDiv.innerHTML = ''; // Clear existing buttons
+
+    // Get player IDs for other players
+    const otherPlayerIds = Object.keys(allPlayersData).filter(pId => pId !== PLAYER_ID && pId.startsWith('player'));
+
+    // Create buttons for other players
+    otherPlayerIds.forEach(pId => {
+        const button = document.createElement('button');
+        button.classList.add('btn', 'btn-tool', 'transfer-btn');
+        button.dataset.targetPlayer = pId;
+        button.textContent = `${allPlayersData[pId].playerName}`;
+        transferDropButtonsDiv.appendChild(button);
+    });
+
+    // Create the "Drop Selected" button
+    const dropButton = document.createElement('button');
+    dropButton.classList.add('btn', 'btn-tool', 'drop-btn');
+    dropButton.dataset.targetPlayer = 'NA';
+    dropButton.textContent = 'Drop Selected';
+    transferDropButtonsDiv.appendChild(dropButton);
+}
 function initializeDevCardDeck() {
     const devCardTypes = {
         'knight': 14,
@@ -1053,6 +1103,13 @@ function updatePlayerUI() {
             cardItem.classList.add('animate-in'); // Keep animation
             cardItem.dataset.resourceType = resourceType; // Set data-resource-type for CSS background image
             // No textContent needed for resource cards as per CSS (display: none for .card-text)
+            cardItem.addEventListener('click', () => toggleCardSelection(cardItem, resourceType));
+
+            // Apply 'selected' class if the card is in the selectedHandCards array
+            //if (selectedHandCards.includes(resourceType)) {
+              //  cardItem.classList.add('selected');
+            //}
+            
             handCardsDiv.appendChild(cardItem);
         });
         document.getElementById('handCardCount').textContent = allPlayersData[PLAYER_ID].hand.length;
@@ -1079,6 +1136,65 @@ function updatePlayerUI() {
                 playerNameInputGroup.classList.add('hidden');
             }
         }
+        renderTransferDropButtons();
+}
+function toggleCardSelection(cardElement, resourceType) {
+    cardElement.classList.toggle('selected');
+    const handCardsDiv = document.getElementById('handCards');
+    if (!handCardsDiv) {
+        console.warn("Element with ID 'handCards' not found.");
+    }
+    selectedHandCards=[];
+    const allCardItems = handCardsDiv.querySelectorAll('.card-item');
+    allCardItems.forEach(cardItem => {
+        if (cardItem.classList.contains('selected')) {
+            const resourceType = cardItem.dataset.resourceType;
+            if (resourceType) {
+                selectedHandCards.push(resourceType);
+            }
+        }
+    });
+    document.getElementById('selectedCardCount').textContent = selectedHandCards.length;
+    console.log('Selected cards:', selectedHandCards);
+}
+async function transferOrDropSelectedCards(currentPlayerId, targetPlayerId) {
+    if (selectedHandCards.length === 0) {
+        showMessage('No cards selected to transfer/drop.', 'error');
+        return;
+    }
+    console.log(currentPlayerId+"=>"+targetPlayerId);
+    savePlayerStateToHistory(); // Save current state before modification
+
+    // Create a copy of selectedHandCards to iterate over, as we'll modify the original
+    // Sort in descending order of originalIndex to avoid issues when splicing
+    //const cardsToProcess = selectedHandCards.map(identifier => {
+    //    const [resourceType, originalIndexStr] = identifier.split('_');
+    //    return { resourceType, originalIndex: parseInt(originalIndexStr) };
+    //}).sort((a, b) => b.originalIndex - a.originalIndex);
+    //alert(cardsToProcess);
+    //alert(selectedHandCards);
+    selectedHandCards.forEach(item => {
+        console.log('item'+item);
+        if (targetPlayerId !== 'NA' && allPlayersData[targetPlayerId]) {
+            allPlayersData[targetPlayerId].hand.push(item);
+            const index = allPlayersData[currentPlayerId].hand.indexOf(item);
+            if (index > -1) {
+                allPlayersData[currentPlayerId].hand.splice(index, 1); 
+            }
+            showMessage(`Transferred 1 ${item} to ${allPlayersData[targetPlayerId].playerName}.`);
+        } else if (targetPlayerId === 'NA') {
+            const index = allPlayersData[currentPlayerId].hand.indexOf(item);
+            if (index > -1) {
+                allPlayersData[currentPlayerId].hand.splice(index, 1); 
+            }
+            showMessage(`Dropped 1 ${item}.`);
+        }
+    });
+
+    selectedHandCards = [];
+    await saveAllPlayerStatesToBackend(); // Save changes to backend
+    updatePlayerUI(); 
+    showMessage('Card operation completed.');
 }
 
 async function onCatanPlayerPageLoad() {
