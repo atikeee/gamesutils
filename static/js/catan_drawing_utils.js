@@ -17,8 +17,8 @@ const RESOURCE_COLORS = {
     'wood': '#3CB371',
     'brick': '#CD5C5C',
     'sheep': '#90EE90',
-    'wheat': '#DAA520',
-    'ore': '#708090',
+    'hay': '#DAA520',
+    'rock': '#708090',
     'desert': '#F4A460',
 };
 const NUMBER_COLOR = '#333';
@@ -28,8 +28,8 @@ const resourceImagePaths = {
     'wood': '/static/images/catan/wood.jpg',
     'brick': '/static/images/catan/brick.jpg',
     'sheep': '/static/images/catan/sheep.jpg',
-    'wheat': '/static/images/catan/hay.jpg',
-    'ore': '/static/images/catan/rock.jpg',
+    'hay': '/static/images/catan/hay.jpg',
+    'rock': '/static/images/catan/rock.jpg',
     'desert': '/static/images/catan/desert.jpg',
 };
 
@@ -39,11 +39,11 @@ const PORT_DATA = [
     null, null,
     ['any', '3:1'],
     null, null,
-    ['wheat', '2:1'],
+    ['hay', '2:1'],
     null, null,
     ['any', '3:1'],
     null, null,
-    ['ore', '2:1'],
+    ['rock', '2:1'],
     null,
     ['any', '3:1'],
     null, null,
@@ -213,7 +213,7 @@ function drawSheepPortIcon(ctx, x, y, iconSize) {
     ctx.stroke();
 }
 
-function drawWheatPortIcon(ctx, x, y, iconSize) {
+function drawhayPortIcon(ctx, x, y, iconSize) {
     ctx.fillStyle = '#FFD700';
     ctx.strokeStyle = '#B8860B';
     ctx.lineWidth = 1.5;
@@ -266,8 +266,8 @@ function drawCirclePort(ctx, x, y, type, ratio, backgroundImage = null) {
             case 'wood': drawWoodPortIcon(ctx, 0, iconYOffset, iconSize); break;
             case 'brick': drawBrickPortIcon(ctx, 0, iconYOffset, iconSize); break;
             case 'sheep': drawSheepPortIcon(ctx, 0, iconYOffset, iconSize); break;
-            case 'wheat': drawWheatPortIcon(ctx, 0, iconYOffset, iconSize); break;
-            case 'ore': drawOrePortIcon(ctx, 0, iconYOffset, iconSize); break;
+            case 'hay': drawhayPortIcon(ctx, 0, iconYOffset, iconSize); break;
+            case 'rock': drawOrePortIcon(ctx, 0, iconYOffset, iconSize); break;
         }
     } else {
         ctx.fillStyle = '#333';

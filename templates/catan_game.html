@@ -3,34 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catan Board Builder</title>
+    <title>Catan Board</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css') }}">
 </head>
-<body >
-    <div class="container">
-        <h1 class="text-3xl font-bold text-gray-800 mb-4">Catan Board Builder</h1>
-        <p class="text-gray-600 text-center mb-6">Shows the board for all 4 player</p>
-
-
-        <canvas id="catanBoard"></canvas>
-        <div id="messageBox" class="message-box hidden"></div>
-        <div class="played-dev-cards-section mt-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-3">Played Development Cards</h2>
-            <div id="playedDevCards" class="card-list">
-                <!-- Played development cards will be displayed here -->
-            </div>
-            <h2 id="player1logh"></h2>
-            <div id="player1log">            </div>
-            <h2 id="player2logh"></h2>
-            <div id="player2log">            </div>
-            <h2 id="player3logh"></h2>
-            <div id="player3log">            </div>
-            <h2 id="player4logh"></h2>
-            <div id="player4log">            </div>
+<body class="bg-gray-100">
+    <div class="main-container">
+        <div class="left-column">
+            <h1 class="text-2xl font-bold text-gray-800 mb-4">Catan Board</h1>
+            <canvas id="catanBoard"></canvas>
+            <div id="messageBox" class="message-box"></div>
         </div>
+        <div class="middle-column">+
+            <div class="middle-section">
+                <div class="played-dev-cards-section mt-6">
+                    <h2 class="text-1xl text-gray-800 mb-3">Played Development Cards</h2>
+                    <div id="playedDevCards" class="card-list">
+                    <!-- Played development cards will be displayed here -->
+                    </div>
+                </div>
+            </div>
+            <div class="middle-section">
+                <div class="played-dev-cards-section mt-6">
+                    <h2 class="text-1xl text-gray-800 mb-3">Dice Roll</h2>
+                    <div id="diceroll">
+                    <!-- Played development cards will be displayed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="right-column">
+            
+
+
+            <div class="right-section">
+                <h2 id="player1logh"></h2>
+                <div id="player1log">            </div>
+            </div>
+            <div class="right-section">
+                <h2 id="player2logh"></h2>
+                <div id="player2log">            </div>
+            </div>
+            <div class="right-section">
+                <h2 id="player3logh"></h2>
+                <div id="player3log">            </div>
+            </div>
+            <div class="right-section">
+                <h2 id="player4logh"></h2>
+                <div id="player4log">            </div>
+            </div>
+        </div>
+        
         
     </div>
     <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}"></script>

@@ -12,7 +12,6 @@
 <body>
     <div class="container">
         <h1 class="text-3xl font-bold text-gray-800 mb-4">Catan Board Builder</h1>
-        <p class="text-gray-600 text-center mb-6">Click on the board to place elements. Use shuffle and swap for map setup.</p>
 
         <div class="controls">
             <div class="button-group" id="tool-select">
@@ -27,7 +26,7 @@
         </div>
 
         <canvas id="catanBoard"></canvas>
-        <div id="messageBox" class="message-box hidden"></div>
+        <div id="messageBox" class="message-box"></div>
     </div>
     <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/catan_game_logic.js') }}"></script>

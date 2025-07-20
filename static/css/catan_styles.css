@@ -17,19 +17,6 @@ html, body {
     padding: 0;
     overflow: auto; /* Allow scrolling if content overflows */
 }
-.container {
-    background-color: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    width: 100%;
-    max-width: 1200px;
-    min-height: 100vh; /* Ensure container takes at least full viewport height */
-}
 
 /* Canvas Styles (Common to all Catan pages) */
 canvas {
@@ -43,6 +30,93 @@ canvas {
     aspect-ratio: 1.2 / 1; /* Approximate aspect ratio for a Catan board */
     border: 2px solid #a78bfa; /* Purple border */
     flex-grow: 1; /* Allow canvas to take available space */
+    max-height: calc(100vh - 120px);
+}
+.container {
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 1200px;
+    min-height: 100vh; 
+    box-sizing: border-box;
+}
+.main-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    gap: 10px;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.left-column {
+    flex: 4;
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* Allow flex item to shrink */
+}
+
+.right-column {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 300px;
+    max-width: 400px;
+}
+
+.right-section {
+    flex: 1;
+    padding: 15px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow-y: auto;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.right-section:last-child {
+    margin-bottom: 0;
+}
+.middle-column {
+    flex: 1; /* This column will take 3 parts of the available space, making it wider */
+    display: flex;
+    flex-direction: column; /* Content inside stacks vertically */
+    min-width: 0; /* Allows the column to shrink */
+    /* Optional: You might want a minimum width for the main content area */
+    /* min-width: 400px; */
+}
+/* NEW: Styling for sections within the Middle Column (similar to right-section) */
+.middle-section {
+    flex: 1; /* Each section takes equal vertical space within the middle column */
+    padding: 15px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 10px; /* Space between sections if multiple are stacked */
+    overflow-y: auto;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Remove bottom margin from the last section in the middle column */
+.middle-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #1f2937;
+    margin-bottom: 10px;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 5px;
 }
 
 .tag {
@@ -400,10 +474,10 @@ canvas {
 .resource-card[data-resource-type="sheep"] {
     background-image: url('/static/images/catan/sheep.jpg');
 }
-.resource-card[data-resource-type="wheat"] {
+.resource-card[data-resource-type="hay"] {
     background-image: url('/static/images/catan/hay.jpg');
 }
-.resource-card[data-resource-type="ore"] {
+.resource-card[data-resource-type="rock"] {
     background-image: url('/static/images/catan/rock.jpg');
 }
 .dev-card[data-resource-type="development"] { /* This was for the button, now for the actual card */

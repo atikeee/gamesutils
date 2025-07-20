@@ -14,18 +14,18 @@ let boardTiles = [];
 let selectedHandCards  = [];
 const socket = io();
 let init_player_data = {
-    'player1': { playerName: 'Player 1', hand: ["wood", "brick", "sheep", "wheat", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "wheat"], devCards: [], roads: [], structures: [], history: [] },
-    'player2': { playerName: 'Player 2', hand: ["wood", "brick", "sheep", "wheat", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "wheat"], devCards: [], roads: [], structures: [], history: [] },
-    'player3': { playerName: 'Player 3', hand: ["wood", "brick", "sheep", "wheat", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "wheat"], devCards: [], roads: [], structures: [], history: [] },
-    'player4': { playerName: 'Player 4', hand: ["wood", "brick", "sheep", "wheat", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "wheat"], devCards: [], roads: [], structures: [], history: [] },
+    'player1': { playerName: 'Player 1', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [] },
+    'player2': { playerName: 'Player 2', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [] },
+    'player3': { playerName: 'Player 3', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [] },
+    'player4': { playerName: 'Player 4', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [] },
     'robber':{q:100,r:100}
 }; 
 let allPlayersData = init_player_data;
 const CARD_COSTS = {
     'road': { 'wood': 1, 'brick': 1 },
-    'house': { 'wood': 1, 'brick': 1, 'sheep': 1, 'wheat': 1 },
-    'city': { 'ore': 3, 'wheat': 2 },
-    'dev': { 'ore': 1, 'sheep': 1, 'wheat': 1 }
+    'house': { 'wood': 1, 'brick': 1, 'sheep': 1, 'hay': 1 },
+    'city': { 'rock': 3, 'hay': 2 },
+    'dev': { 'rock': 1, 'sheep': 1, 'hay': 1 }
 };
 let globalDevCardDeck = [];
 
@@ -55,10 +55,6 @@ let modalResolve;
 function showMessage(message, type = 'info') {
     messageBox.textContent = message;
     messageBox.className = `message-box ${type === 'error' ? 'bg-red-100 text-red-800 border-red-300' : 'bg-yellow-100 text-yellow-800 border-yellow-300'}`;
-    messageBox.classList.remove('hidden');
-    setTimeout(() => {
-        messageBox.classList.add('hidden');
-    }, 3000);
 }
 
 function showConfirmation(message) {
@@ -375,25 +371,25 @@ async function loadBoardTilesFromBackend() {
         } else {
             showMessage((result.message || "No saved board tiles found.") + ' Displaying default board tiles.', 'info');
             boardTiles = [
-                { q: 0, r: -2, type: 'ore', number: 10 },
+                { q: 0, r: -2, type: 'rock', number: 10 },
                 { q: 1, r: -2, type: 'sheep', number: 2 },
                 { q: 2, r: -2, type: 'wood', number: 9 },
                 { q: -1, r: -1, type: 'brick', number: 12 },
-                { q: 0, r: -1, type: 'wheat', number: 6 },
-                { q: 1, r: -1, type: 'ore', number: 4 },
+                { q: 0, r: -1, type: 'hay', number: 6 },
+                { q: 1, r: -1, type: 'rock', number: 4 },
                 { q: 2, r: -1, type: 'wood', number: 10 },
                 { q: -2, r: 0, type: 'wood', number: 9 },
                 { q: -1, r: 0, type: 'sheep', number: 11 },
                 { q: 0, r: 0, type: 'desert', number: null },
                 { q: 1, r: 0, type: 'brick', number: 3 },
-                { q: 2, r: 0, type: 'wheat', number: 8 },
-                { q: -2, r: 1, type: 'ore', number: 8 },
-                { q: -1, r: 1, type: 'wheat', number: 3 },
+                { q: 2, r: 0, type: 'hay', number: 8 },
+                { q: -2, r: 1, type: 'rock', number: 8 },
+                { q: -1, r: 1, type: 'hay', number: 3 },
                 { q: 0, r: 1, type: 'wood', number: 4 },
                 { q: 1, r: 1, type: 'sheep', number: 5 },
                 { q: -2, r: 2, type: 'brick', number: 5 },
                 { q: -1, r: 2, type: 'sheep', number: 6 },
-                { q: 0, r: 2, type: 'wheat', number: 11 }
+                { q: 0, r: 2, type: 'hay', number: 11 }
             ];
             if (!isGamePage && !isPlayerPage) {
                 saveBuilderState();
@@ -406,25 +402,25 @@ async function loadBoardTilesFromBackend() {
         showMessage('Network error loading board tiles: ' + e.message + '. Displaying default board tiles.', 'error');
         console.error('Error loading board tiles from backend:', e);
         boardTiles = [
-            { q: 0, r: -2, type: 'ore', number: 10 },
+            { q: 0, r: -2, type: 'rock', number: 10 },
             { q: 1, r: -2, type: 'sheep', number: 2 },
             { q: 2, r: -2, type: 'wood', number: 9 },
             { q: -1, r: -1, type: 'brick', number: 12 },
-            { q: 0, r: -1, type: 'wheat', number: 6 },
-            { q: 1, r: -1, type: 'ore', number: 4 },
+            { q: 0, r: -1, type: 'hay', number: 6 },
+            { q: 1, r: -1, type: 'rock', number: 4 },
             { q: 2, r: -1, type: 'wood', number: 10 },
             { q: -2, r: 0, type: 'wood', number: 9 },
             { q: -1, r: 0, type: 'sheep', number: 11 },
             { q: 0, r: 0, type: 'desert', number: null },
             { q: 1, r: 0, type: 'brick', number: 3 },
-            { q: 2, r: 0, type: 'wheat', number: 8 },
-            { q: -2, r: 1, type: 'ore', number: 8 },
-            { q: -1, r: 1, type: 'wheat', number: 3 },
+            { q: 2, r: 0, type: 'hay', number: 8 },
+            { q: -2, r: 1, type: 'rock', number: 8 },
+            { q: -1, r: 1, type: 'hay', number: 3 },
             { q: 0, r: 1, type: 'wood', number: 4 },
             { q: 1, r: 1, type: 'sheep', number: 5 },
             { q: -2, r: 2, type: 'brick', number: 5 },
             { q: -1, r: 2, type: 'sheep', number: 6 },
-            { q: 0, r: 2, type: 'wheat', number: 11 }
+            { q: 0, r: 2, type: 'hay', number: 11 }
         ];
         allJunctions = getAllJunctions();
         allEdges = getAllEdges();
