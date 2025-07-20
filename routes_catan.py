@@ -123,3 +123,25 @@ def configure_routes_catan(app,socketio):
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
+
+    @socketio.on('dev_card_played')
+    def handle_dev_card_played(data):
+        """
+        Receives a 'dev_card_played' event from a client and broadcasts it
+        to all other clients, including the game board page.
+        """
+        card_type = data.get('cardType')
+        player_name = data.get('playerName')
+        print(f"SERVER DEBUG: Received 'dev_card_played' event: {card_type} played by {player_name}")
+        # Broadcast the played card information to all clients
+        socketio.emit('dev_card_played_broadcast', {'cardType': card_type, 'playerName': player_name})
+        print("SERVER DEBUG: 'dev_card_played_broadcast' emitted from server.")
+        
+    @socketio.on('card_pick_log')
+    def handle_card_pick_log(data):
+        pid = data.get('pid')
+        log = data.get('log')
+        print(f"SERVER DEBUG: Received 'card_pick_broadcast' event: {log} picked by {pid}")
+        # Broadcast the played card information to all clients
+        socketio.emit('card_pick_log_broadcast', {'pid': pid, 'log': log})
+        

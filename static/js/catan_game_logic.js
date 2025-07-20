@@ -509,52 +509,6 @@ async function loadAllPlayerStatesFromBackend() {
         drawBoard();
     }
 }
-/*
-async function saveRobberStateToBackend() {
-    if (isGamePage || isPlayerPage) return;
-
-    try {
-        const robberStateToSave = allPlayersData['robber'] ? { q: allPlayersData['robber'].q, r: allPlayersData['robber'].r } : { q: 0, r: 0 };
-        const response = await fetch('/save_robber_state', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(robberStateToSave),
-        });
-        const result = await response.json();
-        if (result.status === 'success') {
-            showMessage(result.message);
-        } else {
-            console.error('Error saving robber state:', result.message);
-            showMessage('Error saving robber state: ' + result.message, 'error');
-        }
-    } catch (e) {
-        console.error('Network error saving robber state:', e);
-        showMessage('Network error saving robber state: ' + e.message, 'error');
-    }
-}
-
-async function loadRobberStateFromBackend() {
-    try {
-        const response = await fetch('/load_robber_state');
-        const result = await response.json();
-        if (result.status === 'success' && result.robber_state) {
-            allPlayersData['robber'] = result.robber_state;
-            showMessage('Robber state loaded successfully!');
-        } else {
-            showMessage("No saved robber state found. Initializing default robber position.", 'info');
-            allPlayersData['robber'] = { q: 0, r: 0 };
-        }
-        drawBoard();
-    } catch (e) {
-        showMessage('Network error loading robber state: ' + e.message + '. Initializing default robber position.', 'error');
-        console.error('Error loading robber state from backend:', e);
-        allPlayersData['robber'] = { q: 0, r: 0 };
-        drawBoard();
-    }
-}
-*/
 async function loadAllStatesFromBackend() {
     console.log("loading data");
     await loadBoardTilesFromBackend();
@@ -889,13 +843,7 @@ if (isPlayerPage) {
         }
     });
 
-    document.querySelector('.resource-card').addEventListener('click', (event) => {
-        const target = event.target;
-        if (target.classList.contains('btn-tool')) {
-            const action = target.dataset.tool;
-            showMessage(`Action: ${action} (To be implemented)`);
-        }
-    });
+
 
     const resourceCardButtons = document.querySelectorAll('.resource-card');
     resourceCardButtons.forEach(button => {
@@ -905,6 +853,11 @@ if (isPlayerPage) {
             if (confirmed) {
                 savePlayerStateToHistory();
                 allPlayersData[PLAYER_ID].hand.push(resourceType);
+                // send player_id and resource-type
+                socket.emit('card_pick_log', { 
+                    pid: PLAYER_ID, 
+                    log: resourceType
+                });
                 console.log(`Client: Before save, allPlayersData[${PLAYER_ID}].hand:`, JSON.stringify(allPlayersData[PLAYER_ID].hand));
                 await saveAllPlayerStatesToBackend(); 
                 showMessage(`You took 1 ${resourceType} card!`);
@@ -1138,8 +1091,8 @@ function updatePlayerUI() {
                 cardItem.classList.add('card-item');
                 cardItem.classList.add('dev-card'); // Add dev-card class for background image styling
                 cardItem.classList.add('animate-in'); // Add animation for dev cards too
-                cardItem.dataset.resourceType = cardType; // Set data-resource-type based on the card type
-                // No textContent needed for dev cards as per CSS (display: none for .card-text)
+                cardItem.dataset.cardType = cardType; // Set data-resource-type based on the card type
+                cardItem.addEventListener('click', () => playdevcard(PLAYER_ID, cardType));
                 devCardsDiv.appendChild(cardItem);
             }
         );
@@ -1176,17 +1129,8 @@ async function transferOrDropSelectedCards(currentPlayerId, targetPlayerId) {
         showMessage('No cards selected to transfer/drop.', 'error');
         return;
     }
-    console.log(currentPlayerId+"=>"+targetPlayerId);
+    //console.log(currentPlayerId+"=>"+targetPlayerId);
     savePlayerStateToHistory(); // Save current state before modification
-
-    // Create a copy of selectedHandCards to iterate over, as we'll modify the original
-    // Sort in descending order of originalIndex to avoid issues when splicing
-    //const cardsToProcess = selectedHandCards.map(identifier => {
-    //    const [resourceType, originalIndexStr] = identifier.split('_');
-    //    return { resourceType, originalIndex: parseInt(originalIndexStr) };
-    //}).sort((a, b) => b.originalIndex - a.originalIndex);
-    //alert(cardsToProcess);
-    //alert(selectedHandCards);
     selectedHandCards.forEach(item => {
         console.log('item'+item);
         if (targetPlayerId !== 'NA' && allPlayersData[targetPlayerId]) {
@@ -1211,6 +1155,44 @@ async function transferOrDropSelectedCards(currentPlayerId, targetPlayerId) {
     showMessage('Card operation completed.');
 }
 
+function addDisappearingTag(containerDiv, text) {
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.textContent = text;
+            containerDiv.appendChild(tag);
+            setTimeout(() => {
+                tag.classList.add('fade-out');
+                setTimeout(() => {
+                    if (tag.parentNode) {
+                        tag.parentNode.removeChild(tag);
+                    }
+                }, 300); 
+            }, 60000); 
+        }
+
+async function playdevcard(currentPlayerId, item) {
+    alert(item);
+    const confirmed = await showConfirmation(`Are you sure you want to play the ${item} card?`);
+    if (confirmed) {
+        savePlayerStateToHistory(); // Save state before playing
+        const index = allPlayersData[currentPlayerId].devCards.indexOf(item);
+        if (index > -1) {
+            allPlayersData[currentPlayerId].devCards.splice(index, 1); 
+        }
+            
+        socket.emit('dev_card_played', { 
+            cardType: item, 
+            playerName: allPlayersData[currentPlayerId].playerName 
+        });
+            
+            await saveAllPlayerStatesToBackend(); // Save changes to backend
+            updatePlayerUI(); // Update UI immediately
+        } else {
+            showMessage('Error: Could not find the specific card to play.', 'error');
+            undoPlayerLastAction(); 
+        }
+}
+
 async function onCatanPlayerPageLoad() {
     await loadAllStatesFromBackend();
     updatePlayerUI();
@@ -1225,6 +1207,36 @@ socket.on('catan_update', async () => {
     await loadAllStatesFromBackend();
     updatePlayerUI();
     showMessage('Game state updated by another player!');
+});
+
+socket.on('dev_card_played_broadcast', (data) => {
+    if (isGamePage) {
+        const playedCardsContainer = document.getElementById('playedDevCards');
+        if (playedCardsContainer) {
+            const cardElement = document.createElement('div');
+            cardElement.classList.add('played-card-item');
+            cardElement.classList.add('dev-card'); // Use dev-card styling
+            cardElement.dataset.resourceType = data.cardType; // For background image
+            cardElement.innerHTML = `
+                <span class="card-text">${data.cardType.replace('_', ' ').toUpperCase()}</span>
+                <p>${data.playerName}</p>
+            `;
+            playedCardsContainer.appendChild(cardElement);
+            showMessage(`${data.playerName} played a ${data.cardType.replace('_', ' ')} card!`);
+        }
+    }
+});
+
+socket.on('card_pick_log_broadcast', (data) => {
+    if (isGamePage) {
+        const playedCardsContainerh = document.getElementById(data.pid+'logh');
+        const playedCardsContainer = document.getElementById(data.pid+'log');
+        if (playedCardsContainer) {
+            playedCardsContainerh.innerHTML = allPlayersData[data.pid].playerName
+            addDisappearingTag(playedCardsContainer,data.log);
+            
+        }
+    }
 });
 
 window.addEventListener('load', async () => {

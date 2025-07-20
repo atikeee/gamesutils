@@ -45,6 +45,22 @@ canvas {
     flex-grow: 1; /* Allow canvas to take available space */
 }
 
+.tag {
+    display: inline-block;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 5px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: opacity 0.3s ease;
+}
+
+.fade-out {
+    opacity: 0;
+}
 /* Control Group for Labels and Dropdowns (Used in catan_game.html) */
 .control-group {
     display: flex;
