@@ -1311,21 +1311,27 @@ socket.on('catan_update', async () => {
 
 socket.on('dev_card_played_broadcast', (data) => {
     if (isGamePage) {
-        const playedCardsContainer = document.getElementById('playedDevCards');
+        const playedCardsContainer = document.getElementById('devCards');
+        playedCardsContainer.innerHTML='';
         if (playedCardsContainer) {
             const cardElement = document.createElement('div');
-            cardElement.classList.add('played-card-item');
-            cardElement.classList.add('dev-card'); // Use dev-card styling
-            cardElement.dataset.resourceType = data.cardType; // For background image
-            cardElement.innerHTML = `
-                <span class="card-text">${data.cardType.replace('_', ' ').toUpperCase()}</span>
-                <p>${data.playerName}</p>
+            cardElement.classList.add('card-item');
+            cardElement.classList.add('dev-card'); 
+            cardElement.classList.add('animate-in'); 
+            //cardElement.dataset.resourceType = data.cardType; // For background image
+            cardElement.dataset.cardType = data.cardType;
+            const cardHdr = document.createElement('h3');
+            cardHdr.innerHTML = `
+                ${data.playerName} Played:
             `;
+            playedCardsContainer.appendChild(cardHdr);
             playedCardsContainer.appendChild(cardElement);
-            showMessage(`${data.playerName} played a ${data.cardType.replace('_', ' ')} card!`);
+            showMessage(`${data.playerName} played a ${data.cardType} card!`);
         }
     }
 });
+
+
 
 socket.on('card_pick_log_broadcast', (data) => {
     if (isGamePage) {
