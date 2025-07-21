@@ -589,24 +589,24 @@ canvas {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 2rem; /* Space between dice */
+    gap: 6rem; /* Space between dice */
     font-size: 10rem; /* Large dice display */
     min-height: 120px; /* Ensure container has height during animation */
     transition: transform 0.2s ease-out;
 }
 
 .dice-face {
-    width: 120px;
-    height: 120px;
-    font-size: 10rem;
-    background-color: #f00fff;
-    color: #224455;
-    border: 2px solid #333;
+    width: 100px;
+    height: 100px;
+    font-size: 8rem;
+    background-color: #fbd500;
+    color: #c20c61;
+    border: 3px solid #141313;
     border-radius: 18px; /* Rounded corners for dice */
     display: flex;
     justify-content: center;
     align-items: center;
-    font-weight: bold;
+    
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     animation: roll-animation 0.5s ease-in-out infinite alternate; /* Initial animation */
 }
@@ -654,7 +654,7 @@ canvas {
         align-items: center;
     }
     .button-group {
-        flex-direction: column; /* Stack buttons vertically on small screens */
+        flex-direction: row; /* Stack buttons vertically on small screens */
         width: 100%;
     }
     .btn, .btn-tool {
