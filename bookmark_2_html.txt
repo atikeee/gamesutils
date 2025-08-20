@@ -93,7 +93,7 @@ ToolsAI
     Misc
         multi AI, https://www.yeschat.ai/
         Unknown,https://theresanaiforthat.com/
-Career
+
 MyPersonal
     Games
         bang,http://chriscarr.name:8080/westerncardgame/index.html
@@ -117,8 +117,9 @@ MyPersonal
         hugging face,https://huggingface.co/Rahmanma
         github page1,https://atikeee.github.io/
         github page2,https://mohammadarahman.github.io/
-        
-Ila
+        Bangla Book,https://github.com/atikeee/bongboi
+        Study Book,https://github.com/atikeee/Textbooks-and-study-material
+        misc soft,https://github.com/atikeee/misc_codes
 
 Areeba
     Books

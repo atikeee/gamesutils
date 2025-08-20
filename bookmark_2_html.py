@@ -74,12 +74,46 @@ def generate_html(structure, output_file):
                 }
             });
         }
+        document.addEventListener("DOMContentLoaded", function () {
+        const toggleBtn = document.getElementById("toggleAllBtn");
+        let expanded = false;
+
+        toggleBtn.addEventListener("click", function () {
+            
+            const lnklsts = document.querySelectorAll(".link-list");
+            const collapses = document.querySelectorAll(".subtopic-list");
+
+            collapses.forEach(collapse => {
+                if (!expanded) {
+                    // Expand
+                    collapse.style.display = 'block';
+                } else {
+                    // Collapse
+                    collapse.style.display = 'none';
+                }
+            });
+            lnklsts.forEach(lnklst => {
+                if (!expanded) {
+                    // Expand
+                    lnklst.style.display = 'block';
+                } else {
+                    // Collapse
+                    lnklst.style.display = 'none';
+                }
+            });
+            
+
+            expanded = !expanded;
+            toggleBtn.textContent = expanded ? "Collapse All" : "Expand All";
+        });
+    });
     </script>
     <link href="style.css" rel="stylesheet"/></head>
     """)
     html.append("</head>")
     html.append("<body>")
     html.append("<h1>Atiq's Bookmarks Collection</h1>")
+    html.append("<div class='d-flex justify-content-end mb-3'><button id='toggleAllBtn' class='btn btn-primary'>Expand All</button></div>")
     html.append("<input type='text' id='searchInput' onkeyup='searchLinks()' placeholder='Search links...' style='width: 100%; padding: 8px;'>")
     html.append("<div id='bookmarkContainer'>")
 

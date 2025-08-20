@@ -40,12 +40,46 @@
                 }
             });
         }
+        document.addEventListener("DOMContentLoaded", function () {
+        const toggleBtn = document.getElementById("toggleAllBtn");
+        let expanded = false;
+
+        toggleBtn.addEventListener("click", function () {
+            
+            const lnklsts = document.querySelectorAll(".link-list");
+            const collapses = document.querySelectorAll(".subtopic-list");
+
+            collapses.forEach(collapse => {
+                if (!expanded) {
+                    // Expand
+                    collapse.style.display = 'block';
+                } else {
+                    // Collapse
+                    collapse.style.display = 'none';
+                }
+            });
+            lnklsts.forEach(lnklst => {
+                if (!expanded) {
+                    // Expand
+                    lnklst.style.display = 'block';
+                } else {
+                    // Collapse
+                    lnklst.style.display = 'none';
+                }
+            });
+            
+
+            expanded = !expanded;
+            toggleBtn.textContent = expanded ? "Collapse All" : "Expand All";
+        });
+    });
     </script>
     <link href="style.css" rel="stylesheet"/></head>
     
 </head>
 <body>
 <h1>Atiq's Bookmarks Collection</h1>
+<div class='d-flex justify-content-end mb-3'><button id='toggleAllBtn' class='btn btn-primary'>Expand All</button></div>
 <input type='text' id='searchInput' onkeyup='searchLinks()' placeholder='Search links...' style='width: 100%; padding: 8px;'>
 <div id='bookmarkContainer'>
 <div class='topic' onclick="toggleVisibility('topic_0')">Intel</div>
@@ -192,13 +226,10 @@
 <div class='link-item' data-topic='ToolsAI' data-subtopic='Misc' data-url='https://theresanaiforthat.com/'>Unknown - <a href='https://theresanaiforthat.com/' target='_blank'>https://theresanaiforthat.com/</a></div>
 </div>
 </div>
-<div class='topic' onclick="toggleVisibility('topic_4')">Career</div>
+<div class='topic' onclick="toggleVisibility('topic_4')">MyPersonal</div>
 <div class='subtopic-list' id='topic_4' style='display:none;'>
-</div>
-<div class='topic' onclick="toggleVisibility('topic_5')">MyPersonal</div>
-<div class='subtopic-list' id='topic_5' style='display:none;'>
-<div class='subtopic' onclick="toggleVisibility('topic_5_sub_0')">Games</div>
-<div class='link-list' id='topic_5_sub_0' style='display:none;'>
+<div class='subtopic' onclick="toggleVisibility('topic_4_sub_0')">Games</div>
+<div class='link-list' id='topic_4_sub_0' style='display:none;'>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='Games' data-url='http://chriscarr.name:8080/westerncardgame/index.html'>bang - <a href='http://chriscarr.name:8080/westerncardgame/index.html' target='_blank'>http://chriscarr.name:8080/westerncardgame/index.html</a></div>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='Games' data-url='https://netgames.io/games/'>7 game collections - <a href='https://netgames.io/games/' target='_blank'>https://netgames.io/games/</a></div>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='Games' data-url='https://tabletopia.com/games'>collections - <a href='https://tabletopia.com/games' target='_blank'>https://tabletopia.com/games</a></div>
@@ -206,44 +237,44 @@
 <div class='link-item' data-topic='MyPersonal' data-subtopic='Games' data-url='https://huggingface.co/spaces/Rahmanma/bridge_imp_calculator'>bridge imp calculater - <a href='https://huggingface.co/spaces/Rahmanma/bridge_imp_calculator' target='_blank'>https://huggingface.co/spaces/Rahmanma/bridge_imp_calculator</a></div>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='Games' data-url='https://huggingface.co/spaces/Rahmanma/bridge_scoring'>bridge score - <a href='https://huggingface.co/spaces/Rahmanma/bridge_scoring' target='_blank'>https://huggingface.co/spaces/Rahmanma/bridge_scoring</a></div>
 </div>
-<div class='subtopic' onclick="toggleVisibility('topic_5_sub_1')">bills</div>
-<div class='link-list' id='topic_5_sub_1' style='display:none;'>
+<div class='subtopic' onclick="toggleVisibility('topic_4_sub_1')">bills</div>
+<div class='link-list' id='topic_4_sub_1' style='display:none;'>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='bills' data-url='https://commonres.twa.rentmanager.com/'>HOA - <a href='https://commonres.twa.rentmanager.com/' target='_blank'>https://commonres.twa.rentmanager.com/</a></div>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='bills' data-url='https://portlandgeneral.com/'>PGE - <a href='https://portlandgeneral.com/' target='_blank'>https://portlandgeneral.com/</a></div>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='bills' data-url='https://oprusipng-opencloud.openintl.com/'>TVWD - <a href='https://oprusipng-opencloud.openintl.com/' target='_blank'>https://oprusipng-opencloud.openintl.com/</a></div>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='bills' data-url='https://www.online-billpay.com/'>Gas - <a href='https://www.online-billpay.com/' target='_blank'>https://www.online-billpay.com/</a></div>
 </div>
-<div class='subtopic' onclick="toggleVisibility('topic_5_sub_2')">Stock</div>
-<div class='link-list' id='topic_5_sub_2' style='display:none;'>
+<div class='subtopic' onclick="toggleVisibility('topic_4_sub_2')">Stock</div>
+<div class='link-list' id='topic_4_sub_2' style='display:none;'>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='Stock' data-url='https://www.tradingview.com/chart/'>check stock - <a href='https://www.tradingview.com/chart/' target='_blank'>https://www.tradingview.com/chart/</a></div>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='Stock' data-url='https://www.nasdaq.com/market-activity/ipos'>IPO listing - <a href='https://www.nasdaq.com/market-activity/ipos' target='_blank'>https://www.nasdaq.com/market-activity/ipos</a></div>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='Stock' data-url='https://www.google.com/finance/portfolio/watchlist'>googlefinance watchlist - <a href='https://www.google.com/finance/portfolio/watchlist' target='_blank'>https://www.google.com/finance/portfolio/watchlist</a></div>
 </div>
-<div class='subtopic' onclick="toggleVisibility('topic_5_sub_3')">Misc</div>
-<div class='link-list' id='topic_5_sub_3' style='display:none;'>
+<div class='subtopic' onclick="toggleVisibility('topic_4_sub_3')">Misc</div>
+<div class='link-list' id='topic_4_sub_3' style='display:none;'>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='Misc' data-url='https://itsforfun.pythonanywhere.com/'>My Pages - <a href='https://itsforfun.pythonanywhere.com/' target='_blank'>https://itsforfun.pythonanywhere.com/</a></div>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='Misc' data-url='https://gamesutils.onrender.com/'>My Pages2 - <a href='https://gamesutils.onrender.com/' target='_blank'>https://gamesutils.onrender.com/</a></div>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='Misc' data-url='https://huggingface.co/Rahmanma'>hugging face - <a href='https://huggingface.co/Rahmanma' target='_blank'>https://huggingface.co/Rahmanma</a></div>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='Misc' data-url='https://atikeee.github.io/'>github page1 - <a href='https://atikeee.github.io/' target='_blank'>https://atikeee.github.io/</a></div>
 <div class='link-item' data-topic='MyPersonal' data-subtopic='Misc' data-url='https://mohammadarahman.github.io/'>github page2 - <a href='https://mohammadarahman.github.io/' target='_blank'>https://mohammadarahman.github.io/</a></div>
+<div class='link-item' data-topic='MyPersonal' data-subtopic='Misc' data-url='https://github.com/atikeee/bongboi'>Bangla Book - <a href='https://github.com/atikeee/bongboi' target='_blank'>https://github.com/atikeee/bongboi</a></div>
+<div class='link-item' data-topic='MyPersonal' data-subtopic='Misc' data-url='https://github.com/atikeee/Textbooks-and-study-material'>Study Book - <a href='https://github.com/atikeee/Textbooks-and-study-material' target='_blank'>https://github.com/atikeee/Textbooks-and-study-material</a></div>
+<div class='link-item' data-topic='MyPersonal' data-subtopic='Misc' data-url='https://github.com/atikeee/misc_codes'>misc soft - <a href='https://github.com/atikeee/misc_codes' target='_blank'>https://github.com/atikeee/misc_codes</a></div>
 </div>
 </div>
-<div class='topic' onclick="toggleVisibility('topic_6')">Ila</div>
-<div class='subtopic-list' id='topic_6' style='display:none;'>
-</div>
-<div class='topic' onclick="toggleVisibility('topic_7')">Areeba</div>
-<div class='subtopic-list' id='topic_7' style='display:none;'>
-<div class='subtopic' onclick="toggleVisibility('topic_7_sub_0')">Books</div>
-<div class='link-list' id='topic_7_sub_0' style='display:none;'>
+<div class='topic' onclick="toggleVisibility('topic_5')">Areeba</div>
+<div class='subtopic-list' id='topic_5' style='display:none;'>
+<div class='subtopic' onclick="toggleVisibility('topic_5_sub_0')">Books</div>
+<div class='link-list' id='topic_5_sub_0' style='display:none;'>
 <div class='link-item' data-topic='Areeba' data-subtopic='Books' data-url='https://monkeypen.com/pages/free-childrens-books'>free books - <a href='https://monkeypen.com/pages/free-childrens-books' target='_blank'>https://monkeypen.com/pages/free-childrens-books</a></div>
 </div>
-<div class='subtopic' onclick="toggleVisibility('topic_7_sub_1')">Misc</div>
-<div class='link-list' id='topic_7_sub_1' style='display:none;'>
+<div class='subtopic' onclick="toggleVisibility('topic_5_sub_1')">Misc</div>
+<div class='link-list' id='topic_5_sub_1' style='display:none;'>
 <div class='link-item' data-topic='Areeba' data-subtopic='Misc' data-url='https://scratch.mit.edu/projects/editor/?tutorial=getStarted'>Game Making - <a href='https://scratch.mit.edu/projects/editor/?tutorial=getStarted' target='_blank'>https://scratch.mit.edu/projects/editor/?tutorial=getStarted</a></div>
 <div class='link-item' data-topic='Areeba' data-subtopic='Misc' data-url='https://www.roomrecess.com/games/TypingTutorForKids/play.html'>Typing lesson - <a href='https://www.roomrecess.com/games/TypingTutorForKids/play.html' target='_blank'>https://www.roomrecess.com/games/TypingTutorForKids/play.html</a></div>
 </div>
-<div class='subtopic' onclick="toggleVisibility('topic_7_sub_2')">School</div>
-<div class='link-list' id='topic_7_sub_2' style='display:none;'>
+<div class='subtopic' onclick="toggleVisibility('topic_5_sub_2')">School</div>
+<div class='link-list' id='topic_5_sub_2' style='display:none;'>
 <div class='link-item' data-topic='Areeba' data-subtopic='School' data-url='https://parentvue.beaverton.k12.or.us/PXP2_Login.aspx'>ParentVue - <a href='https://parentvue.beaverton.k12.or.us/PXP2_Login.aspx' target='_blank'>https://parentvue.beaverton.k12.or.us/PXP2_Login.aspx</a></div>
 <div class='link-item' data-topic='Areeba' data-subtopic='School' data-url='https://www.homeschoolmath.net/teaching/NC_3-5_resources.php'>Homeschool curriculam - <a href='https://www.homeschoolmath.net/teaching/NC_3-5_resources.php' target='_blank'>https://www.homeschoolmath.net/teaching/NC_3-5_resources.php</a></div>
 <div class='link-item' data-topic='Areeba' data-subtopic='School' data-url='https://www.commoncoresheets.com/using-substitution-to-solve-problems/95/download'>worksheet - <a href='https://www.commoncoresheets.com/using-substitution-to-solve-problems/95/download' target='_blank'>https://www.commoncoresheets.com/using-substitution-to-solve-problems/95/download</a></div>
