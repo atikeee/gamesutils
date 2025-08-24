@@ -12,12 +12,13 @@ const PLAYER_ID = isPlayerPage ? 'player' + PLAYER_ID_RAW : null;
 let loadedResourceImages = {};
 let boardTiles = [];
 let selectedHandCards  = [];
+
 const socket = io();
 let init_player_data = {
-    'player1': { playerName: 'Player 1', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0 },
-    'player2': { playerName: 'Player 2', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0 },
-    'player3': { playerName: 'Player 3', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0 },
-    'player4': { playerName: 'Player 4', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0 },
+    'player1': { playerName: 'Player 1', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0,score:0 },
+    'player2': { playerName: 'Player 2', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0,score:0 },
+    'player3': { playerName: 'Player 3', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0,score:0 },
+    'player4': { playerName: 'Player 4', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0,score:0 },
     'robber':{q:100,r:100}
 }; 
 let allPlayersData = init_player_data;
@@ -1091,6 +1092,7 @@ function resizeCanvas() {
 }
 
 function updatePlayerUI() {
+    calculatepointsandcards();
     if (!isPlayerPage || !allPlayersData[PLAYER_ID]) return;
 
     const playerNameInput = document.getElementById('playerNameInput');
@@ -1144,6 +1146,7 @@ function updatePlayerUI() {
             }
         }
         renderTransferDropButtons();
+        
 }
 function toggleCardSelection(cardElement, resourceType) {
     cardElement.classList.toggle('selected');
@@ -1285,13 +1288,35 @@ async function playdevcard(currentPlayerId, item) {
             allPlayersData[currentPlayerId].devCards.splice(index, 1); 
         }
             
-        socket.emit('dev_card_played', { 
-            cardType: item, 
-            playerName: allPlayersData[currentPlayerId].playerName 
-        });
+        
         if(item === "knight")
         {
             allPlayersData[currentPlayerId].knightplayed +=1;
+            let c = 0;
+            let maxk = allPlayersData[currentPlayerId].knightplayed;
+            if(maxk>2){
+                for (let i = 0; i < 4; i++) {
+                    if (allPlayersData[i].knightplayed<maxk)
+                    {
+                        c++;
+                    }
+                }
+            }
+            if (c==3)
+            {
+                for (let i = 0; i < 4; i++) {
+                    if (currentPlayerId == i)
+                    {
+                        allPlayersData[currentPlayerId].largestarmy = 1;
+                    }
+                    else
+                    {
+                        allPlayersData[currentPlayerId].largestarmy = 0;
+                    }
+                }
+            }
+            
+               
             //fix
         }else if (item === "victory_point")
         {
@@ -1299,52 +1324,71 @@ async function playdevcard(currentPlayerId, item) {
         }
         await saveAllPlayerStatesToBackend(); // Save changes to backend
         updatePlayerUI(); // Update UI immediately
+        
         } else {
             showMessage('Error: Could not find the specific card to play.', 'error');
         }
+        socket.emit('dev_card_played', { 
+            cardType: item, 
+            playerName: allPlayersData[currentPlayerId].playerName 
+        });
 }
 function calculatepointsandcards() 
 {
-    let score = [0,0,0,0,0,0,0,0,0,0,0,0];
+    
     let i = 0;
     for (const playerId in allPlayersData)
     {
-        
+        let score = 0 ; 
         if(playerId.startsWith('player')){
             let pl  = allPlayersData[playerId];
             if (pl.largestarmy){
-                score[i]+=2;
+                score+=2;
             }
             if (pl.longestroad){
-                score[i]+=2;
+                score+=2;
             }
             let structure = pl.structures;
-            for (const struct in structure)
+            for (const struct of structure)
             {
                 if (struct.type ==='house')
                 {
-                    score[i]+=1;
+                    score+=1;
                 }
-                elif(struct.type ==='city')
+                else if(struct.type ==='city')
                 {
-                    score[i]+=2;
+                    score+=2;
                 }
                 
                 
             }
             if (pl.victory_point){
-                score[i]+=pl.victory_point;
+                score+=pl.victory_point;
             }
-            score[i+1]= pl.hand.length;
-            score[I=2] = pl.devCards.length;
-            i+=3;
-            
-            
+            allPlayersData[playerId].score = score;
+            //score[i+1]= pl.hand.length;
+            //cards[i]=pl.hand.length;
+            //score[i+2] = pl.devCards.length;
+            //devcards[i]=pl.devCards.length;
+            i++;
         }
-        
     }
-    return score;
+    
+    //write code to post the score to the page. 
+        socket.emit('score_update');
 }
+function handleDropdownChange() {
+            // Get the value and displayed text of the selected option
+        for (let i = 0; i < 4; i++) {
+            let pl = 'player' + (i+1);
+            allPlayersData[pl].longestroad = 0;
+        }
+        const dropdown = document.getElementById('pl-dropdown');
+        const selectedOption = dropdown.options[dropdown.selectedIndex];
+        const selectedValue = selectedOption.value;
+        allPlayersData[selectedValue].longestroad = 1;
+        calculatepointsandcards();
+    }
 async function onCatanPlayerPageLoad() {
     await loadAllStatesFromBackend();
     updatePlayerUI();
@@ -1359,11 +1403,7 @@ socket.on('catan_update', async () => {
     await loadAllStatesFromBackend();
     updatePlayerUI();
     showMessage('Game state updated by another player!');
-    //fix update counter and populate the html page here. 
-    if (isGamePage){
-        const p1 = document.getElementById('player1k');
-        p1.innerHTML="test";
-    }
+
     
 });
 
@@ -1390,7 +1430,40 @@ socket.on('dev_card_played_broadcast', (data) => {
     }
 });
 
+socket.on('score_update_broadcast', () => {
+    //add code here for updating the counter
+    if (isGamePage) {
+        dropdown = document.getElementById('pl-dropdown');
+        for (let i = 0; i < 4; i++) {
+                let pl = 'player' + (i+1);
+                let cellId = `cell-${i}-${0}`;
+                let cell = document.getElementById(cellId);
+                cell.textContent = allPlayersData[pl].playerName;
+                
+               dropdown.options[i+1].textContent = allPlayersData[pl].playerName;
+                
 
+                cellId = `cell-${i}-${1}`;
+                cell = document.getElementById(cellId);
+                cell.textContent = allPlayersData[pl].score;
+                
+                cellId = `cell-${i}-${2}`;
+                cell = document.getElementById(cellId);
+                cell.textContent = allPlayersData[pl].hand.length;
+                
+                cellId = `cell-${i}-${3}`;
+                cell = document.getElementById(cellId);
+                cell.textContent = allPlayersData[pl].devCards.length;
+                if (allPlayersData[pl].largestarmy)
+                {
+                    cell = document.getElementById("cell_la");
+                    cell.textContent = allPlayersData[pl].playerName;
+                }
+                
+            }
+            
+    }
+});
 
 socket.on('card_pick_log_broadcast', (data) => {
     //add code here for updating the counter

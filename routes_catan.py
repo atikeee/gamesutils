@@ -148,7 +148,19 @@ def configure_routes_catan(app,socketio):
         # Broadcast the played card information to all clients
         socketio.emit('dev_card_played_broadcast', {'cardType': card_type, 'playerName': player_name})
         print("SERVER DEBUG: 'dev_card_played_broadcast' emitted from server.")
+    
+    @socketio.on('score_update')
+    def handle_score_update():
+        """
+        Receives a 'dev_card_played' event from a client and broadcasts it
+        to all other clients, including the game board page.
+        """
+
+        # Broadcast the played card information to all clients
+        print(f"SERVER DEBUG: Received 'score_update_broadcast' ")
+        socketio.emit('score_update_broadcast')
         
+    
     @socketio.on('card_pick_log')
     def handle_card_pick_log(data):
         pid = data.get('pid')

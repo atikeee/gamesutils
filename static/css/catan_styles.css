@@ -35,7 +35,6 @@ canvas {
     
 }
 .canvas-wrapper {
-    width: 100%;
     height: auto;               /* Big visible board */
     border: 2px solid #a78bfa;
     border-radius: 12px;
@@ -106,7 +105,7 @@ canvas {
     margin-bottom: 0;
 }
 .middle-column {
-    flex: 1; /* This column will take 3 parts of the available space, making it wider */
+    flex: 2; /* This column will take 3 parts of the available space, making it wider */
     display: flex;
     flex-direction: column; /* Content inside stacks vertically */
     min-width: 0; /* Allows the column to shrink */
@@ -644,7 +643,7 @@ canvas {
     display: flex;
     justify-content: center;
     align-items: center;
-    
+    margin: 5px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     animation: roll-animation 0.5s ease-in-out infinite alternate; /* Initial animation */
 }
