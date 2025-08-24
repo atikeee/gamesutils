@@ -118,7 +118,7 @@ function getHexVertices(centerX, centerY, size) {
 }
 
 function drawHex(ctx, x, y, size, fillColor, image = null, strokeColor = '#333', lineWidth = 2) {
-    ctx.globalAlpha = 0.7;
+    ctx.globalAlpha = 0.6;
     ctx.beginPath();
     const vertices = getHexVertices(x, y, size);
     ctx.moveTo(vertices[0].x, vertices[0].y);

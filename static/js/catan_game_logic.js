@@ -14,10 +14,10 @@ let boardTiles = [];
 let selectedHandCards  = [];
 const socket = io();
 let init_player_data = {
-    'player1': { playerName: 'Player 1', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [] },
-    'player2': { playerName: 'Player 2', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [] },
-    'player3': { playerName: 'Player 3', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [] },
-    'player4': { playerName: 'Player 4', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [] },
+    'player1': { playerName: 'Player 1', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0 },
+    'player2': { playerName: 'Player 2', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0 },
+    'player3': { playerName: 'Player 3', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0 },
+    'player4': { playerName: 'Player 4', hand: ["wood", "brick", "sheep", "hay", "wood", "brick", "wood", "brick", "wood", "brick", "sheep", "hay"], devCards: [], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0 },
     'robber':{q:100,r:100}
 }; 
 let allPlayersData = init_player_data;
@@ -632,6 +632,7 @@ function getClosestEdge(px, py, threshold = 20) {
 
 canvas.addEventListener('click', (event) => {
     const rect = canvas.getBoundingClientRect();
+    console.log("rect size: "+rect.width+":"+rect.height);
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     const mouseX = (event.clientX - rect.left) * scaleX;
@@ -791,7 +792,8 @@ canvas.addEventListener('click', (event) => {
         if (isPlayerPage) {
             console.log("trying to save playerstate");
             //await saveAllPlayerStatesToBackend();
-            saveAllPlayerStatesToBackend();            
+            saveAllPlayerStatesToBackend();  
+            //fix : add code to show in game play. 
         }
     }
     drawBoard();
@@ -1020,7 +1022,7 @@ function renderTransferDropButtons() {
     const dropButton = document.createElement('button');
     dropButton.classList.add('btn', 'btn-tool', 'drop-btn');
     dropButton.dataset.targetPlayer = 'NA';
-    dropButton.textContent = 'Drop Selected';
+    dropButton.textContent = 'Drop';
     transferDropButtonsDiv.appendChild(dropButton);
 }
 function initializeDevCardDeck() {
@@ -1044,7 +1046,7 @@ function resizeCanvas() {
     
     const containerWidth = canvas.parentElement.clientWidth;
     const containerHeight = canvas.parentElement.clientHeight;
-
+    console.log("c: w"+containerWidth+"h"+containerHeight);
     const aspectRatio = 1.2 / 1;
     let newWidth = containerWidth;
     let newHeight = newWidth / aspectRatio;
@@ -1053,7 +1055,7 @@ function resizeCanvas() {
         newHeight = containerHeight;
         newWidth = newHeight * aspectRatio;
     }
-
+    console.log("n: w"+newWidth+"h"+newHeight);
     canvas.width = newWidth;
     canvas.height = newHeight;
 
@@ -1167,10 +1169,10 @@ async function transferOrDropSelectedCards(currentPlayerId, targetPlayerId) {
         showMessage('No cards selected to transfer/drop.', 'error');
         return;
     }
-    //console.log(currentPlayerId+"=>"+targetPlayerId);
+    //fix: add code to update counter
     savePlayerStateToHistory(); // Save current state before modification
     selectedHandCards.forEach(item => {
-        console.log('item'+item);
+        //console.log('item'+item);
         if (targetPlayerId !== 'NA' && allPlayersData[targetPlayerId]) {
             allPlayersData[targetPlayerId].hand.push(item);
             const index = allPlayersData[currentPlayerId].hand.indexOf(item);
@@ -1272,6 +1274,8 @@ socket.on('roll_dice_broadcast', () => {
 
     }
 });
+
+
 async function playdevcard(currentPlayerId, item) {
     const confirmed = await showConfirmation(`Are you sure you want to play the ${item} card?`);
     if (confirmed) {
@@ -1285,14 +1289,62 @@ async function playdevcard(currentPlayerId, item) {
             cardType: item, 
             playerName: allPlayersData[currentPlayerId].playerName 
         });
-            
+        if(item === "knight")
+        {
+            allPlayersData[currentPlayerId].knightplayed +=1;
+            //fix
+        }else if (item === "victory_point")
+        {
+            allPlayersData[currentPlayerId].victory_point +=1;
+        }
         await saveAllPlayerStatesToBackend(); // Save changes to backend
         updatePlayerUI(); // Update UI immediately
         } else {
             showMessage('Error: Could not find the specific card to play.', 'error');
         }
 }
-
+function calculatepointsandcards() 
+{
+    let score = [0,0,0,0,0,0,0,0,0,0,0,0];
+    let i = 0;
+    for (const playerId in allPlayersData)
+    {
+        
+        if(playerId.startsWith('player')){
+            let pl  = allPlayersData[playerId];
+            if (pl.largestarmy){
+                score[i]+=2;
+            }
+            if (pl.longestroad){
+                score[i]+=2;
+            }
+            let structure = pl.structures;
+            for (const struct in structure)
+            {
+                if (struct.type ==='house')
+                {
+                    score[i]+=1;
+                }
+                elif(struct.type ==='city')
+                {
+                    score[i]+=2;
+                }
+                
+                
+            }
+            if (pl.victory_point){
+                score[i]+=pl.victory_point;
+            }
+            score[i+1]= pl.hand.length;
+            score[I=2] = pl.devCards.length;
+            i+=3;
+            
+            
+        }
+        
+    }
+    return score;
+}
 async function onCatanPlayerPageLoad() {
     await loadAllStatesFromBackend();
     updatePlayerUI();
@@ -1307,9 +1359,16 @@ socket.on('catan_update', async () => {
     await loadAllStatesFromBackend();
     updatePlayerUI();
     showMessage('Game state updated by another player!');
+    //fix update counter and populate the html page here. 
+    if (isGamePage){
+        const p1 = document.getElementById('player1k');
+        p1.innerHTML="test";
+    }
+    
 });
 
 socket.on('dev_card_played_broadcast', (data) => {
+    //add code here for updating the counter
     if (isGamePage) {
         const playedCardsContainer = document.getElementById('devCards');
         playedCardsContainer.innerHTML='';
@@ -1334,6 +1393,7 @@ socket.on('dev_card_played_broadcast', (data) => {
 
 
 socket.on('card_pick_log_broadcast', (data) => {
+    //add code here for updating the counter
     if (isGamePage) {
         const playedCardsContainerh = document.getElementById(data.pid+'logh');
         const playedCardsContainer = document.getElementById(data.pid+'log');

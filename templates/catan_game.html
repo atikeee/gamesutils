@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catan Board</title>
+    <title>Catan GamePlay</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
@@ -12,11 +12,11 @@
 <body class="bg-gray-100">
     <div class="main-container">
         <div class="left-column">
-            <h1 class="text-2xl font-bold text-gray-800 mb-4">Catan Board</h1>
+            <h1 class="text-2xl font-bold text-gray-800 mb-4">Catan GamePlay</h1>
             <canvas id="catanBoard"></canvas>
             <div id="messageBox" class="message-box"></div>
         </div>
-        <div class="middle-column">+
+        <div class="middle-column">
             <div class="middle-section">
                 <div class="played-dev-cards-section mt-6">
                     <div id="devCards" class="card-list">
@@ -32,25 +32,32 @@
                     </div>
                 </div>
             </div>
+            <div class="middle-section">
+                <div class="assign-point-section mt-6">
+                    <div id="assignpoint">
+                    <!-- add couple of button-->
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="right-column">
             
 
 
             <div class="right-section">
-                <h2 id="player1logh"></h2>
+                <h2><span id ="player1k"></span><span id ="player1rc"></span><span id ="player1dc"></span><span id="player1logh"></span></h2>
                 <div id="player1log">            </div>
             </div>
             <div class="right-section">
-                <h2 id="player2logh"></h2>
+                <h2><span id ="player2k"></span><span id ="player2rc"></span><span id ="player2dc"></span><span id="player2logh"></span></h2>
                 <div id="player2log">            </div>
             </div>
             <div class="right-section">
-                <h2 id="player3logh"></h2>
+                <h2><span id ="player3k"></span><span id ="player3rc"></span><span id ="player3dc"></span><span id="player3logh"></span></h2>
                 <div id="player3log">            </div>
             </div>
             <div class="right-section">
-                <h2 id="player4logh"></h2>
+                <h2><span id ="player4k"></span><span id ="player4rc"></span><span id ="player4dc"></span><span id="player4logh"></span></h2>
                 <div id="player4log">            </div>
             </div>
         </div>

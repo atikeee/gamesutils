@@ -24,12 +24,12 @@
 
         <div class="controls player-controls">
             <div class="button-group" id="player-tool-select">
-                <button class="btn btn-tool" data-tool="house">Place House</button>
-                <button class="btn btn-tool" data-tool="city">Upgrade to City</button>
-                <button class="btn btn-tool" data-tool="road">Place Road</button>
-                <button class="btn btn-tool" data-tool="robber">Move Robber</button>
-                <button class="btn btn-tool" data-tool="undo-player">Undo Last Action</button>
-                <button class="btn btn-tool" value="roll-dice" id='rolldice' onclick="rolldice()">Roll Dice</button>
+                <button class="btn btn-tool" data-tool="house">House</button>
+                <button class="btn btn-tool" data-tool="city">City</button>
+                <button class="btn btn-tool" data-tool="road">Road</button>
+                <button class="btn btn-tool" data-tool="robber">Robber</button>
+                <button class="btn btn-tool" data-tool="undo-player">Undo</button>
+                <button class="btn btn-tool" value="roll-dice" id='rolldice' onclick="rolldice()">Roll</button>
             </div>
             <div class="card-buttons mt-4">
                 <h3 class="text-xl font-semibold text-gray-700 mb-2">Take Resources:</h3>
@@ -59,8 +59,10 @@
                 <!-- The original dev card button is removed as it's now a div within the group -->
             </div>
         </div>
+        <div class="canvas-wrapper">
+            <canvas id="catanBoard"></canvas>
+        </div>
 
-        <canvas id="catanBoard"></canvas>
         <div id="messageBox" class="message-box"></div>
 
         <div class="player-decks-section">
@@ -72,7 +74,7 @@
                 <div class="selected-cards-info text-gray-700 font-medium mb-3">
                         Selected: <span id="selectedCardCount">0</span> cards
                 </div>
-                <div id="transferDropButtons" class="button-group transfer-buttons flex-col md:flex-row">
+                <div id="transferDropButtons" class="button-group transfer-buttons">
                         <!-- Buttons will be dynamically generated here by JavaScript -->
                 </div>
             </div>
