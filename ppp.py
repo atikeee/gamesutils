@@ -37,7 +37,7 @@ def process_links(beg, end):
 
     n = 0
     lines = input_content.splitlines()
-
+    #lines = ["https://www.wow.xxx/videos/tutors-busty-blonde-blowjob-bonanza/","https://www.wow.xxx/videos/caught-in-the-act-the-best-of-getting-busted/"]
     for line in lines:
         n += 1
         if end > 0 and (n > end):
@@ -117,6 +117,24 @@ def process_links(beg, end):
                             #output_lines.append(f"link: {l}\n")
                             output_lines.append(f'#EXTINF:-1 #EXTINF:-1 group-title="xh",{title}')
                             output_lines.append(l)
+                except Exception as e:
+                    error_lines.append(f"Error: {e}")
+                    pass
+            elif(line.startswith("https://www.wow.xxx")):
+                #output_lines.append(f"\nXHamster {n}: {line}")
+                headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36'}
+                reg_url = line.strip()
+                try:
+                    req = Request(url=reg_url,headers=headers)
+                    h = urlopen(req).read()
+                    tree = html.fromstring(h)
+                    items = tree.xpath(r'/html/body//video/source/@src')
+                    title = str(n) +"."+ tree.xpath(r'//title')[0].text
+                    
+                    for i in items:
+                        l= i
+                        output_lines.append(f'#EXTINF:-1 #EXTINF:-1 group-title="wow",{title}')
+                        output_lines.append(l)
                 except Exception as e:
                     error_lines.append(f"Error: {e}")
                     pass
