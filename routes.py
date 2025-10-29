@@ -849,7 +849,7 @@ def configure_routes(app,socketio):
         return render_template('ppp_tool.html', result=result, download_link_available=download_link_available, view_link_available=view_link_available, output_filename=OUTPUT_FILE)
     # END NEW ROUTE
 
-    @app.route(f'/ppp_input')
+    @app.route(f'/ppp_tool/input')
     def view_ppp_input():
         """
         Displays the content of _input.txt with line numbers prepended to each line.
@@ -872,7 +872,7 @@ def configure_routes(app,socketio):
         else:
             return "Error: Input file `_input.txt` not found on the server.", 404
 
-    @app.route(f'/ppp_error') # Use f-string for dynamic filename
+    @app.route(f'/ppp_tool/error') # Use f-string for dynamic filename
     def view_ppp_error():
         """
         Allows users to view the zzz.m3u file directly in the browser without styling.
@@ -887,24 +887,46 @@ def configure_routes(app,socketio):
                 return f"Error reading output file: {e}", 500
         else:
             return "Error: Output file not found. Please process the URLs first.", 404
+    @app.route('/ppp_tool/<filename>')
+    def view_m3u_file(filename):
+        """
+        Allows users to view any specified .m3u file directly in the browser 
+        with a 'text/plain' MIME type.
+        """
+        # 1. Basic validation to ensure the requested file is an .m3u file
+        if not filename.endswith('.m3u'):
+            return "Invalid file type. Only .m3u files can be viewed.", 400
+        full_path = filename 
 
-    @app.route(f'/ppp_output') # Use f-string for dynamic filename
-    def view_ppp_output():
-        """
-        Allows users to view the zzz.m3u file directly in the browser without styling.
-        """
-        if os.path.exists(OUTPUT_FILE):
+        if os.path.exists(full_path):
             try:
-                with open(OUTPUT_FILE, 'r', encoding='utf-8') as f:
+                with open(full_path, 'r', encoding='utf-8') as f:
                     content = f.read()
-                # Return the content with text/plain MIME type
+                
                 return Response(content, mimetype='text/plain')
+                
             except Exception as e:
-                return f"Error reading output file: {e}", 500
+                return f"Error reading file {filename}: {e}", 500
         else:
-            return "Error: Output file not found. Please process the URLs first.", 404
+            return f"File **{filename}** not found.", 404
+        
+    #@app.route(f'/ppp_output') # Use f-string for dynamic filename
+    #def view_ppp_output():
+    #    """
+    #    Allows users to view the zzz.m3u file directly in the browser without styling.
+    #    """
+    #    if os.path.exists(OUTPUT_FILE):
+    #        try:
+    #            with open(OUTPUT_FILE, 'r', encoding='utf-8') as f:
+    #                content = f.read()
+    #            # Return the content with text/plain MIME type
+    #            return Response(content, mimetype='text/plain')
+    #        except Exception as e:
+    #            return f"Error reading output file: {e}", 500
+    #    else:
+    #        return "Error: Output file not found. Please process the URLs first.", 404
 
-    @app.route('/download_ppp_output')
+    @app.route('/ppp_tool/download')
     def download_ppp_output():
         """
         Allows users to download the zzz.m3u file.
