@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bridge Score Calculator</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      padding: 20px;
+      color: #333;
+      max-width: 700px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: #222;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .home-link {
+      display: inline-block;
+      margin-bottom: 16px;
+      text-decoration: none;
+      color: #0077cc;
+      font-size: 14px;
+    }
+    .home-link:hover { text-decoration: underline; }
+
+    /* ── SECTION CARDS ── */
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.08);
+      padding: 18px 22px;
+      margin-bottom: 18px;
+    }
+
+    .card h3 {
+      margin: 0 0 12px 0;
+      font-size: 15px;
+      color: #444;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 6px;
+    }
+
+    /* ── RADIO BUTTON GROUPS ── */
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .btn-group input[type="radio"] { display: none; }
+
+    .btn-group label {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 2px solid #ccc;
+      cursor: pointer;
+      font-size: 15px;
+      background: #fafafa;
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .btn-group input[type="radio"]:checked + label {
+      background: #0077cc;
+      color: white;
+      border-color: #0077cc;
+    }
+
+    /* Suit colours when selected */
+    .suit-group input[type="radio"]:checked + label { background: #2a7a2a; border-color: #2a7a2a; }
+    .vul-group  input[type="radio"]:checked + label.vul-yes { background: #cc2200; border-color: #cc2200; }
+    .dbl-group  input[type="radio"]:checked + label { background: #7700cc; border-color: #7700cc; }
+
+    /* Suit symbols */
+    .suit-C { color: #555; }
+    .suit-D { color: #cc4400; }
+    .suit-H { color: #cc0000; }
+    .suit-S { color: #222; }
+
+    /* Win tricks: colour-code made vs down */
+    .win-group label[data-win="1"],
+    .win-group label[data-win="2"],
+    .win-group label[data-win="3"],
+    .win-group label[data-win="4"],
+    .win-group label[data-win="5"],
+    .win-group label[data-win="6"] { border-color: #e88; color: #a00; }
+
+    .win-group input[type="radio"]:checked + label[data-win="1"],
+    .win-group input[type="radio"]:checked + label[data-win="2"],
+    .win-group input[type="radio"]:checked + label[data-win="3"],
+    .win-group input[type="radio"]:checked + label[data-win="4"],
+    .win-group input[type="radio"]:checked + label[data-win="5"],
+    .win-group input[type="radio"]:checked + label[data-win="6"] { background: #cc2200; border-color: #cc2200; color: white; }
+
+    /* ── CALCULATE BUTTON ── */
+    #calc-btn {
+      width: 100%;
+      padding: 12px;
+      font-size: 17px;
+      font-weight: bold;
+      background: #0077cc;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    #calc-btn:hover { background: #005fa3; }
+
+    /* ── RESULT TABLE ── */
+    #result-section { display: none; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 4px;
+    }
+
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+      font-size: 15px;
+    }
+
+    th { background: #222; color: white; }
+
+    .row-total td {
+      font-weight: bold;
+      font-size: 17px;
+      background: #e8f5e9;
+      color: #1a5c1a;
+    }
+
+    .row-total.negative td { background: #fdecea; color: #a00; }
+
+    .zero-row td { color: #bbb; }
+
+    /* ── MISC ── */
+    .error-msg {
+      background: #fdecea;
+      color: #a00;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+
+    #spinner {
+      display: none;
+      text-align: center;
+      padding: 10px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+
+  <a class="home-link" href="/">← Back to Game Hub</a>
+  <h1>🃏 Bridge Score Calculator</h1>
+  <p class="subtitle">Enter the contract details to calculate the score</p>
+
+  <!-- BID -->
+  <div class="card">
+    <h3>Bid Level</h3>
+    <div class="btn-group" id="bid-group">
+      {% for b in [1,2,3,4,5,6,7] %}
+      <input type="radio" name="bid" id="bid_{{ b }}" value="{{ b }}" {% if b == 1 %}checked{% endif %}>
+      <label for="bid_{{ b }}">{{ b }}</label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- SUITE -->
+  <div class="card">
+    <h3>Suit</h3>
+    <div class="btn-group suit-group">
+      <input type="radio" name="suite" id="suite_C" value="C" checked>
+      <label for="suite_C" class="suit-C">♣ Clubs</label>
+
+      <input type="radio" name="suite" id="suite_D" value="D">
+      <label for="suite_D" class="suit-D">♦ Diamonds</label>
+
+      <input type="radio" name="suite" id="suite_H" value="H">
+      <label for="suite_H" class="suit-H">♥ Hearts</label>
+
+      <input type="radio" name="suite" id="suite_S" value="S">
+      <label for="suite_S" class="suit-S">♠ Spades</label>
+
+      <input type="radio" name="suite" id="suite_N" value="N">
+      <label for="suite_N">NT</label>
+    </div>
+  </div>
+
+  <!-- TRICKS WON -->
+  <div class="card">
+    <h3>Tricks Won <small style="color:#888;font-weight:normal">(red = down, blue = made)</small></h3>
+    <div class="btn-group win-group">
+      {% for w in [1,2,3,4,5,6,7,8,9,10,11,12,13] %}
+      <input type="radio" name="win" id="win_{{ w }}" value="{{ w }}" {% if w == 7 %}checked{% endif %}>
+      <label for="win_{{ w }}" data-win="{{ w }}">{{ w }}</label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- DOUBLE -->
+  <div class="card">
+    <h3>Double</h3>
+    <div class="btn-group dbl-group">
+      <input type="radio" name="double" id="dbl_Normal" value="Normal" checked>
+      <label for="dbl_Normal">Normal</label>
+
+      <input type="radio" name="double" id="dbl_Double" value="Double">
+      <label for="dbl_Double">✗✗ Double</label>
+
+      <input type="radio" name="double" id="dbl_Redouble" value="Redouble">
+      <label for="dbl_Redouble">✗✗✗✗ Redouble</label>
+    </div>
+  </div>
+
+  <!-- VULNERABLE -->
+  <div class="card">
+    <h3>Vulnerability</h3>
+    <div class="btn-group vul-group">
+      <input type="radio" name="vul" id="vul_nv" value="NotVulnerable" checked>
+      <label for="vul_nv">Not Vulnerable</label>
+
+      <input type="radio" name="vul" id="vul_v" value="Vulnerable">
+      <label for="vul_v" class="vul-yes">🔴 Vulnerable</label>
+    </div>
+  </div>
+
+  <!-- CALCULATE -->
+  <button id="calc-btn" onclick="calcScore()">Calculate Score</button>
+
+  <div id="spinner">Calculating...</div>
+
+  <!-- RESULT -->
+  <div class="card" id="result-section">
+    <h3>Score Breakdown</h3>
+    <div id="error-msg" class="error-msg" style="display:none;"></div>
+    <table id="result-table">
+      <thead>
+        <tr><th>Category</th><th style="text-align:right">Points</th></tr>
+      </thead>
+      <tbody id="result-body"></tbody>
+    </table>
+  </div>
+
+<script>
+  function getVal(name) {
+    const el = document.querySelector(`input[name="${name}"]:checked`);
+    return el ? el.value : null;
+  }
+
+  function calcScore() {
+    const bid    = getVal("bid");
+    const suite  = getVal("suite");
+    const win    = getVal("win");
+    const double = getVal("double");
+    const vul    = getVal("vul");
+
+    if (!bid || !suite || !win || !double || !vul) {
+      alert("Please select all options.");
+      return;
+    }
+
+    document.getElementById("spinner").style.display = "block";
+    document.getElementById("result-section").style.display = "none";
+
+    const formData = new FormData();
+    formData.append("bid",    bid);
+    formData.append("suite",  suite);
+    formData.append("win",    win);
+    formData.append("double", double);
+    formData.append("vul",    vul);
+
+    fetch("/bridge/score", { method: "POST", body: formData })
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById("spinner").style.display = "none";
+        document.getElementById("result-section").style.display = "block";
+
+        if (data.status === "error") {
+          document.getElementById("error-msg").style.display = "block";
+          document.getElementById("error-msg").textContent = "Error: " + data.message;
+          document.getElementById("result-table").style.display = "none";
+          return;
+        }
+
+        document.getElementById("error-msg").style.display = "none";
+        document.getElementById("result-table").style.display = "table";
+
+        const r = data.result;
+        const isNeg = r.total_score < 0;
+
+        const rows = [
+          { label: "TOTAL SCORE",        val: r.total_score,  bold: true },
+          { label: "Play Score",          val: r.play_score },
+          { label: "Play Bonus",          val: r.play_bonus },
+          { label: "False Call (Insult)", val: r.fc_score },
+          { label: "Over Trick",          val: r.ot_score },
+          { label: "Game Point",          val: r.game_score },
+          { label: "Slam Bonus",          val: r.slam_bonus },
+          { label: "Down / Short",        val: r.down_score > 0 ? -r.down_score : 0 },
+        ];
+
+        const tbody = document.getElementById("result-body");
+        tbody.innerHTML = "";
+        rows.forEach(row => {
+          const tr = document.createElement("tr");
+          if (row.bold) {
+            tr.className = "row-total" + (isNeg ? " negative" : "");
+          } else if (row.val === 0) {
+            tr.className = "zero-row";
+          }
+          tr.innerHTML = `<td>${row.label}</td><td style="text-align:right">${row.val}</td>`;
+          tbody.appendChild(tr);
+        });
+
+        // Scroll to result
+        document.getElementById("result-section").scrollIntoView({ behavior: "smooth" });
+      })
+      .catch(err => {
+        document.getElementById("spinner").style.display = "none";
+        alert("Network error: " + err);
+      });
+  }
+</script>
+
+</body>
+</html>
