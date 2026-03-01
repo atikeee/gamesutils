@@ -1,174 +1,626 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>My Puzzle & Game Hub</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Game Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;0,9..40,800&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
   <style>
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --surface2: #1c2330;
+      --border:   #30363d;
+      --text:     #e6edf3;
+      --muted:    #8b949e;
+      --soft:     #3d444d;
+
+      /* category accents */
+      --c-cards:   #f78166;
+      --c-board:   #58a6ff;
+      --c-quiz:    #d2a8ff;
+      --c-media:   #ffa657;
+      --c-tools:   #3fb950;
+      --c-flights: #79c0ff;
+
+      --g-cards:   rgba(247,129,102,0.12);
+      --g-board:   rgba(88,166,255,0.12);
+      --g-quiz:    rgba(210,168,255,0.12);
+      --g-media:   rgba(255,166,87,0.12);
+      --g-tools:   rgba(63,185,80,0.12);
+      --g-flights: rgba(121,192,255,0.12);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
     body {
-      font-family: Arial, sans-serif;
-      background: #f7f7f7;
-      padding: 30px;
-      color: #333;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 80px;
+      background-image:
+        radial-gradient(ellipse 80% 40% at 50% -10%, rgba(88,166,255,0.07) 0%, transparent 70%),
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 48px 48px, 48px 48px;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      padding: 48px 24px 36px;
+      text-align: center;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .logo-icon {
+      font-size: 36px;
+      filter: drop-shadow(0 0 16px rgba(88,166,255,0.5));
     }
     h1 {
-      text-align: center;
-      color: #222;
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(26px, 5vw, 42px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      background: linear-gradient(130deg, #e6edf3 40%, #58a6ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.1;
     }
-    .app-list {
-      max-width: 800px;
-      margin: auto;
-    }
-    .app-item {
-      background: white;
-      padding: 15px 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      margin-bottom: 15px;
-    }
-    .app-item a {
-      font-weight: bold;
-      font-size: 18px;
-      text-decoration: none;
-      color: #0077cc;
-    }
-    .app-item a:hover {
-      text-decoration: underline;
-    }
-    .description {
-      margin-top: 5px;
+    .subtitle {
+      color: var(--muted);
       font-size: 14px;
+      font-weight: 400;
+      margin-top: 6px;
+      letter-spacing: 0.2px;
+    }
+
+    /* ─── MAIN ─── */
+    main {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 0 18px;
+    }
+
+    /* ─── SECTION ─── */
+    .section { margin-bottom: 40px; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .section-bar {
+      width: 3px;
+      height: 18px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .section-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .cat-cards   .section-bar { background: var(--c-cards); }
+    .cat-board   .section-bar { background: var(--c-board); }
+    .cat-quiz    .section-bar { background: var(--c-quiz); }
+    .cat-media   .section-bar { background: var(--c-media); }
+    .cat-tools   .section-bar { background: var(--c-tools); }
+    .cat-flights .section-bar { background: var(--c-flights); }
+
+    /* ─── TILE GRID ─── */
+    .tile-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+    }
+
+    /* ─── TILE ─── */
+    .tile {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 22px 10px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      text-decoration: none;
+      color: var(--text);
+      text-align: center;
+      cursor: pointer;
+      /* entrance animation */
+      opacity: 0;
+      transform: translateY(10px);
+      animation: tileIn 0.4s ease forwards;
+      transition:
+        transform       0.22s cubic-bezier(.34,1.4,.64,1),
+        box-shadow      0.22s ease,
+        border-color    0.22s ease,
+        background      0.22s ease;
+      /* clip tooltip overflow within grid cells */
+      overflow: visible;
+    }
+
+    /* hover glow per category */
+    .cat-cards   .tile:hover { border-color: var(--c-cards);   box-shadow: 0 0 0 1px var(--c-cards),   0 10px 36px var(--g-cards);   background: var(--surface2); }
+    .cat-board   .tile:hover { border-color: var(--c-board);   box-shadow: 0 0 0 1px var(--c-board),   0 10px 36px var(--g-board);   background: var(--surface2); }
+    .cat-quiz    .tile:hover { border-color: var(--c-quiz);    box-shadow: 0 0 0 1px var(--c-quiz),    0 10px 36px var(--g-quiz);    background: var(--surface2); }
+    .cat-media   .tile:hover { border-color: var(--c-media);   box-shadow: 0 0 0 1px var(--c-media),   0 10px 36px var(--g-media);   background: var(--surface2); }
+    .cat-tools   .tile:hover { border-color: var(--c-tools);   box-shadow: 0 0 0 1px var(--c-tools),   0 10px 36px var(--g-tools);   background: var(--surface2); }
+    .cat-flights .tile:hover { border-color: var(--c-flights); box-shadow: 0 0 0 1px var(--c-flights), 0 10px 36px var(--g-flights); background: var(--surface2); }
+
+    .tile:hover { transform: translateY(-5px) scale(1.03); }
+    .tile:active { transform: translateY(-2px) scale(1.01); }
+
+    /* icon */
+    .tile-icon {
+      font-size: 28px;
+      line-height: 1;
+      transition: transform 0.22s cubic-bezier(.34,1.6,.64,1);
+    }
+    .tile:hover .tile-icon { transform: scale(1.18) rotate(-4deg); }
+
+    /* name */
+    .tile-name {
+      font-size: 12.5px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--text);
+      letter-spacing: 0.1px;
+    }
+
+    /* category dot on tile */
+    .tile::before {
+      content: '';
+      position: absolute;
+      top: 10px; right: 10px;
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+    .tile:hover::before { opacity: 1; }
+    .cat-cards   .tile::before { background: var(--c-cards); }
+    .cat-board   .tile::before { background: var(--c-board); }
+    .cat-quiz    .tile::before { background: var(--c-quiz); }
+    .cat-media   .tile::before { background: var(--c-media); }
+    .cat-tools   .tile::before { background: var(--c-tools); }
+    .cat-flights .tile::before { background: var(--c-flights); }
+
+    /* ─── TOOLTIP ─── */
+    .tip {
+      position: absolute;
+      bottom: calc(100% + 12px);
+      left: 50%;
+      transform: translateX(-50%) translateY(6px);
+      background: #21262d;
+      border: 1px solid #444c56;
+      border-radius: 10px;
+      padding: 9px 13px;
+      width: 210px;
+      max-width: 88vw;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.6;
+      color: var(--muted);
+      text-align: left;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 999;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      white-space: normal;
+    }
+    /* arrow down */
+    .tip::after {
+      content: '';
+      position: absolute;
+      top: 100%; left: 50%;
+      transform: translateX(-50%);
+      border: 7px solid transparent;
+      border-top-color: #444c56;
+    }
+    .tip::before {
+      content: '';
+      position: absolute;
+      top: calc(100% + 1px); left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: #21262d;
+      z-index: 1;
+    }
+
+    .tile:hover .tip {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* flip tooltip downward when near top of viewport */
+    .tile.tip-below .tip {
+      bottom: auto;
+      top: calc(100% + 12px);
+      transform: translateX(-50%) translateY(-6px);
+    }
+    .tile.tip-below .tip::after {
+      top: auto; bottom: 100%;
+      border-top-color: transparent;
+      border-bottom-color: #444c56;
+    }
+    .tile.tip-below .tip::before {
+      top: auto; bottom: calc(100% + 1px);
+      border-top-color: transparent;
+      border-bottom-color: #21262d;
+    }
+    .tile.tip-below:hover .tip { transform: translateX(-50%) translateY(0); }
+
+    /* ─── ENTRANCE ANIMATION ─── */
+    @keyframes tileIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* Stagger tiles inside each grid */
+    .tile:nth-child(1)  { animation-delay: 0.03s }
+    .tile:nth-child(2)  { animation-delay: 0.07s }
+    .tile:nth-child(3)  { animation-delay: 0.11s }
+    .tile:nth-child(4)  { animation-delay: 0.15s }
+    .tile:nth-child(5)  { animation-delay: 0.19s }
+    .tile:nth-child(6)  { animation-delay: 0.23s }
+    .tile:nth-child(7)  { animation-delay: 0.27s }
+    .tile:nth-child(8)  { animation-delay: 0.31s }
+    .tile:nth-child(9)  { animation-delay: 0.35s }
+
+    /* ─── FOOTER ─── */
+    footer {
+      text-align: center;
+      margin-top: 60px;
+      color: var(--soft);
+      font-size: 12px;
+    }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 540px) {
+      header { padding: 32px 16px 24px; }
+      main { padding: 0 12px; }
+      .tile-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+      .tile { padding: 16px 8px 14px; gap: 7px; border-radius: 12px; }
+      .tile-icon { font-size: 24px; }
+      .tile-name { font-size: 11.5px; }
+      /* always show tooltip below on mobile to avoid off-screen */
+      .tip {
+        bottom: auto !important;
+        top: calc(100% + 10px) !important;
+        transform: translateX(-50%) translateY(-6px) !important;
+      }
+      .tip::after { top: auto; bottom: 100%; border-top-color: transparent; border-bottom-color: #444c56; }
+      .tip::before { top: auto; bottom: calc(100% + 1px); border-top-color: transparent; border-bottom-color: #21262d; z-index:1; }
+      .tile:hover .tip { transform: translateX(-50%) translateY(0) !important; }
+    }
+
+    @media (max-width: 360px) {
+      .tile-grid { grid-template-columns: repeat(3, 1fr); }
     }
   </style>
 </head>
 <body>
-  <h1>Welcome to the Game Hub</h1>
-  <div class="app-list">
 
-    <!-- ── NEW ── -->
-    <div class="app-item">
-      <a href="/bridge">🃏 Bridge Score Calculator</a>
-      <div class="description">Calculate Contract Bridge scores for 4 players. Supports all bids (1–7), suits (♣♦♥♠ NT), Double/Redouble, Vulnerable/Not Vulnerable, overtricks, undertricks, and slam bonuses.</div>
-    </div>
-    <div class="app-item">
-      <a href="/bridge/gamescore">🃏 Bridge Game Score Tracker</a>
-      <div class="description">Full game score sheet for 4 players (N/E/S/W). Set player names, track up to 12 rounds with contract, tricks won and auto-calculated NS vs EW totals. Scores persist across browser refreshes.</div>
-    </div>
-    <!-- ── END NEW ── -->
-
-    <div class="app-item">
-      <a href="/catan_board">Catan Board Builder</a>
-      <div class="description">Renders the Catan board builder page. you can build the game board and swap</div>
-    </div>
-    <div class="app-item">
-      <a href="/catan_game">Catan Game page (common view) </a>
-      <div class="description">The main Catan game page. Available for everyone to see</div>
-    </div>
-    <div class="app-item">
-      <a href="/catan_player/1">Catan Player 1</a>
-      <div class="description">Renders the game page for Player 1. can use 1-4 for 4 player</div>
-    </div>
-    
-    <div class="app-item">
-      <a href="/buzzer">Buzzer</a>
-      <div class="description">Press the buzzer to record who clicked first. Tracks name and IP. View results in the report page.</div>
-    </div>
-
-    <div class="app-item">
-      <a href="/report">Buzzer Report</a>
-      <div class="description">View all buzzers with timestamps. Clear results or reset name mappings.</div>
-    </div>
-
-    <div class="app-item">
-      <a href="/photoscramble">Photo Scramble</a>
-      <div class="description">Guess the image hidden behind scrambled grids. Change grid size to make it harder or easier.</div>
-    </div>
-
-    <div class="app-item">
-      <a href="/guesstune">Guess Tune</a>
-      <div class="description">Listen to segments from YouTube music clips. Try to guess the song. Change clip and segment.</div>
-    </div>
-
-    <div class="app-item">
-      <a href="/photopair">Photo Pair</a>
-      <div class="description">Flip grid tiles to reveal matching photo pairs. Shows pairs used below. Timed reveal included.</div>
-    </div>
-
-    <div class="app-item">
-      <a href="/shuffle_cards">Shuffle Card</a>
-      <div class="description">Displays a shuffled 52-card deck.</div>
-    </div>
-
-    <div class="app-item">
-      <a href="/misc">Misc Quiz</a>
-      <div class="description">Each slide shows a photo and a question with optional hint and answer. Controlled by CSV.</div>
-    </div>
-
-    <div class="app-item">
-      <a href="/riddle">Riddle Cards</a>
-      <div class="description">Flashcards with question, hint, and answer. Click the card to flip. Text loaded from files.</div>
-    </div>
-
-    <div class="app-item">
-      <a href="/crack">Crack the Code</a>
-      <div class="description">Decrypt scrambled answers by flipping individual letters. One-click reveals all same letters.</div>
-    </div>
-    <div class="app-item">
-      <a href="/codenames">Codenames: Find your teams word from the clue given. </a>
-      <div class="description">Codenames play between Red and Blue team. Each team will have a spymaster and he/she will give a clue with one word and a number. only spymaster will know
-        what is red word or blue word. there is one black (forbidden) word too. whoever click black will loose the game. if any team select other teams color the word selection turn will be over.
-      </div>
-    </div>
-    <div class="app-item">
-      <a href="/codenames_spy">Codenames Spy: Give wise clue with maximum number possible</a>
-      <div class="description">This page is protected by one time password and only spymaster can/ should see this page. </div>
-    </div>
-    <div class="app-item">
-      <a href="/panchforon/namelist">Register Player for Panchforon</a>
-      <div class="description">This can be played among any group of player. each group should register their name first before the game start.</div>
-    </div>
-    <div class="app-item">
-      <a href="/panchforon/play">Play Panchforon</a>
-      <div class="description">There will be 3 levels of game: 1st level can say anything to express the word (no synonyms/antonyms), 2nd level uses one word, and 3rd level uses only acting.</div>
-    </div>
-    <div class="app-item">
-      <a href="/panchforon/status">Panchforon Status</a>
-      </div>
-    <div class="app-item">
-      <a href="/panchforon/review">Panchforon Review</a>
-      <div class="description">Review and adjust saved/skipped words for the current player.</div>
-    </div>
-    <div class="app-item">
-      <a href="/playmedia">Play Media</a>
-      <div class="description">Play media audio only and check VDO later.</div>
-    </div>
-    <div class="app-item">
-      <a href="/leetcode/index.html">LeetCode 150 problems</a>
-      <div class="description">Access static files related to LeetCode exercises (e.g., `/leetcode/index.html`).</div>
-    </div>
-    <div class="app-item">
-      <a href="/links">Useful Links</a>
-      <div class="description">A collection of various useful links.</div>
-    </div>
-    <div class="app-item">
-      <a href="/delta/">Delta Flights Viewer (Grouped)</a>
-      <div class="description">View flight information grouped by source and destination.</div>
-    </div>
-    <div class="app-item">
-      <a href="/delta/view">Delta Flights Viewer (Detailed)</a>
-      <div class="description">View detailed flight information with source and destination filters.</div>
-    </div>
-    <div class="app-item">
-      <a href="/delta/add">Add Delta Flight</a>
-      <div class="description">Manually add new flight entries to the database.</div>
-    </div>
-    <div class="app-item">
-      <a href="/delta/parse_flights">Parse Delta Flights</a>
-      <div class="description">Automatically fetch and save Delta flight data from an external API.</div>
-    </div>
-    
-    <div class="app-item">
-      <a href="/ppp_tool">PPP Tool</a>
-      <div class="description">Process URLs from `_input.txt` to generate `zzz.m3u` file.</div>
-    </div>    
+<header>
+  <div class="logo">
+    <span class="logo-icon">🎮</span>
+    <h1>Game Hub</h1>
   </div>
+  <p class="subtitle">Games · Puzzles · Tools — all in one place</p>
+</header>
+
+<main>
+
+  <!-- ══════════════ CARD GAMES ══════════════ -->
+  <div class="section cat-cards">
+    <div class="section-header">
+      <div class="section-bar"></div>
+      <span class="section-title">Card Games</span>
+      <div class="section-line"></div>
+    </div>
+    <div class="tile-grid">
+
+      <a href="/bridge" class="tile">
+        <span class="tile-icon">🃏</span>
+        <span class="tile-name">Bridge Score</span>
+        <div class="tip">Single-hand Bridge score calculator — bid, suit, tricks, double &amp; vulnerability with full breakdown.</div>
+      </a>
+
+      <a href="/bridge/gamescore" class="tile">
+        <span class="tile-icon">📋</span>
+        <span class="tile-name">Bridge Game</span>
+        <div class="tip">Full 12-round game tracker for 4 players (N/E/S/W). Live-synced across all devices. Auto vulnerability cycle.</div>
+      </a>
+
+      <a href="/shuffle_cards" class="tile">
+        <span class="tile-icon">🎴</span>
+        <span class="tile-name">Shuffle Deck</span>
+        <div class="tip">Displays a freshly shuffled 52-card deck.</div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ══════════════ BOARD GAMES ══════════════ -->
+  <div class="section cat-board">
+    <div class="section-header">
+      <div class="section-bar"></div>
+      <span class="section-title">Board Games</span>
+      <div class="section-line"></div>
+    </div>
+    <div class="tile-grid">
+
+      <a href="/catan_board" class="tile">
+        <span class="tile-icon">🗺️</span>
+        <span class="tile-name">Catan Board</span>
+        <div class="tip">Build &amp; randomise the Catan hex board. Swap terrain tiles and numbers.</div>
+      </a>
+
+      <a href="/catan_game" class="tile">
+        <span class="tile-icon">🏝️</span>
+        <span class="tile-name">Catan Game</span>
+        <div class="tip">Shared Catan game view visible to all players in the room.</div>
+      </a>
+
+      <a href="/catan_player/1" class="tile">
+        <span class="tile-icon">🧑‍🤝‍🧑</span>
+        <span class="tile-name">Catan Player</span>
+        <div class="tip">Individual player screen for Catan. Use /catan_player/1 through /catan_player/4.</div>
+      </a>
+
+      <a href="/panchforon/namelist" class="tile">
+        <span class="tile-icon">✏️</span>
+        <span class="tile-name">Panchforon</span>
+        <div class="tip">Team word game with 3 levels: free description → one word → acting only. Register players here first.</div>
+      </a>
+
+      <a href="/panchforon/play" class="tile">
+        <span class="tile-icon">▶️</span>
+        <span class="tile-name">Panchforon Play</span>
+        <div class="tip">Start the Panchforon game. Three rounds of increasing difficulty.</div>
+      </a>
+
+      <a href="/panchforon/status" class="tile">
+        <span class="tile-icon">📊</span>
+        <span class="tile-name">Panchforon Score</span>
+        <div class="tip">Live scores and game progress for all Panchforon teams.</div>
+      </a>
+
+      <a href="/panchforon/review" class="tile">
+        <span class="tile-icon">🔍</span>
+        <span class="tile-name">Panchforon Review</span>
+        <div class="tip">Review and adjust saved or skipped words for the current player.</div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ══════════════ QUIZ & PUZZLES ══════════════ -->
+  <div class="section cat-quiz">
+    <div class="section-header">
+      <div class="section-bar"></div>
+      <span class="section-title">Quiz &amp; Puzzles</span>
+      <div class="section-line"></div>
+    </div>
+    <div class="tile-grid">
+
+      <a href="/codenames" class="tile">
+        <span class="tile-icon">🕵️</span>
+        <span class="tile-name">Codenames</span>
+        <div class="tip">Red vs Blue word game. Spymaster gives one-word clues. Avoid the black card — it ends the game.</div>
+      </a>
+
+      <a href="/codenames_spy" class="tile">
+        <span class="tile-icon">🔐</span>
+        <span class="tile-name">Spy View</span>
+        <div class="tip">Password-protected Codenames spymaster view. Shows all colours — spymaster only!</div>
+      </a>
+
+      <a href="/photoscramble" class="tile">
+        <span class="tile-icon">🧩</span>
+        <span class="tile-name">Photo Scramble</span>
+        <div class="tip">Guess the hidden image behind scrambled tiles. Adjust grid size for difficulty.</div>
+      </a>
+
+      <a href="/photopair" class="tile">
+        <span class="tile-icon">🖼️</span>
+        <span class="tile-name">Photo Pair</span>
+        <div class="tip">Flip tiles to match photo pairs. Memory card game with timed reveal mode.</div>
+      </a>
+
+      <a href="/misc" class="tile">
+        <span class="tile-icon">❓</span>
+        <span class="tile-name">Misc Quiz</span>
+        <div class="tip">Slideshow quiz — photo + question with optional hint and answer. Loaded from CSV.</div>
+      </a>
+
+      <a href="/riddle" class="tile">
+        <span class="tile-icon">🧠</span>
+        <span class="tile-name">Riddles</span>
+        <div class="tip">Flashcard riddles. Click to flip and reveal the answer.</div>
+      </a>
+
+      <a href="/crack" class="tile">
+        <span class="tile-icon">🔓</span>
+        <span class="tile-name">Crack the Code</span>
+        <div class="tip">Decrypt scrambled answers letter by letter. One click reveals all matching letters.</div>
+      </a>
+
+      <a href="/buzzer" class="tile">
+        <span class="tile-icon">🔔</span>
+        <span class="tile-name">Buzzer</span>
+        <div class="tip">Quiz buzzer — records who pressed first with name, IP and timestamp.</div>
+      </a>
+
+      <a href="/report" class="tile">
+        <span class="tile-icon">📝</span>
+        <span class="tile-name">Buzzer Report</span>
+        <div class="tip">All buzzer entries with timestamps. Clear results or reset name mappings.</div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ══════════════ MEDIA ══════════════ -->
+  <div class="section cat-media">
+    <div class="section-header">
+      <div class="section-bar"></div>
+      <span class="section-title">Media</span>
+      <div class="section-line"></div>
+    </div>
+    <div class="tile-grid">
+
+      <a href="/guesstune" class="tile">
+        <span class="tile-icon">🎵</span>
+        <span class="tile-name">Guess the Tune</span>
+        <div class="tip">Short clips from YouTube songs. Guess the track before time runs out.</div>
+      </a>
+
+      <a href="/playmedia" class="tile">
+        <span class="tile-icon">🎧</span>
+        <span class="tile-name">Play Media</span>
+        <div class="tip">Audio-only player — listen first, reveal the video later.</div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ══════════════ TOOLS ══════════════ -->
+  <div class="section cat-tools">
+    <div class="section-header">
+      <div class="section-bar"></div>
+      <span class="section-title">Tools &amp; Dev</span>
+      <div class="section-line"></div>
+    </div>
+    <div class="tile-grid">
+
+      <a href="/ppp_tool" class="tile">
+        <span class="tile-icon">⚙️</span>
+        <span class="tile-name">PPP Tool</span>
+        <div class="tip">Process URLs from _input.txt to generate a .m3u playlist file.</div>
+      </a>
+
+      <a href="/links" class="tile">
+        <span class="tile-icon">🔗</span>
+        <span class="tile-name">Useful Links</span>
+        <div class="tip">A curated collection of useful external links.</div>
+      </a>
+
+      <a href="/leetcode/index.html" class="tile">
+        <span class="tile-icon">💻</span>
+        <span class="tile-name">LeetCode 150</span>
+        <div class="tip">Static reference page for the LeetCode Top 150 problems.</div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ══════════════ FLIGHTS ══════════════ -->
+  <div class="section cat-flights">
+    <div class="section-header">
+      <div class="section-bar"></div>
+      <span class="section-title">Flights</span>
+      <div class="section-line"></div>
+    </div>
+    <div class="tile-grid">
+
+      <a href="/delta/" class="tile">
+        <span class="tile-icon">✈️</span>
+        <span class="tile-name">Flights Grouped</span>
+        <div class="tip">Delta flight data grouped by source → destination route.</div>
+      </a>
+
+      <a href="/delta/view" class="tile">
+        <span class="tile-icon">🗓️</span>
+        <span class="tile-name">Flights Detail</span>
+        <div class="tip">Detailed flight view with source and destination filters.</div>
+      </a>
+
+      <a href="/delta/add" class="tile">
+        <span class="tile-icon">➕</span>
+        <span class="tile-name">Add Flight</span>
+        <div class="tip">Manually add a new Delta flight entry to the database.</div>
+      </a>
+
+      <a href="/delta/parse_flights" class="tile">
+        <span class="tile-icon">📡</span>
+        <span class="tile-name">Parse Flights</span>
+        <div class="tip">Auto-fetch and save Delta flight data from the external API.</div>
+      </a>
+
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <p>Game Hub &mdash; all your apps, one place</p>
+</footer>
+
+<script>
+  // Flip tooltips downward when tile is near the top of the viewport
+  function positionTooltips() {
+    document.querySelectorAll('.tile').forEach(tile => {
+      const rect = tile.getBoundingClientRect();
+      tile.classList.toggle('tip-below', rect.top < 200);
+    });
+  }
+  window.addEventListener('scroll', positionTooltips, { passive: true });
+  window.addEventListener('resize', positionTooltips, { passive: true });
+  positionTooltips();
+
+  // Touch devices: tap to toggle tooltip (first tap shows, second navigates)
+  if ('ontouchstart' in window) {
+    let openTile = null;
+    document.querySelectorAll('.tile').forEach(tile => {
+      tile.addEventListener('click', e => {
+        if (tile !== openTile) {
+          e.preventDefault();
+          if (openTile) openTile.classList.remove('touch-open');
+          tile.classList.add('touch-open');
+          openTile = tile;
+        } else {
+          // second tap — let the link navigate
+          openTile = null;
+        }
+      });
+    });
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.tile') && openTile) {
+        openTile.classList.remove('touch-open');
+        openTile = null;
+      }
+    });
+  }
+</script>
+
+<!-- Touch tooltip style: show tip on first tap -->
+<style>
+  .tile.touch-open .tip {
+    opacity: 1 !important;
+    transform: translateX(-50%) translateY(0) !important;
+  }
+</style>
+
 </body>
 </html>

@@ -570,9 +570,9 @@ def configure_routes(app,socketio):
     def send_leetcode_static(filename):
         return send_from_directory('templates/leetcode', filename)        
 
-    @app.route('/links')
-    def send_links():
-        return send_from_directory('templates', 'links.html')        
+    #@app.route('/links')
+    #def send_links():
+    #    return send_from_directory('templates', 'links.html')        
         
     @app.route('/delta/view')
     def view_page2():
