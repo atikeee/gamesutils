@@ -82,6 +82,10 @@ def configure_routes_bridge(app, socketio):
     def bridge():
         return render_template("bridge.html")
 
+    @app.route("/bridge/gamescore")
+    def bridge_gamescore():
+        return render_template("bridge_gamescore.html")
+
     @app.route("/bridge/score", methods=["POST"])
     def bridge_score():
         try:

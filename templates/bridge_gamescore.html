@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bridge Game Score</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --felt: #1a4a2e;
+      --felt-light: #235c39;
+      --felt-dark: #0f2d1b;
+      --gold: #c9a84c;
+      --gold-light: #e8c97a;
+      --cream: #f5f0e8;
+      --cream-dark: #e8e0d0;
+      --red: #8b1a1a;
+      --red-light: #c0392b;
+      --blue-score: #1a3a5c;
+      --card-white: #fefefe;
+      --shadow: rgba(0,0,0,0.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Courier Prime', monospace;
+      background: var(--felt-dark);
+      background-image:
+        radial-gradient(ellipse at 20% 50%, rgba(35,92,57,0.3) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(26,74,46,0.4) 0%, transparent 50%),
+        repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 2px,
+          rgba(255,255,255,0.015) 2px,
+          rgba(255,255,255,0.015) 4px
+        );
+      min-height: 100vh;
+      color: var(--cream);
+      padding: 0 0 60px 0;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: var(--felt-dark);
+      border-bottom: 3px solid var(--gold);
+      padding: 16px 24px 12px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .header a {
+      color: var(--gold);
+      text-decoration: none;
+      font-size: 13px;
+      opacity: 0.8;
+    }
+    .header a:hover { opacity: 1; }
+    .header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      color: var(--gold);
+      letter-spacing: 2px;
+      flex: 1;
+      text-align: center;
+    }
+    .suits { font-size: 18px; letter-spacing: 4px; }
+    .suits .s { color: #222; background: var(--cream); padding: 1px 3px; border-radius: 2px; }
+    .suits .h, .suits .d { color: var(--red-light); background: var(--cream); padding: 1px 3px; border-radius: 2px; }
+
+    /* ── SCOREBOARD SUMMARY ── */
+    .scoreboard {
+      background: var(--felt);
+      border: 2px solid var(--gold);
+      border-radius: 12px;
+      margin: 20px 16px 0;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      box-shadow: 0 4px 20px var(--shadow), inset 0 1px 0 rgba(201,168,76,0.2);
+    }
+    .score-team {
+      flex: 1;
+      text-align: center;
+    }
+    .score-team .team-label {
+      font-family: 'Playfair Display', serif;
+      font-size: 13px;
+      letter-spacing: 3px;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .score-team .team-total {
+      font-family: 'Playfair Display', serif;
+      font-size: 42px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .ns-total { color: #7ecfff; }
+    .ew-total { color: #ffb07e; }
+    .score-divider {
+      width: 2px;
+      height: 70px;
+      background: linear-gradient(to bottom, transparent, var(--gold), transparent);
+      margin: 0 20px;
+    }
+    .vs-label {
+      font-family: 'Playfair Display', serif;
+      font-size: 14px;
+      color: var(--gold);
+      opacity: 0.6;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .score-center {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    /* ── PLAYERS SETUP ── */
+    .players-bar {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(201,168,76,0.3);
+      border-radius: 10px;
+      margin: 14px 16px 0;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .player-input-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .player-label {
+      font-family: 'Playfair Display', serif;
+      font-size: 15px;
+      font-weight: 700;
+      width: 22px;
+      text-align: center;
+    }
+    .label-N, .label-S { color: #7ecfff; }
+    .label-E, .label-W { color: #ffb07e; }
+
+    .player-input-group input {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(201,168,76,0.4);
+      border-radius: 6px;
+      color: var(--cream);
+      padding: 6px 10px;
+      font-family: 'Courier Prime', monospace;
+      font-size: 14px;
+      width: 100px;
+    }
+    .player-input-group input:focus {
+      outline: none;
+      border-color: var(--gold);
+      background: rgba(255,255,255,0.12);
+    }
+    .btn {
+      padding: 7px 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Courier Prime', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      transition: all 0.15s;
+    }
+    .btn-gold {
+      background: var(--gold);
+      color: var(--felt-dark);
+    }
+    .btn-gold:hover { background: var(--gold-light); }
+    .btn-danger {
+      background: transparent;
+      color: #e88;
+      border: 1px solid #e88;
+    }
+    .btn-danger:hover { background: rgba(200,50,50,0.2); }
+    .btn-add {
+      background: var(--felt-light);
+      color: var(--gold);
+      border: 1px solid var(--gold);
+    }
+    .btn-add:hover { background: var(--gold); color: var(--felt-dark); }
+
+    /* ── MAIN TABLE AREA ── */
+    .table-wrap {
+      margin: 16px 16px 0;
+      overflow-x: auto;
+    }
+
+    table.score-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 820px;
+    }
+
+    table.score-table thead tr th {
+      background: var(--felt-dark);
+      border-top: 2px solid var(--gold);
+      border-bottom: 2px solid var(--gold);
+      padding: 10px 8px;
+      font-family: 'Playfair Display', serif;
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-align: center;
+      color: var(--gold);
+    }
+    th.ns-col { color: #7ecfff; }
+    th.ew-col { color: #ffb07e; }
+
+    table.score-table tbody tr {
+      transition: background 0.15s;
+    }
+    table.score-table tbody tr:nth-child(even) {
+      background: rgba(255,255,255,0.03);
+    }
+    table.score-table tbody tr:hover {
+      background: rgba(201,168,76,0.06);
+    }
+
+    table.score-table td {
+      padding: 6px 6px;
+      border-bottom: 1px solid rgba(201,168,76,0.15);
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    /* Score cells */
+    .score-cell {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      min-width: 70px;
+    }
+    .score-pos { color: #7ecfff; }
+    .score-neg { color: #ff7e7e; }
+    .score-ew-pos { color: #ffb07e; }
+    .score-ew-neg { color: #ff7e7e; }
+
+    /* ── CONTRACT CELL ── */
+    .contract-btn {
+      background: rgba(201,168,76,0.1);
+      border: 1px solid rgba(201,168,76,0.35);
+      border-radius: 6px;
+      color: var(--cream);
+      padding: 5px 8px;
+      font-family: 'Courier Prime', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      width: 100%;
+      min-width: 130px;
+      text-align: left;
+      transition: all 0.15s;
+    }
+    .contract-btn:hover {
+      border-color: var(--gold);
+      background: rgba(201,168,76,0.18);
+    }
+    .contract-btn.filled {
+      background: rgba(201,168,76,0.15);
+      border-color: var(--gold);
+    }
+    .contract-display {
+      font-family: 'Playfair Display', serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--gold-light);
+    }
+    .contract-sub {
+      font-size: 10px;
+      color: rgba(245,240,232,0.5);
+      margin-top: 1px;
+    }
+
+    /* tricks selector */
+    .tricks-select {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(201,168,76,0.3);
+      border-radius: 6px;
+      color: var(--cream);
+      padding: 5px 4px;
+      font-family: 'Courier Prime', monospace;
+      font-size: 14px;
+      width: 68px;
+      text-align: center;
+      cursor: pointer;
+    }
+    .tricks-select:focus { outline: none; border-color: var(--gold); }
+    .tricks-select:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* delete row btn */
+    .del-btn {
+      background: transparent;
+      border: 1px solid rgba(200,100,100,0.4);
+      color: #e88;
+      border-radius: 4px;
+      width: 26px; height: 26px;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      transition: all 0.15s;
+    }
+    .del-btn:hover { background: rgba(200,50,50,0.25); border-color: #e88; }
+
+    /* ── ADD ROW ── */
+    .add-row-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 14px 16px 0;
+      padding: 10px;
+      background: transparent;
+      border: 2px dashed rgba(201,168,76,0.35);
+      border-radius: 8px;
+      color: var(--gold);
+      cursor: pointer;
+      font-family: 'Courier Prime', monospace;
+      font-size: 14px;
+      width: calc(100% - 32px);
+      transition: all 0.2s;
+    }
+    .add-row-btn:hover { border-color: var(--gold); background: rgba(201,168,76,0.08); }
+    .add-row-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--felt);
+      border: 2px solid var(--gold);
+      border-radius: 14px;
+      padding: 24px 28px;
+      width: 380px;
+      max-width: 95vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      position: relative;
+    }
+    .modal h2 {
+      font-family: 'Playfair Display', serif;
+      color: var(--gold);
+      font-size: 20px;
+      margin-bottom: 20px;
+      letter-spacing: 1px;
+    }
+
+    .modal-section {
+      margin-bottom: 16px;
+    }
+    .modal-section label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: rgba(245,240,232,0.6);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    /* Radio pill groups inside modal */
+    .pill-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .pill-group input[type=radio] { display: none; }
+    .pill-group label {
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(201,168,76,0.35);
+      cursor: pointer;
+      font-size: 13px;
+      background: rgba(255,255,255,0.05);
+      transition: all 0.15s;
+      letter-spacing: 0;
+    }
+    .pill-group input[type=radio]:checked + label {
+      background: var(--gold);
+      color: var(--felt-dark);
+      border-color: var(--gold);
+      font-weight: 700;
+    }
+
+    /* suit colors */
+    .pill-suit input:checked + label { background: #2a6e4a; border-color: #4caf78; color: #fff; }
+    .pill-C label, .pill-D label { }
+    label.suit-H, label.suit-D { color: #ffb07e; }
+
+    /* caller pills */
+    .pill-ns input:checked + label { background: #1a3a5c; border-color: #7ecfff; color: #7ecfff; }
+    .pill-ew input:checked + label { background: #5c3a1a; border-color: #ffb07e; color: #ffb07e; }
+
+    .modal-close {
+      position: absolute;
+      top: 12px; right: 14px;
+      background: none; border: none;
+      color: rgba(245,240,232,0.4);
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .modal-close:hover { color: var(--cream); }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .modal-actions .btn { flex: 1; padding: 10px; font-size: 14px; }
+
+    /* ── TOTALS ROW ── */
+    tr.totals-row td {
+      background: var(--felt-dark);
+      border-top: 2px solid var(--gold);
+      font-family: 'Playfair Display', serif;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 10px 6px;
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--gold);
+      color: var(--felt-dark);
+      padding: 10px 22px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 14px;
+      opacity: 0;
+      transition: all 0.3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <a href="/bridge">← Bridge</a>
+  <h1>🃏 Bridge Game Score</h1>
+  <span class="suits">
+    <span class="s">♠</span>
+    <span class="h">♥</span>
+    <span class="d">♦</span>
+    <span class="s">♣</span>
+  </span>
+</div>
+
+<!-- SCOREBOARD SUMMARY -->
+<div class="scoreboard">
+  <div class="score-team">
+    <div class="team-label">North · South</div>
+    <div class="team-total ns-total" id="ns-grand">0</div>
+  </div>
+  <div class="score-divider"></div>
+  <div class="score-team">
+    <div class="team-label">East · West</div>
+    <div class="team-total ew-total" id="ew-grand">0</div>
+  </div>
+</div>
+
+<!-- PLAYERS BAR -->
+<div class="players-bar">
+  <div class="player-input-group">
+    <span class="player-label label-N">N</span>
+    <input type="text" id="name-N" placeholder="North" maxlength="12"/>
+  </div>
+  <div class="player-input-group">
+    <span class="player-label label-S">S</span>
+    <input type="text" id="name-S" placeholder="South" maxlength="12"/>
+  </div>
+  <div class="player-input-group">
+    <span class="player-label label-E">E</span>
+    <input type="text" id="name-E" placeholder="East" maxlength="12"/>
+  </div>
+  <div class="player-input-group">
+    <span class="player-label label-W">W</span>
+    <input type="text" id="name-W" placeholder="West" maxlength="12"/>
+  </div>
+  <button class="btn btn-gold" onclick="savePlayers()">Save Names</button>
+  <button class="btn btn-danger" onclick="confirmReset()">Reset All</button>
+</div>
+
+<!-- TABLE -->
+<div class="table-wrap">
+  <table class="score-table">
+    <thead>
+      <tr>
+        <th style="width:32px">#</th>
+        <th class="ns-col" id="th-N">N</th>
+        <th class="ns-col" id="th-S">S</th>
+        <th class="ew-col" id="th-E">E</th>
+        <th class="ew-col" id="th-W">W</th>
+        <th style="min-width:150px">Contract</th>
+        <th style="width:80px">Tricks</th>
+        <th style="width:34px"></th>
+      </tr>
+    </thead>
+    <tbody id="score-tbody"></tbody>
+    <tfoot>
+      <tr class="totals-row">
+        <td></td>
+        <td colspan="2" class="ns-total" id="ns-total-cell" style="color:#7ecfff;text-align:center">NS: 0</td>
+        <td colspan="2" class="ew-total" id="ew-total-cell" style="color:#ffb07e;text-align:center">EW: 0</td>
+        <td colspan="3" style="color:var(--gold);font-size:12px;text-align:right;padding-right:12px">
+          MAX 12 ROUNDS
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<!-- ADD ROW BUTTON -->
+<button class="add-row-btn" id="add-row-btn" onclick="addRow()">+ Add Round</button>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- CONTRACT MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2>Set Contract</h2>
+
+    <div class="modal-section">
+      <label>Bid Level</label>
+      <div class="pill-group" id="m-bid">
+        <input type="radio" name="m_bid" id="mb1" value="1"><label for="mb1">1</label>
+        <input type="radio" name="m_bid" id="mb2" value="2"><label for="mb2">2</label>
+        <input type="radio" name="m_bid" id="mb3" value="3"><label for="mb3">3</label>
+        <input type="radio" name="m_bid" id="mb4" value="4"><label for="mb4">4</label>
+        <input type="radio" name="m_bid" id="mb5" value="5"><label for="mb5">5</label>
+        <input type="radio" name="m_bid" id="mb6" value="6"><label for="mb6">6</label>
+        <input type="radio" name="m_bid" id="mb7" value="7"><label for="mb7">7</label>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <label>Suit</label>
+      <div class="pill-group pill-suit" id="m-suite">
+        <input type="radio" name="m_suite" id="msC" value="C"><label for="msC">♣ Clubs</label>
+        <input type="radio" name="m_suite" id="msD" value="D"><label for="msD" class="suit-D">♦ Diamonds</label>
+        <input type="radio" name="m_suite" id="msH" value="H"><label for="msH" class="suit-H">♥ Hearts</label>
+        <input type="radio" name="m_suite" id="msS" value="S"><label for="msS">♠ Spades</label>
+        <input type="radio" name="m_suite" id="msN" value="N"><label for="msN">NT</label>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <label>Double</label>
+      <div class="pill-group" id="m-double">
+        <input type="radio" name="m_double" id="mdN" value="Normal" checked><label for="mdN">Normal</label>
+        <input type="radio" name="m_double" id="mdD" value="Double"><label for="mdD">✗✗ Double</label>
+        <input type="radio" name="m_double" id="mdR" value="Redouble"><label for="mdR">✗✗✗✗ Rdbl</label>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <label>Vulnerability</label>
+      <div class="pill-group" id="m-vul">
+        <input type="radio" name="m_vul" id="mvN" value="NotVulnerable" checked><label for="mvN">Not Vuln</label>
+        <input type="radio" name="m_vul" id="mvV" value="Vulnerable"><label for="mvV">🔴 Vulnerable</label>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <label>Caller (Declarer)</label>
+      <div class="pill-group" id="m-caller">
+        <input type="radio" name="m_caller" id="mcN" value="N" class="pill-ns"><label for="mcN" id="mcN-lbl">N</label>
+        <input type="radio" name="m_caller" id="mcS" value="S" class="pill-ns"><label for="mcS" id="mcS-lbl">S</label>
+        <input type="radio" name="m_caller" id="mcE" value="E" class="pill-ew"><label for="mcE" id="mcE-lbl">E</label>
+        <input type="radio" name="m_caller" id="mcW" value="W" class="pill-ew"><label for="mcW" id="mcW-lbl">W</label>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-gold" onclick="saveContract()">Save Contract</button>
+      <button class="btn btn-danger" onclick="clearContract()">Clear</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  SCORING LOGIC (mirrors your calculate_point)
+// ═══════════════════════════════════════════════
+function calculatePoint(bid, suite, win, double_, vul) {
+  let suite_point = 30, dbl = 1;
+  let play_score=0, play_bonus=0, game_score=0, fc_score=0;
+  let ot_score=0, ot_score_mul=0, down_score=0, slam_bonus=0;
+
+  const nvd=[0,100,300,500,800,1100,1400,1700,2000,2300,2600,2900,3200,3500];
+  const vd =[0,200,500,800,1100,1400,1700,2000,2300,2600,2900,3200,3500,3800];
+  const nvr=[0,200,600,1000,1600,2200,2800,3400,4000,4600,5200,5800,6400,7000];
+  const vr =[0,400,1000,1600,2200,2800,3400,4000,4600,5200,5800,6400,7000,7600];
+
+  if (suite==='C'||suite==='D') suite_point=20;
+
+  if (double_==='Double') {
+    ot_score_mul = vul==='Vulnerable'?200:100; dbl=2; fc_score=50;
+  } else if (double_==='Redouble') {
+    ot_score_mul = vul==='Vulnerable'?400:200; dbl=4; fc_score=100;
+  }
+
+  const ot = win - bid - 6;
+  let bid_point = bid * suite_point;
+  let win_point = (win - 6) * suite_point;
+
+  if (suite==='N') { bid_point+=10; win_point+=10; }
+  bid_point*=dbl; win_point*=dbl;
+
+  let total_score;
+  if (ot<0) {
+    fc_score=0;
+    const i=-ot;
+    if (double_==='Redouble') down_score = vul==='Vulnerable'?vr[i]:nvr[i];
+    else if (double_==='Double') down_score = vul==='Vulnerable'?vd[i]:nvd[i];
+    else down_score = i*(vul==='Vulnerable'?100:50);
+    total_score = -down_score;
+  } else {
+    if (bid_point>=100) {
+      game_score = vul==='Vulnerable'?500:300;
+      if (bid===7) slam_bonus = vul==='Vulnerable'?1500:1000;
+      else if (bid===6) slam_bonus = vul==='Vulnerable'?750:500;
+    } else { play_bonus=50; }
+    play_score = dbl===1 ? win_point : bid_point;
+    ot_score = ot * ot_score_mul;
+    total_score = play_score+fc_score+game_score+play_bonus+ot_score+slam_bonus;
+  }
+  return total_score;
+}
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+const STORAGE_KEY = 'bridge_gamescore_v1';
+
+let state = {
+  players: { N:'North', S:'South', E:'East', W:'West' },
+  rows: []   // each: { id, contract:{bid,suite,double,vul,caller} | null, tricks: null }
+};
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state = JSON.parse(raw);
+  } catch(e) {}
+  if (!state.rows || state.rows.length===0) {
+    state.rows = [{ id: Date.now(), contract: null, tricks: null }];
+    saveState();
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  PLAYERS
+// ═══════════════════════════════════════════════
+function savePlayers() {
+  ['N','S','E','W'].forEach(p => {
+    const v = document.getElementById('name-'+p).value.trim();
+    if (v) state.players[p] = v;
+  });
+  saveState();
+  renderAll();
+  toast('Names saved ✓');
+}
+
+function loadPlayerInputs() {
+  ['N','S','E','W'].forEach(p => {
+    document.getElementById('name-'+p).value = state.players[p] || '';
+  });
+}
+
+function updateHeaders() {
+  ['N','S','E','W'].forEach(p => {
+    const el = document.getElementById('th-'+p);
+    if(el) el.textContent = state.players[p] || p;
+  });
+  // update modal caller labels
+  ['N','S','E','W'].forEach(p => {
+    const lbl = document.getElementById('mc'+p+'-lbl');
+    if(lbl) lbl.textContent = (state.players[p]||p).substring(0,8);
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  ROWS
+// ═══════════════════════════════════════════════
+function addRow() {
+  if (state.rows.length >= 12) { toast('Maximum 12 rounds reached'); return; }
+  state.rows.push({ id: Date.now(), contract: null, tricks: null });
+  saveState();
+  renderTable();
+  updateTotals();
+  updateAddBtn();
+}
+
+function deleteRow(id) {
+  if (state.rows.length <= 1) { toast('At least one row required'); return; }
+  state.rows = state.rows.filter(r => r.id !== id);
+  saveState();
+  renderTable();
+  updateTotals();
+  updateAddBtn();
+}
+
+// ═══════════════════════════════════════════════
+//  SCORE CALCULATION PER ROW
+// ═══════════════════════════════════════════════
+function getRowScore(row) {
+  if (!row.contract || row.tricks === null) return null;
+  const c = row.contract;
+  const score = calculatePoint(+c.bid, c.suite, +row.tricks, c.double, c.vul);
+  // Positive score = caller's team wins, Negative = opponents win
+  const callerNS = (c.caller==='N'||c.caller==='S');
+  return { score, callerNS };
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER TABLE
+// ═══════════════════════════════════════════════
+function renderTable() {
+  const tbody = document.getElementById('score-tbody');
+  tbody.innerHTML = '';
+
+  state.rows.forEach((row, idx) => {
+    const sc = getRowScore(row);
+    let nScore='', sScore='', eScore='', wScore='';
+    let nCls='', sCls='', eCls='', wCls='';
+
+    if (sc !== null) {
+      if (sc.callerNS) {
+        // NS team gets the score
+        const val = sc.score;
+        nScore = val; sScore = '';
+        const cls = val>=0?'score-pos':'score-neg';
+        nCls = cls; sCls = cls;
+        // show on N column only (represents NS team for that round)
+        sScore = '';
+      } else {
+        // EW team gets the score
+        const val = sc.score;
+        eScore = val; wScore = '';
+        const cls = val>=0?'score-ew-pos':'score-ew-neg';
+        eCls = cls; wCls = cls;
+      }
+    }
+
+    // Contract display
+    const c = row.contract;
+    let contractHTML = '';
+    if (c) {
+      const suitSymbols = {C:'♣',D:'♦',H:'♥',S:'♠',N:'NT'};
+      const suitColors  = {C:'#ccc',D:'#ffb07e',H:'#ff8080',S:'#ccc',N:'#ccc'};
+      const dblStr = c.double==='Double'?' ✗✗':c.double==='Redouble'?' ✗✗✗✗':'';
+      const vulStr = c.vul==='Vulnerable'?' V':' NV';
+      const sym = suitSymbols[c.suite]||c.suite;
+      const col = suitColors[c.suite]||'#ccc';
+      contractHTML = `
+        <button class="contract-btn filled" onclick="openModal(${row.id})">
+          <div class="contract-display">
+            ${c.bid}<span style="color:${col}">${sym}</span>${dblStr}${vulStr}
+          </div>
+          <div class="contract-sub">Caller: ${state.players[c.caller]||c.caller}</div>
+        </button>`;
+    } else {
+      contractHTML = `<button class="contract-btn" onclick="openModal(${row.id})">
+        <span style="color:rgba(245,240,232,0.3);font-size:11px">tap to set contract…</span>
+      </button>`;
+    }
+
+    // Tricks select — 0 = not set
+    const tricksHTML = buildTricksSelect(row);
+
+    const tr = document.createElement('tr');
+    tr.id = 'row-'+row.id;
+    tr.innerHTML = `
+      <td style="color:rgba(245,240,232,0.4);font-size:12px">${idx+1}</td>
+      <td class="score-cell ${nCls}">${nScore !== '' ? nScore : ''}</td>
+      <td class="score-cell ${sCls}">${sScore !== '' ? sScore : ''}</td>
+      <td class="score-cell ${eCls}">${eScore !== '' ? eScore : ''}</td>
+      <td class="score-cell ${wCls}">${wScore !== '' ? wScore : ''}</td>
+      <td>${contractHTML}</td>
+      <td>${tricksHTML}</td>
+      <td><button class="del-btn" onclick="deleteRow(${row.id})" title="Delete row">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildTricksSelect(row) {
+  const disabled = !row.contract ? 'disabled' : '';
+  let opts = '<option value="">–</option>';
+  for (let i=1;i<=13;i++) {
+    const sel = row.tricks==i ? 'selected' : '';
+    opts += `<option value="${i}" ${sel}>${i}</option>`;
+  }
+  return `<select class="tricks-select" ${disabled} onchange="setTricks(${row.id},this.value)">${opts}</select>`;
+}
+
+// ═══════════════════════════════════════════════
+//  TRICKS CHANGE
+// ═══════════════════════════════════════════════
+function setTricks(id, val) {
+  const row = state.rows.find(r=>r.id===id);
+  if (!row) return;
+  row.tricks = val ? +val : null;
+  saveState();
+  renderTable();
+  updateTotals();
+}
+
+// ═══════════════════════════════════════════════
+//  TOTALS
+// ═══════════════════════════════════════════════
+function updateTotals() {
+  let ns=0, ew=0;
+  state.rows.forEach(row => {
+    const sc = getRowScore(row);
+    if (!sc) return;
+    if (sc.callerNS) {
+      if (sc.score>=0) ns+=sc.score; else ew+=(-sc.score);
+    } else {
+      if (sc.score>=0) ew+=sc.score; else ns+=(-sc.score);
+    }
+  });
+  document.getElementById('ns-grand').textContent = ns;
+  document.getElementById('ew-grand').textContent = ew;
+  document.getElementById('ns-total-cell').textContent = `NS: ${ns}`;
+  document.getElementById('ew-total-cell').textContent = `EW: ${ew}`;
+}
+
+function updateAddBtn() {
+  const btn = document.getElementById('add-row-btn');
+  btn.disabled = state.rows.length >= 12;
+  btn.textContent = state.rows.length>=12
+    ? '✓ Maximum 12 rounds reached'
+    : `+ Add Round  (${state.rows.length}/12)`;
+}
+
+// ═══════════════════════════════════════════════
+//  MODAL
+// ═══════════════════════════════════════════════
+let activeRowId = null;
+
+function openModal(id) {
+  activeRowId = id;
+  const row = state.rows.find(r=>r.id===id);
+  if (!row) return;
+
+  // reset to defaults
+  document.querySelector('input[name="m_double"][value="Normal"]').checked = true;
+  document.querySelector('input[name="m_vul"][value="NotVulnerable"]').checked = true;
+  ['m_bid','m_suite','m_caller'].forEach(n => {
+    const el = document.querySelector(`input[name="${n}"]:checked`);
+    if(el) el.checked=false;
+  });
+
+  // populate if contract exists
+  if (row.contract) {
+    const c = row.contract;
+    const bid_el = document.querySelector(`input[name="m_bid"][value="${c.bid}"]`);
+    if(bid_el) bid_el.checked=true;
+    const suite_el = document.querySelector(`input[name="m_suite"][value="${c.suite}"]`);
+    if(suite_el) suite_el.checked=true;
+    const dbl_el = document.querySelector(`input[name="m_double"][value="${c.double}"]`);
+    if(dbl_el) dbl_el.checked=true;
+    const vul_el = document.querySelector(`input[name="m_vul"][value="${c.vul}"]`);
+    if(vul_el) vul_el.checked=true;
+    const caller_el = document.querySelector(`input[name="m_caller"][value="${c.caller}"]`);
+    if(caller_el) caller_el.checked=true;
+  }
+
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  activeRowId = null;
+}
+
+function saveContract() {
+  if (!activeRowId) return;
+  const row = state.rows.find(r=>r.id===activeRowId);
+  if (!row) return;
+
+  const bid    = document.querySelector('input[name="m_bid"]:checked');
+  const suite  = document.querySelector('input[name="m_suite"]:checked');
+  const double_= document.querySelector('input[name="m_double"]:checked');
+  const vul    = document.querySelector('input[name="m_vul"]:checked');
+  const caller = document.querySelector('input[name="m_caller"]:checked');
+
+  if (!bid||!suite||!caller) {
+    toast('Please select Bid, Suit and Caller'); return;
+  }
+
+  row.contract = {
+    bid:    +bid.value,
+    suite:  suite.value,
+    double: double_?double_.value:'Normal',
+    vul:    vul?vul.value:'NotVulnerable',
+    caller: caller.value
+  };
+  // reset tricks if contract changes
+  row.tricks = null;
+  saveState();
+  closeModal();
+  renderTable();
+  updateTotals();
+  toast('Contract saved ✓');
+}
+
+function clearContract() {
+  if (!activeRowId) return;
+  const row = state.rows.find(r=>r.id===activeRowId);
+  if (row) { row.contract=null; row.tricks=null; }
+  saveState();
+  closeModal();
+  renderTable();
+  updateTotals();
+}
+
+// close modal on overlay click
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target===this) closeModal();
+});
+
+// ═══════════════════════════════════════════════
+//  RESET
+// ═══════════════════════════════════════════════
+function confirmReset() {
+  if (!confirm('Reset all scores and names? This cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = {
+    players: { N:'North', S:'South', E:'East', W:'West' },
+    rows: [{ id: Date.now(), contract: null, tricks: null }]
+  };
+  saveState();
+  renderAll();
+  toast('Game reset ✓');
+}
+
+// ═══════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER ALL
+// ═══════════════════════════════════════════════
+function renderAll() {
+  loadPlayerInputs();
+  updateHeaders();
+  renderTable();
+  updateTotals();
+  updateAddBtn();
+}
+
+// ═══════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════
+loadState();
+renderAll();
+</script>
+</body>
+</html>
