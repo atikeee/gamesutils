@@ -85,6 +85,7 @@ def configure_routes_links(app, socketio):
     @app.route("/links/edit", methods=["POST"])
     def links_edit_save():
         content = request.form.get("content", "")
+        content = content.strip('\r\n') + '\n'
         try:
             with open(BOOKMARKS_FILE, 'w', encoding='utf-8') as f:
                 f.write(content)
