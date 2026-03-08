@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bridge Admin</title>
+    <style>
+        body { background: #0d1117; color: white; font-family: sans-serif; padding: 20px; }
+        .room-row { 
+            display: flex; justify-content: space-between; align-items: center;
+            background: #161b22; margin-bottom: 10px; padding: 15px; border-radius: 8px;
+        }
+        .reset-btn { background: #f85149; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+        .status { color: #8b949e; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>Bridge Admin Control</h1>
+    <div id="rooms">
+        {% for id, data in rooms.items() %}
+        <div class="room-row">
+            <div>
+                <strong>Room {{ id }}</strong>
+                <div class="status">
+                    Players: 
+                    N: {{ "Occupied" if data.players.N else "Empty" }} | 
+                    E: {{ "Occupied" if data.players.E else "Empty" }} | 
+                    S: {{ "Occupied" if data.players.S else "Empty" }} | 
+                    W: {{ "Occupied" if data.players.W else "Empty" }}
+                </div>
+            </div>
+            <button class="reset-btn" onclick="resetRoom('{{ id }}')">Reset Room</button>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        async function resetRoom(id) {
+            if(!confirm(`Are you sure you want to reset Room ${id}?`)) return;
+            const res = await fetch(`/bridge_v2/admin/reset/${id}`, { method: 'POST' });
+            if((await res.json()).status === 'success') location.reload();
+        }
+    </script>
+</body>
+</html>
