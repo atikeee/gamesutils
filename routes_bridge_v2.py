@@ -87,36 +87,76 @@ def configure_routes_bridge_v2(app, socketio):
         emit('game_state_update', {"game": game_data}, room=f"bridge_room_{room_id}")        
 
 
+    
+    
+
+
     @socketio.on('join_bridge_room')
     def handle_socket_join(data):
         room_id = str(data['room_id'])
         join_room(f"bridge_room_{room_id}")
         
-        # Get current state from manager
         room = bridge_manager.rooms.get(room_id)
         if room:
-            # Broadcast to everyone in the room that a new player joined
+            # Send current state to everyone when someone joins or refreshes
             emit('game_state_update', {
                 "game": room['game'], 
                 "players": room['players']
             }, room=f"bridge_room_{room_id}")
 
-    
     @socketio.on('request_deal')
     def handle_request_deal(data):
         room_id = str(data['room_id'])
-        # Get the latest room object
         room = bridge_manager.rooms.get(room_id)
         
-        # Check for 4 players
+        if not room: return
+
+        # Count actual occupied seats
         player_count = sum(1 for p in room["players"].values() if p is not None)
         
-        if player_count == 4:
-            # This function updates room['game'] and saves to file
+        # Only deal if table is full and we are in waiting phase
+        if player_count == 4 and room["game"]["phase"] == "waiting":
             bridge_manager.deal_cards(room_id) 
             
-            # Broadcast the ENTIRE updated room state
             emit('game_state_update', {
                 "game": room['game'], 
                 "players": room['players']
-            }, room=f"bridge_room_{room_id}")            
+            }, room=f"bridge_room_{room_id}")
+
+    @socketio.on('submit_bid')
+    def handle_submit_bid(data):
+        room_id = str(data['room_id'])
+        room = bridge_manager.rooms.get(room_id)
+        
+        # 1. Validation: Is it this player's turn?
+        # (In a real game, you'd check the session/direction here too)
+        
+        # 2. Add to history
+        bid = {
+            "player": room["game"]["current_bidder"],
+            "level": data.get("level", 0),
+            "strain": data.get("strain")
+        }
+        room["game"]["bid_history"].append(bid)
+        
+        # 3. Handle Pass logic
+        if data.get("strain") == "Pass":
+            room["game"]["pass_count"] += 1
+        else:
+            room["game"]["pass_count"] = 0 # Reset passes if someone bids
+        
+        # 4. Check for end of bidding (3 passes, or 4 if no one bid)
+        if room["game"]["pass_count"] >= 3 and len(room["game"]["bid_history"]) >= 3:
+            # For now, just mark play phase (we will add contract logic later)
+            room["game"]["phase"] = "play"
+        else:
+            # Rotate to next bidder
+            order = ["N", "E", "S", "W"]
+            curr_idx = order.index(room["game"]["current_bidder"])
+            room["game"]["current_bidder"] = order[(curr_idx + 1) % 4]
+        
+        bridge_manager.save_states()
+        emit('game_state_update', {
+            "game": room['game'], 
+            "players": room['players']
+        }, room=f"bridge_room_{room_id}")            

@@ -67,40 +67,28 @@ class BridgeManager:
             self.save_states()
             return True
         return False
-
-    def get_default_room_state(self):
-        return {
-            "players": {"N": None, "E": None, "S": None, "W": None},
-            "game": {
-                "round": 1,
-                "dealer": "N", # Starts with North
-                "phase": "waiting", # waiting, bidding, playing
-                "hands": {"N":[], "E":[], "S":[], "W":[]},
-                "tricks_won": {"NS": 0, "EW": 0},
-                "current_bid": "None",
-                "declarer": None,
-                "dummy": None,
-                "current_trick": []
-            },
-            "config": {"max_rounds": 12}
-        }
-
     def deal_cards(self, room_id):
         room = self.rooms.get(str(room_id))
         
-        # Restoration of your specific deck logic
+        # 1. Standard Deck & Shuffle
         suits = ['S', 'H', 'D', 'C']
         values = ['2','3','4','5','6','7','8','9','10','J','Q','K','A']
         deck = [{'suit': s, 'val': v} for s in suits for v in values]
         random.shuffle(deck)
 
-        # Distribute 13 cards to each player
+        # 2. Distribute 13 cards
         room["game"]["hands"]["N"] = deck[0:13]
         room["game"]["hands"]["E"] = deck[13:26]
         room["game"]["hands"]["S"] = deck[26:39]
         room["game"]["hands"]["W"] = deck[39:52]
         
+        # 3. Setup Bidding Phase
         room["game"]["phase"] = "bidding"
+        # FIX: Dealer bids first
+        room["game"]["current_bidder"] = room["game"]["dealer"] 
+        room["game"]["bid_history"] = []
+        room["game"]["pass_count"] = 0
+        
         self.save_states()
         return room["game"]
         
@@ -119,28 +107,12 @@ class BridgeManager:
                 "dealer": "N", 
                 "phase": "waiting",
                 "hands": {"N":[], "E":[], "S":[], "W":[]},
-                "tricks_won": {"NS": 0, "EW": 0}, # Ensure this exists
+                "tricks_won": {"NS": 0, "EW": 0},
                 "current_bid": "None",
+                "bid_history": [], # Added this
+                "pass_count": 0,    # Added this
+                "current_bidder": None, # Added this
                 "dummy": None,
                 "current_trick": []
             }
         }
-
-    def deal_cards(self, room_id):
-        room = self.rooms.get(str(room_id))
-        
-        # Restored your specific deck and shuffle logic
-        suits = ['S', 'H', 'D', 'C']
-        values = ['2','3','4','5','6','7','8','9','10','J','Q','K','A']
-        deck = [{'suit': s, 'val': v} for s in suits for v in values]
-        random.shuffle(deck)
-
-        # Distribute 13 cards to each player
-        room["game"]["hands"]["N"] = deck[0:13]
-        room["game"]["hands"]["E"] = deck[13:26]
-        room["game"]["hands"]["S"] = deck[26:39]
-        room["game"]["hands"]["W"] = deck[39:52]
-        
-        room["game"]["phase"] = "bidding" 
-        self.save_states()
-        return room["game"]
