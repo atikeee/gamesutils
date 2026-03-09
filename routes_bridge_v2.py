@@ -78,13 +78,6 @@ def configure_routes_bridge_v2(app, socketio):
             return jsonify({"status": "success"})
         return jsonify({"status": "error"}), 400  
         
-    @socketio.on('request_deal')
-    def handle_deal(data):
-        room_id = data['room_id']
-        # 1. Deal cards
-        game_data = bridge_manager.deal_cards(room_id)
-        # 2. Broadcast the new state (with hands) to everyone in the room
-        emit('game_state_update', {"game": game_data}, room=f"bridge_room_{room_id}")        
 
 
     
@@ -109,54 +102,80 @@ def configure_routes_bridge_v2(app, socketio):
         room_id = str(data['room_id'])
         room = bridge_manager.rooms.get(room_id)
         
-        if not room: return
+        # 1. Validation: Does room exist?
+        if not room: 
+            return
 
-        # Count actual occupied seats
+        # 2. Validation: Are there 4 players?
         player_count = sum(1 for p in room["players"].values() if p is not None)
         
-        # Only deal if table is full and we are in waiting phase
+        # 3. Only deal if 4 players are present and phase is 'waiting'
         if player_count == 4 and room["game"]["phase"] == "waiting":
+            # This triggers the sorting and state update in the manager
             bridge_manager.deal_cards(room_id) 
             
+            # 4. Broadcast the FULL state (game + players) so names and hands update
             emit('game_state_update', {
                 "game": room['game'], 
                 "players": room['players']
             }, room=f"bridge_room_{room_id}")
-
     @socketio.on('submit_bid')
     def handle_submit_bid(data):
         room_id = str(data['room_id'])
         room = bridge_manager.rooms.get(room_id)
+        level = int(data.get("level", 0))
+        strain = data.get("strain")
         
-        # 1. Validation: Is it this player's turn?
-        # (In a real game, you'd check the session/direction here too)
+        # 1. Bidding Validation Logic
+        strain_rank = {"C": 1, "D": 2, "H": 3, "S": 4, "NT": 5}
+        last_bid = room["game"].get("highest_bid")
         
-        # 2. Add to history
-        bid = {
-            "player": room["game"]["current_bidder"],
-            "level": data.get("level", 0),
-            "strain": data.get("strain")
-        }
-        room["game"]["bid_history"].append(bid)
+        is_pass = (strain == "Pass")
+        is_double = (strain in ["X", "XX"])
         
-        # 3. Handle Pass logic
-        if data.get("strain") == "Pass":
-            room["game"]["pass_count"] += 1
-        else:
-            room["game"]["pass_count"] = 0 # Reset passes if someone bids
+        if not is_pass and not is_double:
+            # Check if the new bid is actually higher
+            if last_bid:
+                new_val = (level * 10) + strain_rank[strain]
+                old_val = (last_bid['level'] * 10) + strain_rank[last_bid['strain']]
+                if new_val <= old_val:
+                    return  # Ignore bid if it's not higher
+
+            # Update Highest Bid (only for suit/NT bids)
+            room["game"]["highest_bid"] = {
+                "level": level, "strain": strain, 
+                "player": room["game"]["current_bidder"],
+                "db": "None"
+            }
         
-        # 4. Check for end of bidding (3 passes, or 4 if no one bid)
+        if is_double and last_bid:
+            room["game"]["highest_bid"]["db"] = strain
+
+        # 2. History & Turn Rotation
+        room["game"]["bid_history"].append({
+            "player": room["game"]["current_bidder"], 
+            "level": level, 
+            "strain": strain
+        })
+        
+        room["game"]["pass_count"] = (room["game"]["pass_count"] + 1) if is_pass else 0
+        
+        # 3. Phase Transition
         if room["game"]["pass_count"] >= 3 and len(room["game"]["bid_history"]) >= 3:
-            # For now, just mark play phase (we will add contract logic later)
-            room["game"]["phase"] = "play"
+            if not room["game"]["highest_bid"]:
+                room["game"]["phase"] = "waiting" # All passed
+            else:
+                room["game"]["phase"] = "play"
+                winner = room["game"]["highest_bid"]["player"]
+                order = ["N", "E", "S", "W"]
+                # Identify Dummy (Partner of Winner)
+                room["game"]["dummy"] = order[(order.index(winner) + 2) % 4]
+                # Next player starts the play
+                room["game"]["current_player"] = order[(order.index(winner) + 1) % 4]
         else:
-            # Rotate to next bidder
             order = ["N", "E", "S", "W"]
             curr_idx = order.index(room["game"]["current_bidder"])
             room["game"]["current_bidder"] = order[(curr_idx + 1) % 4]
         
         bridge_manager.save_states()
-        emit('game_state_update', {
-            "game": room['game'], 
-            "players": room['players']
-        }, room=f"bridge_room_{room_id}")            
+        emit('game_state_update', {"game": room['game'], "players": room['players']}, room=f"bridge_room_{room_id}")
