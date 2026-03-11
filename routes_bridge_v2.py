@@ -179,3 +179,72 @@ def configure_routes_bridge_v2(app, socketio):
         
         bridge_manager.save_states()
         emit('game_state_update', {"game": room['game'], "players": room['players']}, room=f"bridge_room_{room_id}")
+    @socketio.on('play_card')
+    def handle_play_card(data):
+        room_id = str(data['room_id'])
+        room = bridge_manager.rooms.get(room_id)
+        player_dir = data['direction']
+        card_index = data['card_index']
+
+        game = room["game"]
+        
+        # 1. Validation
+        if game["phase"] != "play": return
+        if game["current_player"] != player_dir: return
+
+        # 2. Move card from hand to center
+        hand = game["hands"][player_dir]
+        played_card = hand.pop(card_index)
+        game["current_trick"].append({
+            "player": player_dir,
+            "card": played_card
+        })
+
+        # 3. Check if Trick is complete (4 cards)
+        if len(game["current_trick"]) == 4:
+            # Identify Winner
+            winner = determine_trick_winner(game["current_trick"], game["highest_bid"])
+            
+            # Update Score
+            if winner in ["N", "S"]: game["tricks_won"]["NS"] += 1
+            else: game["tricks_won"]["EW"] += 1
+            
+            # Winner leads the next trick
+            game["current_player"] = winner
+            
+            # IMPORTANT: We usually want players to SEE the 4th card 
+            # before the center clears. We'll handle the "Clear" on the next play 
+            # or via a short timer logic later.
+        else:
+            # Rotate turn to next player
+            order = ["N", "E", "S", "W"]
+            game["current_player"] = order[(order.index(player_dir) + 1) % 4]
+
+        bridge_manager.save_states()
+        emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")
+
+    def determine_trick_winner(trick_cards, contract):
+        # trick_cards[0] is the lead card
+        lead_suit = trick_cards[0]['card']['suit']
+        trump_suit = contract['strain']
+        
+        best_card = None
+        winner = None
+
+        rank_map = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14}
+
+        for play in trick_cards:
+            card = play['card']
+            player = play['player']
+            
+            score = rank_map[card['val']]
+            if card['suit'] == trump_suit:
+                score += 100 # Trump beats everything
+            elif card['suit'] != lead_suit:
+                score = 0 # Wrong suit, no trump = can't win
+                
+            if best_card is None or score > best_card:
+                best_card = score
+                winner = player
+                
+        return winner        

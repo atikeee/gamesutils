@@ -22,7 +22,6 @@
         .player-area { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
         .center { grid-area: center; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
 
-        /* Bidding Box Overlay */
         #bidding-input { 
             position: absolute; background: rgba(22, 27, 34, 0.98); border: 2px solid var(--accent); 
             padding: 15px; border-radius: 12px; z-index: 2000; display: none; flex-direction: column; gap: 10px;
@@ -33,12 +32,10 @@
         .bid-btn.active { background: var(--accent); border-color: white; }
         #confirm-bid-btn { background: #238636; margin-top: 5px; font-size: 1.2rem; }
 
-        /* Bidding History */
         #history-container { display: none; width: 100%; max-height: 150px; overflow-y: auto; background: #1c2330; border-radius: 4px; border: 1px solid #30363d; }
         #bid-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: center; }
         #bid-table td { padding: 6px; border: 1px solid #30363d; }
 
-        /* Card Visuals - Two Rows Top Left */
         .hand-container { display: flex; justify-content: center; align-items: center; width: 100%; height: var(--card-h); position: relative; }
         .card { 
             width: var(--card-w); height: var(--card-h); background: white; color: black; 
@@ -49,13 +46,19 @@
         .card.selected { transform: translateY(-40px) !important; z-index: 2000 !important; border: 3px solid var(--accent); }
         .card.red { color: #d12e2e; }
         
-        /* Fixed: Two rows top-left for readability */
         .card-info { text-align: left; display: flex; flex-direction: column; line-height: 1.1; font-weight: 900; }
         .card-val-top { font-size: 1.3rem; }
         .card-suit-top { font-size: 1.5rem; }
 
         .name-tag { font-size: 0.8rem; background: #30363d; padding: 4px 12px; border-radius: 6px; z-index: 10; border: 2px solid transparent; }
         .active-turn { border-color: var(--accent); color: var(--accent); }
+        
+        #trick-area { position: relative; width: 200px; height: 200px; display: flex; align-items: center; justify-content: center; }
+        .played-card { position: absolute; width: var(--card-w); height: var(--card-h); }
+        .pos-top { top: -20px; }
+        .pos-bottom { bottom: -20px; }
+        .pos-right { right: -20px; }
+        .pos-left { left: -20px; }
     </style>
 </head>
 <body>
@@ -70,10 +73,11 @@
     <div class="player-area" style="grid-area: left"><div class="name-tag" id="tag-left"></div><div class="hand-container" id="hand-left"></div></div>
     
     <div class="player-area center">
+        <div id="trick-area"></div>
         <div id="history-container"><table id="bid-table"><thead><tr><th>N</th><th>E</th><th>S</th><th>W</th></tr></thead><tbody id="bid-history-body"></tbody></table></div>
         
         <div id="bidding-input">
-            <div class="bid-row" id="row-levels">
+            <div class="bid-row">
                 <button class="bid-btn" onclick="setLevel(1)">1</button>
                 <button class="bid-btn" onclick="setLevel(2)">2</button>
                 <button class="bid-btn" onclick="setLevel(3)">3</button>
@@ -82,7 +86,7 @@
                 <button class="bid-btn" onclick="setLevel(6)">6</button>
                 <button class="bid-btn" onclick="setLevel(7)">7</button>
             </div>
-            <div class="bid-row" id="row-suits">
+            <div class="bid-row">
                 <button class="bid-btn" onclick="setStrain('C')">♣</button>
                 <button class="bid-btn" onclick="setStrain('D')">♦</button>
                 <button class="bid-btn" onclick="setStrain('H')">♥</button>
@@ -109,6 +113,8 @@
     let curLevel = 0;
     let curStrain = "";
 
+    const SUIT_SYMBOLS = { 'S': '♠', 'H': '♥', 'D': '♦', 'C': '♣', 'NT': 'NT', 'Pass': 'P', 'X': 'X', 'XX': 'XX' };
+
     socket.on('connect', () => socket.emit('join_bridge_room', { room_id: roomId }));
 
     function getLocalPos(dir) {
@@ -117,29 +123,37 @@
         return ["bottom", "right", "top", "left"][diff];
     }
 
-    {% raw %}
     socket.on('game_state_update', (data) => {
         const game = data.game;
         const players = data.players;
         
         const isBidding = (game.phase === 'bidding');
+        const isPlay = (game.phase === 'play');
+
         document.getElementById('history-container').style.display = isBidding ? 'block' : 'none';
         document.getElementById('bidding-input').style.display = (isBidding && game.current_bidder === myDir) ? 'flex' : 'none';
         
         const dealerOrder = ["W", "N", "E", "S"];
         const curDealer = dealerOrder[game.round % 4];
         document.getElementById('deal-btn').style.display = (game.phase === 'waiting' && curDealer === myDir) ? 'block' : 'none';
-        document.getElementById('status-msg').innerText = isBidding ? (game.current_bidder === myDir ? "YOUR TURN" : `Wait: ${game.current_bidder}`) : "Waiting...";
+        
+        let status = "Waiting...";
+        if(isBidding) status = (game.current_bidder === myDir) ? "YOUR BID" : `Wait: ${game.current_bidder}`;
+        if(isPlay) status = (game.current_player === myDir) ? "YOUR TURN" : `Wait: ${game.current_player}`;
+        document.getElementById('status-msg').innerText = status;
 
         ['N','E','S','W'].forEach(dir => {
             const pos = getLocalPos(dir);
             const tag = document.getElementById(`tag-${pos}`);
             tag.innerText = players[dir] ? `${dir}: ${players[dir].name}` : "Empty";
-            tag.classList.toggle('active-turn', game.current_bidder === dir);
+            
+            const isTurn = isBidding ? (game.current_bidder === dir) : (game.current_player === dir);
+            tag.classList.toggle('active-turn', isTurn);
         });
 
         ['N','E','S','W'].forEach(dir => renderHand(`hand-${getLocalPos(dir)}`, game.hands[dir], (dir !== myDir)));
-        renderHistory(game.bid_history, game.dealer);
+        if (isBidding) renderHistory(game.bid_history, game.dealer);
+        renderTrick(game.current_trick || []);
     });
 
     function renderHand(containerId, cards, isHidden) {
@@ -152,17 +166,33 @@
             const x = (index - (cards.length - 1) / 2) * (window.innerWidth < 600 ? 20 : 28);
             cardEl.style.transform = `translateX(${x}px)`;
             cardEl.style.zIndex = index;
+            
             if (isHidden) {
                 cardEl.style.background = "linear-gradient(135deg, #1e4d8c 0%, #0d2a54 100%)";
             } else {
-                cardEl.innerHTML = `<div class="card-info"><span class="card-val-top">${card.val}</span><span class="card-suit-top">${{'S':'♠','H':'♥','D':'♦','C':'♣'}[card.suit]}</span></div>`;
+                cardEl.innerHTML = `<div class="card-info"><span class="card-val-top">${card.val}</span><span class="card-suit-top">${SUIT_SYMBOLS[card.suit]}</span></div>`;
                 cardEl.onclick = () => {
-                    // FIX: Deselect others, select only one
-                    document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
-                    cardEl.classList.add('selected');
+                    if (cardEl.classList.contains('selected')) {
+                        socket.emit('play_card', { room_id: roomId, direction: myDir, card_index: index });
+                    } else {
+                        document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+                        cardEl.classList.add('selected');
+                    }
                 };
             }
             container.appendChild(cardEl);
+        });
+    }
+
+    function renderTrick(trick) {
+        const area = document.getElementById('trick-area');
+        area.innerHTML = '';
+        trick.forEach(p => {
+            const div = document.createElement('div');
+            const pos = getLocalPos(p.player);
+            div.className = `card played-card pos-${pos} ${['H','D'].includes(p.card.suit) ? 'red' : ''}`;
+            div.innerHTML = `<div class="card-info"><span class="card-val-top">${p.card.val}</span><span class="card-suit-top">${SUIT_SYMBOLS[p.card.suit]}</span></div>`;
+            area.appendChild(div);
         });
     }
 
@@ -177,36 +207,25 @@
         history.forEach((b, i) => {
             if (row.children.length === 4) { body.appendChild(row); row = document.createElement('tr'); }
             const td = document.createElement('td');
-            const suitMap = {'S':'♠','H':'♥','D':'♦','C':'♣','NT':'NT','Pass':'P','X':'X','XX':'XX'};
-            td.innerText = (b.level > 0 ? b.level : '') + suitMap[b.strain];
+            td.innerText = (b.level > 0 ? b.level : '') + SUIT_SYMBOLS[b.strain];
             row.appendChild(td);
         });
         body.appendChild(row);
     }
-    {% endraw %}
 
-    function setLevel(n) {
-        curLevel = n;
-        updateBidButtons();
-    }
-    function setStrain(s) {
-        curStrain = s;
-        updateBidButtons();
-    }
-    function selectSpecial(type) {
-        curLevel = 0;
-        curStrain = type;
-        updateBidButtons();
-    }
+    function setLevel(n) { curLevel = n; updateBidButtons(); }
+    function setStrain(s) { curStrain = s; updateBidButtons(); }
+    function selectSpecial(type) { curLevel = 0; curStrain = type; updateBidButtons(); }
+    
     function updateBidButtons() {
         document.querySelectorAll('.bid-btn').forEach(b => {
-            b.classList.toggle('active', b.innerText == curLevel || b.innerText == {'S':'♠','H':'♥','D':'♦','C':'♣','NT':'NT','Pass':'Pass','X':'X','XX':'XX'}[curStrain]);
+            const isMatch = b.innerText == curLevel || b.innerText == SUIT_SYMBOLS[curStrain] || b.innerText == curStrain;
+            b.classList.toggle('active', isMatch);
         });
     }
 
     function submitFinalBid() {
         if (!curStrain) return;
-        if (curLevel === 0 && !['Pass', 'X', 'XX'].includes(curStrain)) return;
         socket.emit('submit_bid', { room_id: roomId, level: curLevel, strain: curStrain });
         curLevel = 0; curStrain = "";
         document.querySelectorAll('.active').forEach(el => el.classList.remove('active'));

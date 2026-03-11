@@ -99,6 +99,7 @@ class BridgeManager:
         room["game"]["dealer"] = order[(curr_idx + 1) % 4]
         self.save_states()
 
+    
     def get_default_room_state(self):
         return {
             "players": {"N": None, "E": None, "S": None, "W": None},
@@ -108,14 +109,16 @@ class BridgeManager:
                 "phase": "waiting",
                 "hands": {"N":[], "E":[], "S":[], "W":[]},
                 "tricks_won": {"NS": 0, "EW": 0},
-                "current_bid": "None",
-                "bid_history": [], # Added this
-                "pass_count": 0,    # Added this
-                "current_bidder": None, # Added this
+                "current_bid": None,
+                "highest_bid": None,
+                "bid_history": [],
+                "pass_count": 0, 
+                "current_bidder": None,
                 "dummy": None,
-                "current_trick": []
+                "current_trick": [], # Will store: [{"player": "N", "card": {...}}, ...]
+                "current_player": None
             }
-        }
+        }        
     @staticmethod
     def sort_hand(hand):
         # Order: Spades, Hearts, Clubs, Diamonds
