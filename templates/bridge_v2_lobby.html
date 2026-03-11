@@ -82,7 +82,7 @@
 
         const data = await res.json();
         if (data.status === 'success') {
-            alert("Your Passcode: " + data.passcode);
+            //alert("Your Passcode: " + data.passcode);
             localStorage.setItem(`bridge_v2_pass`, data.passcode); 
             window.location.href = `/bridge_v2/game/${roomId}/${selectedSeat}`;
         } else {
