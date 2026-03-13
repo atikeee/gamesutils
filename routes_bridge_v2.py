@@ -162,7 +162,7 @@ def configure_routes_bridge_v2(app, socketio):
         
         # 3. Phase Transition
         # 3. Phase Transition
-        if room["game"]["pass_count"] >= 3 and len(room["game"]["bid_history"]) >= 3:
+        if room["game"]["pass_count"] >= 3 and len(room["game"]["bid_history"]) >= 4:
             if not room["game"]["highest_bid"]:
                 room["game"]["phase"] = "waiting" # All passed (Redeal)
             else:
@@ -189,7 +189,8 @@ def configure_routes_bridge_v2(app, socketio):
         game = room["game"]
         player_dir = data['direction'] # Seat of the person who clicked
         card_index = data['card_index']
-        
+        if game.get("claim_data"):
+            return
         if game["phase"] != "play":
             return
 
@@ -261,55 +262,91 @@ def configure_routes_bridge_v2(app, socketio):
         game = room["game"]
         
         # Only current player can claim
-        if game["current_player"] != data['direction']: return
-
-        game["claim_data"] = {
-            "claimer": data['direction'],
-            "amount": int(data['amount']),
-            "approvals": []
-        }
-        bridge_manager.save_states()
-        emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")
-
+        if len(game["current_trick"]) == 0 and game["current_player"] == data['direction']:
+            game["claim_data"] = {
+                "claimer": data['direction'],
+                "amount": int(data['amount']),
+                "approvals": []
+            }
+            bridge_manager.save_states()
+            emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")
     @socketio.on('respond_claim')
     def handle_claim_response(data):
         room_id = str(data['room_id'])
         room = bridge_manager.rooms.get(room_id)
         game = room["game"]
         
-        if not game["claim_data"]: return
+        if not game.get("claim_data"): 
+            return
 
-        if data['response'] == 'approve':
-            # Only opponents need to approve. If N claims, E and W must approve.
-            if data['direction'] not in game["claim_data"]["approvals"]:
-                game["claim_data"]["approvals"].append(data['direction'])
-            
-            # Check if BOTH opponents approved
-            claimer = game["claim_data"]["claimer"]
-            opponents = ["E", "W"] if claimer in ["N", "S"] else ["N", "S"]
-            
-            if all(opp in game["claim_data"]["approvals"] for opp in opponents):
-                # Grant tricks and end round
+        player_direction = data['direction']
+        claimer = game["claim_data"]["claimer"]
+        
+        # Determine teams to verify the responder is an opponent
+        claimer_team = "NS" if claimer in ["N", "S"] else "EW"
+        responder_team = "NS" if player_direction in ["N", "S"] else "EW"
+
+        # Only process if the person responding is an opponent
+        if claimer_team != responder_team:
+            if data['response'] == 'approve':
+                # ACTION: ONE opponent approval is sufficient to end the round
                 team = "NS" if claimer in ["N", "S"] else "EW"
                 opp_team = "EW" if team == "NS" else "NS"
-                remaining = 13 - (game["tricks_won"]["NS"] + game["tricks_won"]["EW"])
                 
-                game["tricks_won"][team] += game["claim_data"]["amount"]
-                game["tricks_won"][opp_team] += (remaining - game["claim_data"]["amount"])
+                # Calculate total tricks remaining at the time the claim was made
+                # (Note: tricks_won should only be updated after the claim is settled)
+                total_played = game["tricks_won"]["NS"] + game["tricks_won"]["EW"]
+                remaining = 13 - total_played
+                
+                claimed_amt = game["claim_data"]["amount"]
+                
+                # Add claimed tricks to claimer's team, rest to opponents
+                game["tricks_won"][team] += claimed_amt
+                game["tricks_won"][opp_team] += (remaining - claimed_amt)
+                
+                # Reset claim data and end the round
+                game["claim_data"] = None
                 end_round(game, room_id)
-        else:
-            # REJECTED: Set a flag to reveal cards, but keep game going
-            game["reveal_all"] = True
-            game["claim_data"] = None 
+            else:
+                # ACTION: ONE opponent rejection is sufficient to resume the game
+                # Per your request: reveals all cards and clears the claim lock
+                game["reveal_all"] = True
+                game["claim_data"] = None 
 
         bridge_manager.save_states()
         emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")
+
+
     def end_round(game, room_id):
+        # Fix: Increment Round Number
+        game["round_num"] = game.get("round_num", 1) + 1
+        
         game["phase"] = "waiting"
         game["hands"] = {"N":[], "E":[], "S":[], "W":[]}
         game["current_trick"] = []
         game["claim_data"] = None
+        game["tricks_won"] = {"NS": 0, "EW": 0} # Reset trick counts
+        game["highest_bid"] = {"level": 0, "strain": None, "bidder": None}
+        game["bid_history"] = []
+        game["dummy_revealed"] = False
+        game["reveal_all"] = False
+        
         bridge_manager.rotate_dealer(room_id)
+    def handle_bid(data):
+        # ... (existing bid logic)
+        
+        # NEW RULE: Bidding ends if 3 passes occur AND at least 4 bids total have been made.
+        # This prevents the game from ending if the first three people pass immediately.
+        consecutive_passes = 0
+        for b in reversed(game["bid_history"]):
+            if b["bid"] == "Pass":
+                consecutive_passes += 1
+            else:
+                break
+                
+        if consecutive_passes >= 3 and len(game["bid_history"]) >= 4:
+            # Bidding finishes...
+            game["phase"] = "picking_declarer"
     def determine_trick_winner(trick_cards, contract):
         """
         Determines the winner of a 4-card trick.
@@ -366,3 +403,27 @@ def configure_routes_bridge_v2(app, socketio):
             
             bridge_manager.save_states()
             emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")
+
+    @socketio.on('request_end_round')
+    def handle_end_round_request(data):
+        # Placeholder for End Round logic
+        pass
+
+    @socketio.on('request_undo')
+    def handle_undo_request(data):
+        # Placeholder for Undo logic
+        pass            
+    @socketio.on('force_end_round')
+    def handle_force_end(data):
+        room_id = str(data['room_id'])
+        room = bridge_manager.rooms.get(room_id)
+        game = room["game"]
+        
+        # Log who ended the round (optional)
+        print(f"Round forced to end by {data['direction']} in room {room_id}")
+        
+        # Reuse existing end_round logic (Resets hands, clears trick, rotates dealer)
+        end_round(game, room_id)
+        
+        bridge_manager.save_states()
+        emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")

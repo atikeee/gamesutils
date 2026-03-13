@@ -61,6 +61,42 @@
         .pos-left { left: -20px; }
 
         .score-pill { margin-left: 8px; color: #8b949e; font-weight: normal; }
+        .control-panel {
+        position: fixed;
+        bottom: 20px;
+        padding: 10px;
+        background: var(--surface);
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        display: none; /* Only show during play phase */
+        z-index: 4000;
+        gap: 10px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    #left-controls { left: 20px; display: flex; align-items: center; }
+    #right-controls { right: 20px; display: flex; align-items: center; }
+    
+    .ctrl-btn {
+        background: #21262d;
+        color: white;
+        border: 1px solid #30363d;
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    .ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .btn-green { background: #238636; }
+    .btn-red { background: #d12e2e; }
+    
+    #claim-count {
+        background: #0d1117;
+        color: white;
+        border: 1px solid #30363d;
+        padding: 8px;
+        border-radius: 4px;
+    }
+    
     </style>
 </head>
 <body>
@@ -165,6 +201,17 @@
         </div>
         <div class="hand-container" id="hand-bottom"></div>
     </div>
+    <div id="left-controls" class="control-panel">
+        <select id="claim-count"></select>
+        <button id="btn-claim" class="ctrl-btn btn-green" onclick="sendClaim()">Claim</button>
+        <button id="btn-approve" class="ctrl-btn btn-green" onclick="respondClaim('approve')" disabled>Approve</button>
+        <button id="btn-reject" class="ctrl-btn btn-red" onclick="respondClaim('reject')" disabled>Reject</button>
+        </div>
+
+    <div id="right-controls" class="control-panel">
+    <button id="btn-undo" class="ctrl-btn" onclick="requestUndo()">Undo</button>
+    <button id="btn-end" class="ctrl-btn btn-red" onclick="requestEndRound()">End Round</button>
+    </div>
 </div>
 
 <script>
@@ -185,108 +232,165 @@
     }
 
 socket.on('game_state_update', (data) => {
-    const game = data.game;
-    const players = data.players;
-    const isPlay = (game.phase === 'play');
-    const isBidding = (game.phase === 'bidding');
-    const isWaiting = (game.phase === 'waiting');
-    const isPickingDeclarer = (game.phase === 'picking_declarer');
+    const { game, players } = data;
+    const { phase, current_player, current_bidder, dummy, dummy_revealed, hands, current_trick, highest_bid, claim_data } = game;
 
-    // 1. UI VISIBILITY
+    // --- 1. PHASE CONSTANTS ---
+    const isPlay = (phase === 'play');
+    const isBidding = (phase === 'bidding');
+    const isWaiting = (phase === 'waiting');
+    const isPickingDeclarer = (phase === 'picking_declarer');
+
+    // --- 2. UI VISIBILITY (Bidding & Headers) ---
     document.getElementById('history-container').style.display = (isBidding || isPickingDeclarer) ? 'block' : 'none';
-    document.getElementById('bidding-input').style.display = (isBidding && game.current_bidder === myDir) ? 'flex' : 'none';
+    document.getElementById('bidding-input').style.display = (isBidding && current_bidder === myDir) ? 'flex' : 'none';
     
-    // 2. HEADER & STATUS UPDATES
     const bidDisplay = document.getElementById('current-bid-display');
-    if (game.highest_bid && game.highest_bid.level > 0) {
-        const owner = game.declarer || "TBD";
-        bidDisplay.innerText = `Bid: ${game.highest_bid.level}${SUIT_SYMBOLS[game.highest_bid.strain]} (${owner})`;
+    if (highest_bid && highest_bid.level > 0) {
+        bidDisplay.innerText = `Bid: ${highest_bid.level}${SUIT_SYMBOLS[highest_bid.strain]} (${game.declarer || "TBD"})`;
     } else {
         bidDisplay.innerText = "";
     }
 
     document.getElementById('deal-btn').style.display = (isWaiting && game.dealer === myDir) ? 'block' : 'none';
-    // If you have a declarer-select element:
     const decSelect = document.getElementById('declarer-select');
     if (decSelect) decSelect.style.display = (isPickingDeclarer && game.dealer === myDir) ? 'inline-block' : 'none';
+    
+    
+    
+    
+    // 1. Update Round Number Display
+    const roundNumEl = document.getElementById('round-num');
+    if (roundNumEl) roundNumEl.innerText = game.round_num || 1;
 
+    // 2. Updated Status Messages with Player Names
     const statusMsg = document.getElementById('status-msg');
-    if (isWaiting) statusMsg.innerText = "Waiting for Deal...";
-    else if (isPickingDeclarer) statusMsg.innerText = (game.dealer === myDir) ? "CHOOSE DECLARER" : `Dealer ${game.dealer} is choosing...`;
-    else if (isBidding) statusMsg.innerText = (game.current_bidder === myDir) ? "YOUR BID" : `Waiting for ${game.current_bidder}...`;
-    else if (isPlay) statusMsg.innerText = (game.current_player === myDir) ? "YOUR TURN" : `Waiting for ${game.current_player}...`;
+    
+    const getPlayerName = (dir) => {
+        return (players[dir] && players[dir].name) ? players[dir].name : dir;
+    };
 
-    // 3. PLAYER NAMES, SCORES, AND TURN HIGHLIGHTS
+    if (isWaiting) {
+        statusMsg.innerText = `Waiting for Dealer (${getPlayerName(game.dealer)}) to deal...`;
+    } else if (isPickingDeclarer) {
+        statusMsg.innerText = (game.dealer === myDir) ? "CHOOSE DECLARER" : `${getPlayerName(game.dealer)} is choosing...`;
+    } else if (isBidding) {
+        const bidderName = getPlayerName(game.current_bidder);
+        statusMsg.innerText = (game.current_bidder === myDir) ? "YOUR BID" : `Waiting for ${bidderName}...`;
+    } else if (isPlay) {
+        // Fix: Show "Now Playing: <PlayerName>"
+        const activeName = getPlayerName(game.current_player);
+        statusMsg.innerText = (game.current_player === myDir) ? "YOUR TURN" : `Now Playing: ${activeName}`;
+    }
+    // --- 4. PLAYER TAGS & SCORES ---
     ['N', 'E', 'S', 'W'].forEach(dir => {
         const localPos = getLocalPos(dir);
         const nameEl = document.getElementById(`name-${localPos}`);
         const scoreEl = document.getElementById(`score-${localPos}`);
         const tagEl = document.getElementById(`tag-${localPos}`);
 
-        // Update Name and Score
         if (nameEl) nameEl.innerText = (players[dir] ? players[dir].name : dir);
         if (scoreEl) {
-            const team = (dir === 'N' || dir === 'S') ? 'NS' : 'EW';
+            const team = (['N', 'S'].includes(dir)) ? 'NS' : 'EW';
             scoreEl.innerText = game.tricks_won[team] || 0;
         }
 
-        // Highlight Active Turn
         if (tagEl) {
-            const isTurn = (isBidding && game.current_bidder === dir) || (isPlay && game.current_player === dir);
-            if (isTurn) {
-                tagEl.classList.add('active-turn');
-                tagEl.style.border = "2px solid var(--accent)";
-            } else {
-                tagEl.classList.remove('active-turn');
-                tagEl.style.border = "2px solid transparent";
-            }
+            const isTurn = (isBidding && current_bidder === dir) || (isPlay && current_player === dir);
+            tagEl.classList.toggle('active-turn', isTurn);
+            tagEl.style.border = isTurn ? "2px solid var(--accent)" : "2px solid transparent";
         }
     });
 
-    // 4. TRICK AREA (CENTER)
-    renderTrick(game.current_trick || []);
+    // --- 5. GAME CONTROL PANELS (Bottom Corners) ---
+    const leftPanel = document.getElementById('left-controls');
+    const rightPanel = document.getElementById('right-controls');
+    leftPanel.style.display = isPlay ? 'flex' : 'none';
+    rightPanel.style.display = isPlay ? 'flex' : 'none';
 
-    // 5. CLAIM LOGIC
-    const remaining = 13 - ((game.tricks_won.NS || 0) + (game.tricks_won.EW || 0));
-    const isLeadPlayer = (game.current_trick && game.current_trick.length === 0 && game.current_player === myDir);
-    const claimUI = document.getElementById('claim-ui');
-    if (isPlay && isLeadPlayer && remaining > 0) {
-        claimUI.style.display = 'block';
-        const select = document.getElementById('claim-count');
-        select.innerHTML = '';
-        for(let i=1; i<=remaining; i++) {
-            let opt = document.createElement('option');
-            opt.value = i; opt.innerText = i;
-            if(i === remaining) opt.selected = true;
-            select.appendChild(opt);
-        }
-    } else {
-        claimUI.style.display = 'none';
-    }
-
-    const approvalUI = document.getElementById('claim-approval');
-    if (game.claim_data) {
-        const claimer = game.claim_data.claimer;
-        const myTeam = (myDir === 'N' || myDir === 'S') ? 'NS' : 'EW';
-        const claimerTeam = (claimer === 'N' || claimer === 'S') ? 'NS' : 'EW';
-        if (myTeam !== claimerTeam) {
-            approvalUI.style.display = 'block';
-            document.getElementById('claim-msg').innerText = `${claimer} claims ${game.claim_data.amount} tricks.`;
-        } else {
-            approvalUI.style.display = 'none';
-        }
-    } else {
-        approvalUI.style.display = 'none';
-    }
-
-    // 6. RENDER HANDS
-    ['N','E','S','W'].forEach(dir => {
-        const isMe = (dir === myDir);
-        const isDummy = (dir === game.dummy);
-        const dummyRevealed = game.dummy_revealed === true;
-        let shouldShow = isMe || (isDummy && dummyRevealed) || game.reveal_all;
+    if (isPlay) {
+        const remaining = 13 - (game.tricks_won.NS + game.tricks_won.EW);
         
-        renderHand(`hand-${getLocalPos(dir)}`, game.hands[dir], !shouldShow, dir, game);
+        
+        // You can claim if you are the current player and it's time to lead/start a trick
+        
+        const isWaitingForResponse = !!claim_data;
+
+        // Global lock to stop card clicks
+        window.gameLocked = isWaitingForResponse;
+
+        // Claim UI Elements
+        const btnApprove = document.getElementById('btn-approve');
+        const btnReject = document.getElementById('btn-reject');
+        
+        
+        
+        
+        // --- UPDATED CLAIM LOGIC ---
+        const btnClaim = document.getElementById('btn-claim');
+        const claimSelect = document.getElementById('claim-count');
+        
+        // Updated condition: check if either table is empty OR full, and it's your turn
+        const isTrickEmpty = (!current_trick || current_trick.length === 0);
+        const isTrickComplete = (current_trick && current_trick.length === 4);
+        const isMyLeadTurn = (isTrickEmpty || isTrickComplete) && (current_player === myDir);
+
+        btnClaim.disabled = !isMyLeadTurn || !!claim_data || remaining === 0;
+        
+        // FORCE POPULATE: If it's your turn and dropdown is empty, fill it
+        if (isMyLeadTurn && !claim_data && (claimSelect.children.length === 0 || claimSelect.dataset.lastRem != remaining)) {
+            claimSelect.innerHTML = '';
+            for(let i=1; i<=remaining; i++) {
+                let opt = document.createElement('option');
+                opt.value = i; opt.innerText = i;
+                if(i === remaining) opt.selected = true;
+                claimSelect.appendChild(opt);
+            }
+            claimSelect.dataset.lastRem = remaining; // Prevent constant flickering
+        }
+        
+        
+        
+        // Enable Claim only if it's your lead, no claim is pending, and cards remain
+        btnClaim.disabled = !isMyLeadTurn || isWaitingForResponse || remaining === 0;
+        
+        // Repopulate dropdown only when it's valid to claim and not currently waiting
+        if (isMyLeadTurn && !isWaitingForResponse) {
+            // We only refresh the list if the current count is different to avoid UI flickering
+            if (claimSelect.children.length !== remaining) {
+                claimSelect.innerHTML = '';
+                for(let i=1; i<=remaining; i++) {
+                    let opt = document.createElement('option');
+                    opt.value = i; opt.innerText = i;
+                    if(i === remaining) opt.selected = true;
+                    claimSelect.appendChild(opt);
+                }
+            }
+        }
+
+        // Approval Logic: Enable buttons for opponents when a claim is active
+        if (isWaitingForResponse) {
+            const claimerTeam = (['N', 'S'].includes(claim_data.claimer)) ? 'NS' : 'EW';
+            const myTeam = (['N', 'S'].includes(myDir)) ? 'NS' : 'EW';
+            const isOpponent = (claimerTeam !== myTeam); 
+            
+            btnApprove.disabled = !isOpponent;
+            btnReject.disabled = !isOpponent;
+            
+            // Optional: Update button text to show who is claiming
+            btnClaim.innerText = "Pending...";
+        } else {
+            btnApprove.disabled = true;
+            btnReject.disabled = true;
+            btnClaim.innerText = "Claim";
+        }
+    }
+    // --- 6. RENDER HANDS & TRICK ---
+    renderTrick(current_trick || []);
+
+    ['N','E','S','W'].forEach(dir => {
+        const shouldShow = (dir === myDir) || (dir === dummy && dummy_revealed) || game.reveal_all;
+        renderHand(`hand-${getLocalPos(dir)}`, hands[dir], !shouldShow, dir, game);
     });
     
     if (isBidding || isPickingDeclarer) {
@@ -303,15 +407,25 @@ socket.on('game_state_update', (data) => {
         });
     }
     function requestDeal() { socket.emit('request_deal', { room_id: roomId }); }
-
+    
+    
+    // --- NEW FUNCTIONS ---
     function sendClaim() {
-        const amt = document.getElementById('claim-count').value;
-        socket.emit('claim_tricks', { room_id: roomId, direction: myDir, amount: amt });
+        const count = document.getElementById('claim-count').value;
+        socket.emit('claim_tricks', { room_id: roomId, direction: myDir, amount: count });
     }
 
-    function respondClaim(response) {
-        socket.emit('respond_claim', { room_id: roomId, direction: myDir, response: response });
+    function respondClaim(type) {
+        socket.emit('respond_claim', { room_id: roomId, direction: myDir, response: type });
     }
+
+    function requestEndRound() {
+        if (confirm("Are you sure you want to end this round early? Scores will be finalized as they are.")) {
+            socket.emit('force_end_round', { room_id: roomId, direction: myDir });
+        }
+    }
+    
+    
 
     function renderHand(containerId, cards, isHidden, seatDir, game) {
     const container = document.getElementById(containerId);
@@ -331,7 +445,12 @@ socket.on('game_state_update', (data) => {
             cardEl.innerHTML = `<div class="card-info"><span class="card-val-top">${card.val}</span><span class="card-suit-top">${SUIT_SYMBOLS[card.suit]}</span></div>`;
             
             cardEl.onclick = () => {
-                // Determine if it's the current player's turn to play a card from THIS seat
+                
+                if (window.gameLocked) {
+                console.log("Game is locked during claim negotiation.");
+            return;
+        }
+    // Determine if it's the current player's turn to play a card from THIS seat
                 const isCurrentSeatTurn = (game.current_player === seatDir);
                 
                 // Determine if I am the one allowed to click it:

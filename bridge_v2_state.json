@@ -3,38 +3,34 @@
         "players": {
             "N": {
                 "name": "n",
-                "passcode": "Club53"
+                "passcode": "Mountain44"
             },
             "E": {
                 "name": "e",
-                "passcode": "Bridge90"
+                "passcode": "Forest93"
             },
             "S": {
                 "name": "s",
-                "passcode": "Ocean64"
+                "passcode": "Mountain61"
             },
             "W": {
                 "name": "w",
-                "passcode": "Ocean67"
+                "passcode": "Mountain63"
             }
         },
         "game": {
             "round": 1,
-            "dealer": "N",
-            "phase": "play",
+            "dealer": "E",
+            "phase": "bidding",
             "hands": {
                 "N": [
                     {
                         "suit": "S",
-                        "val": "A"
+                        "val": "K"
                     },
                     {
                         "suit": "S",
-                        "val": "10"
-                    },
-                    {
-                        "suit": "S",
-                        "val": "5"
+                        "val": "3"
                     },
                     {
                         "suit": "H",
@@ -42,23 +38,27 @@
                     },
                     {
                         "suit": "H",
+                        "val": "8"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "7"
+                    },
+                    {
+                        "suit": "H",
                         "val": "3"
                     },
                     {
                         "suit": "C",
-                        "val": "J"
-                    },
-                    {
-                        "suit": "C",
-                        "val": "9"
-                    },
-                    {
-                        "suit": "C",
-                        "val": "2"
+                        "val": "Q"
                     },
                     {
                         "suit": "D",
-                        "val": "A"
+                        "val": "9"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "8"
                     },
                     {
                         "suit": "D",
@@ -71,6 +71,10 @@
                     {
                         "suit": "D",
                         "val": "3"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "2"
                     }
                 ],
                 "E": [
@@ -80,65 +84,73 @@
                     },
                     {
                         "suit": "S",
+                        "val": "8"
+                    },
+                    {
+                        "suit": "S",
                         "val": "7"
                     },
                     {
                         "suit": "S",
-                        "val": "6"
-                    },
-                    {
-                        "suit": "S",
-                        "val": "2"
-                    },
-                    {
-                        "suit": "H",
-                        "val": "7"
-                    },
-                    {
-                        "suit": "H",
                         "val": "4"
                     },
                     {
-                        "suit": "C",
-                        "val": "A"
-                    },
-                    {
-                        "suit": "C",
+                        "suit": "H",
                         "val": "Q"
                     },
                     {
+                        "suit": "H",
+                        "val": "6"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "5"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "2"
+                    },
+                    {
                         "suit": "C",
-                        "val": "3"
-                    },
-                    {
-                        "suit": "D",
-                        "val": "Q"
-                    },
-                    {
-                        "suit": "D",
                         "val": "10"
+                    },
+                    {
+                        "suit": "C",
+                        "val": "9"
+                    },
+                    {
+                        "suit": "C",
+                        "val": "7"
                     },
                     {
                         "suit": "D",
                         "val": "7"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "5"
                     }
                 ],
                 "S": [
                     {
                         "suit": "S",
-                        "val": "Q"
+                        "val": "A"
                     },
                     {
                         "suit": "S",
-                        "val": "8"
+                        "val": "6"
+                    },
+                    {
+                        "suit": "S",
+                        "val": "2"
                     },
                     {
                         "suit": "H",
-                        "val": "8"
+                        "val": "J"
                     },
                     {
                         "suit": "H",
-                        "val": "5"
+                        "val": "9"
                     },
                     {
                         "suit": "C",
@@ -146,7 +158,11 @@
                     },
                     {
                         "suit": "C",
-                        "val": "7"
+                        "val": "J"
+                    },
+                    {
+                        "suit": "C",
+                        "val": "8"
                     },
                     {
                         "suit": "C",
@@ -154,7 +170,11 @@
                     },
                     {
                         "suit": "C",
-                        "val": "4"
+                        "val": "3"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "A"
                     },
                     {
                         "suit": "D",
@@ -162,17 +182,13 @@
                     },
                     {
                         "suit": "D",
-                        "val": "8"
-                    },
-                    {
-                        "suit": "D",
-                        "val": "5"
+                        "val": "10"
                     }
                 ],
                 "W": [
                     {
                         "suit": "S",
-                        "val": "K"
+                        "val": "Q"
                     },
                     {
                         "suit": "S",
@@ -180,11 +196,11 @@
                     },
                     {
                         "suit": "S",
-                        "val": "4"
+                        "val": "10"
                     },
                     {
                         "suit": "S",
-                        "val": "3"
+                        "val": "5"
                     },
                     {
                         "suit": "H",
@@ -192,23 +208,27 @@
                     },
                     {
                         "suit": "H",
-                        "val": "Q"
-                    },
-                    {
-                        "suit": "H",
-                        "val": "6"
-                    },
-                    {
-                        "suit": "C",
                         "val": "10"
                     },
                     {
+                        "suit": "H",
+                        "val": "4"
+                    },
+                    {
                         "suit": "C",
-                        "val": "8"
+                        "val": "A"
                     },
                     {
                         "suit": "C",
                         "val": "6"
+                    },
+                    {
+                        "suit": "C",
+                        "val": "4"
+                    },
+                    {
+                        "suit": "C",
+                        "val": "2"
                     },
                     {
                         "suit": "D",
@@ -216,68 +236,37 @@
                     },
                     {
                         "suit": "D",
-                        "val": "9"
+                        "val": "Q"
                     }
                 ]
             },
             "tricks_won": {
-                "NS": 1,
+                "NS": 0,
                 "EW": 0
             },
             "highest_bid": {
-                "level": 1,
-                "strain": "NT",
-                "player": "S",
+                "level": 2,
+                "strain": "C",
+                "player": "E",
                 "db": "None"
             },
             "bid_history": [
                 {
-                    "player": "N",
-                    "level": 1,
-                    "strain": "H"
-                },
-                {
                     "player": "E",
-                    "level": 1,
-                    "strain": "S"
-                },
-                {
-                    "player": "S",
-                    "level": 1,
-                    "strain": "NT"
-                },
-                {
-                    "player": "W",
-                    "level": 0,
-                    "strain": "Pass"
-                },
-                {
-                    "player": "N",
-                    "level": 0,
-                    "strain": "Pass"
-                },
-                {
-                    "player": "E",
-                    "level": 0,
-                    "strain": "Pass"
+                    "level": 2,
+                    "strain": "C"
                 }
             ],
-            "pass_count": 3,
-            "current_bidder": null,
-            "current_trick": [
-                {
-                    "player": "S",
-                    "card": {
-                        "suit": "D",
-                        "val": "2"
-                    }
-                }
-            ],
-            "current_player": "W",
+            "pass_count": 0,
+            "current_bidder": "S",
+            "current_trick": [],
+            "current_player": "N",
             "claim_data": null,
-            "declarer": "S",
-            "dummy": "N",
-            "dummy_revealed": true
+            "declarer": "W",
+            "dummy": "E",
+            "round_num": 2,
+            "dummy_revealed": false,
+            "reveal_all": false
         }
     },
     "2": {
