@@ -161,17 +161,17 @@ def configure_routes_bridge_v2(app, socketio):
         room["game"]["pass_count"] = (room["game"]["pass_count"] + 1) if is_pass else 0
         
         # 3. Phase Transition
+        # 3. Phase Transition
         if room["game"]["pass_count"] >= 3 and len(room["game"]["bid_history"]) >= 3:
             if not room["game"]["highest_bid"]:
-                room["game"]["phase"] = "waiting" # All passed
+                room["game"]["phase"] = "waiting" # All passed (Redeal)
             else:
-                room["game"]["phase"] = "play"
-                winner = room["game"]["highest_bid"]["player"]
-                order = ["N", "E", "S", "W"]
-                # Identify Dummy (Partner of Winner)
-                room["game"]["dummy"] = order[(order.index(winner) + 2) % 4]
-                # Next player starts the play
-                room["game"]["current_player"] = order[(order.index(winner) + 1) % 4]
+                # Instead of going to 'play', go to the new selection phase
+                room["game"]["phase"] = "picking_declarer"
+                
+                # Reset these so nobody can play yet
+                room["game"]["current_player"] = None
+                room["game"]["current_bidder"] = None
         else:
             order = ["N", "E", "S", "W"]
             curr_idx = order.index(room["game"]["current_bidder"])
@@ -183,42 +183,77 @@ def configure_routes_bridge_v2(app, socketio):
     def handle_play_card(data):
         room_id = str(data['room_id'])
         room = bridge_manager.rooms.get(room_id)
+        if not room:
+            return
+            
         game = room["game"]
-        player_dir = data['direction']
+        player_dir = data['direction'] # Seat of the person who clicked
         card_index = data['card_index']
+        
+        if game["phase"] != "play":
+            return
 
-        # 1. Clear board logic: If previous trick was full (4 cards), 
-        # clear it before starting the new one.
+        # 1. Determine whose turn it is and if the clicker has permission
+        current_turn_seat = game["current_player"]
+        is_dummy_turn = (current_turn_seat == game["dummy"])
+        
+        can_play = False
+        if not is_dummy_turn:
+            # Normal turn: Only the player in the seat can play
+            if player_dir == current_turn_seat:
+                can_play = True
+        else:
+            # Dummy turn: Either the dummy clicks their own card, or the declarer clicks it
+            if player_dir == current_turn_seat or player_dir == game["declarer"]:
+                can_play = True
+
+        if not can_play:
+            return
+
+        # 2. Clear old trick if a new lead is happening
+        # If there are 4 cards on the table, the new lead clears them
         if len(game["current_trick"]) == 4:
             game["current_trick"] = []
 
-        # 2. Play the card
-        card = game["hands"][player_dir].pop(card_index)
-        game["current_trick"].append({"player": player_dir, "card": card})
+        # 3. Execute the Play
+        # Always pop from the current_player's hand
+        if card_index >= len(game["hands"][current_turn_seat]):
+            return # Safety check
 
-        # 3. Check if trick is complete
+        card = game["hands"][current_turn_seat].pop(card_index)
+        game["current_trick"].append({"player": current_turn_seat, "card": card})
+
+        # 4. Dummy Reveal Logic
+        # Dummy is revealed only after the very first card of the first trick is played
+        total_tricks_completed = game["tricks_won"]["NS"] + game["tricks_won"]["EW"]
+        if total_tricks_completed == 0 and len(game["current_trick"]) == 1:
+            game["dummy_revealed"] = True
+
+        # 5. Determine Next Turn or Trick Winner
         if len(game["current_trick"]) == 4:
             winner = determine_trick_winner(game["current_trick"], game["highest_bid"])
             
-            # Increment Team Scores correctly
+            # Update Team Scores
             if winner in ["N", "S"]:
                 game["tricks_won"]["NS"] += 1
             else:
                 game["tricks_won"]["EW"] += 1
-            
-            # The winner of this trick plays first next time
+                
+            # Trick winner leads the next trick
             game["current_player"] = winner
         else:
             # Move to next player clockwise
             order = ["N", "E", "S", "W"]
-            game["current_player"] = order[(order.index(player_dir) + 1) % 4]
+            curr_idx = order.index(current_turn_seat)
+            game["current_player"] = order[(curr_idx + 1) % 4]
 
-        # End round check
+        # 6. End Round Check
         if (game["tricks_won"]["NS"] + game["tricks_won"]["EW"]) == 13:
             end_round(game, room_id)
 
         bridge_manager.save_states()
-        emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")
+        emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")    
+
     @socketio.on('claim_tricks')
     def handle_claim(data):
         room_id = str(data['room_id'])
@@ -245,28 +280,30 @@ def configure_routes_bridge_v2(app, socketio):
         if not game["claim_data"]: return
 
         if data['response'] == 'approve':
+            # Only opponents need to approve. If N claims, E and W must approve.
             if data['direction'] not in game["claim_data"]["approvals"]:
                 game["claim_data"]["approvals"].append(data['direction'])
             
-            # If both opponents approve (or all other 3 players)
-            if len(game["claim_data"]["approvals"]) >= 2:
-                # Grant tricks
-                claimer = game["claim_data"]["claimer"]
+            # Check if BOTH opponents approved
+            claimer = game["claim_data"]["claimer"]
+            opponents = ["E", "W"] if claimer in ["N", "S"] else ["N", "S"]
+            
+            if all(opp in game["claim_data"]["approvals"] for opp in opponents):
+                # Grant tricks and end round
                 team = "NS" if claimer in ["N", "S"] else "EW"
                 opp_team = "EW" if team == "NS" else "NS"
-                
                 remaining = 13 - (game["tricks_won"]["NS"] + game["tricks_won"]["EW"])
+                
                 game["tricks_won"][team] += game["claim_data"]["amount"]
                 game["tricks_won"][opp_team] += (remaining - game["claim_data"]["amount"])
-                
                 end_round(game, room_id)
         else:
-            # Rejected
-            game["claim_data"] = None
+            # REJECTED: Set a flag to reveal cards, but keep game going
+            game["reveal_all"] = True
+            game["claim_data"] = None 
 
         bridge_manager.save_states()
         emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")
-
     def end_round(game, room_id):
         game["phase"] = "waiting"
         game["hands"] = {"N":[], "E":[], "S":[], "W":[]}
@@ -308,3 +345,24 @@ def configure_routes_bridge_v2(app, socketio):
                 winner_index = i
                 
         return trick_cards[winner_index]['player']       
+    @socketio.on('set_declarer')
+    def handle_set_declarer(data):
+        room_id = str(data['room_id'])
+        room = bridge_manager.rooms.get(room_id)
+        game = room["game"]
+        
+        # Verify it's actually the dealer making the choice
+        if game["dealer"] == data.get('direction'):
+            declarer_choice = data['declarer']
+            game["declarer"] = declarer_choice
+            game["phase"] = "play"
+            
+            # Identify Dummy (Partner of Declarer)
+            order = ["N", "E", "S", "W"]
+            game["dummy"] = order[(order.index(declarer_choice) + 2) % 4]
+            
+            # The player to the LEFT of the declarer always leads first
+            game["current_player"] = order[(order.index(declarer_choice) + 1) % 4]
+            
+            bridge_manager.save_states()
+            emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")

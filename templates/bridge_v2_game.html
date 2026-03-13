@@ -59,27 +59,30 @@
         .pos-bottom { bottom: -20px; }
         .pos-right { right: -20px; }
         .pos-left { left: -20px; }
-        
-        #info-header { 
-            background: var(--surface); 
-            padding: 5px 15px; 
-            border-bottom: 1px solid #30363d; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            height: 45px; 
-        }
+
+        .score-pill { margin-left: 8px; color: #8b949e; font-weight: normal; }
     </style>
 </head>
 <body>
-
 <div id="info-header">
-    <div>Rd <span id="round-num">1</span> | <span id="status-msg">...</span></div>
-    <button id="deal-btn" onclick="requestDeal()" style="display:none;">Deal</button>
+    <div>
+        Rd <span id="round-num">1</span> | 
+        <span id="status-msg" style="font-weight: bold; color: #fff;">...</span> | 
+        <span id="current-bid-display" style="color: var(--accent); font-weight: bold;"></span>
+    </div>
+    <div id="dealer-controls">
+        <button id="deal-btn" onclick="requestDeal()" style="display:none;">Deal</button>
+        <div id="declarer-select" style="display:none;">
+            <span style="font-size: 0.8rem;">Pick Declarer:</span>
+            <button class="bid-btn" style="padding: 2px 8px;" onclick="setDeclarer('N')">N</button>
+            <button class="bid-btn" style="padding: 2px 8px;" onclick="setDeclarer('E')">E</button>
+            <button class="bid-btn" style="padding: 2px 8px;" onclick="setDeclarer('S')">S</button>
+            <button class="bid-btn" style="padding: 2px 8px;" onclick="setDeclarer('W')">W</button>
+        </div>
+    </div>
 </div>
-
 <div id="game-table">
-        <div class="player-area" style="grid-area: top">
+    <div class="player-area" style="grid-area: top">
         <div class="name-tag" id="tag-top">
             <span id="name-top"></span>
             <span class="score-pill">Tricks: <span id="score-top">0</span></span>
@@ -94,76 +97,74 @@
         </div>
         <div class="hand-container" id="hand-left"></div>
     </div>
+
     <div class="player-area center">
-    <div id="trick-area"></div>
+        <div id="trick-area"></div>
 
-    <div id="claim-ui" style="display:none; background: var(--surface); padding: 10px; border-radius: 8px; border: 1px solid var(--accent); z-index: 3000; margin-bottom: 10px;">
-        <label style="font-size: 0.8rem; display: block; margin-bottom: 5px;">Claim remaining tricks:</label>
-        <div style="display: flex; gap: 5px;">
-            <select id="claim-count" style="flex: 1; background: #21262d; color: white; border: 1px solid #30363d; border-radius: 4px;"></select>
-            <button class="bid-btn" style="padding: 5px 15px; margin: 0;" onclick="sendClaim()">Claim</button>
+        <div id="claim-ui" style="display:none; background: var(--surface); padding: 10px; border-radius: 8px; border: 1px solid var(--accent); z-index: 3000; margin-bottom: 10px;">
+            <label style="font-size: 0.8rem; display: block; margin-bottom: 5px;">Claim remaining tricks:</label>
+            <div style="display: flex; gap: 5px;">
+                <select id="claim-count" style="flex: 1; background: #21262d; color: white; border: 1px solid #30363d; border-radius: 4px;"></select>
+                <button class="bid-btn" style="padding: 5px 15px; margin: 0;" onclick="sendClaim()">Claim</button>
+            </div>
+        </div>
+
+        <div id="claim-approval" style="display:none; background: #1c2330; padding: 15px; border-radius: 8px; border: 2px solid #d12e2e; text-align: center; z-index: 3000;">
+            <p id="claim-msg" style="margin-bottom: 10px; font-weight: bold;"></p>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="respondClaim('approve')" style="flex:1; background: #238636; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer;">Approve</button>
+                <button onclick="respondClaim('reject')" style="flex:1; background: #d12e2e; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer;">Reject</button>
+            </div>
+        </div>
+
+        <div id="history-container">
+            <table id="bid-table">
+                <thead><tr><th>N</th><th>E</th><th>S</th><th>W</th></tr></thead>
+                <tbody id="bid-history-body"></tbody>
+            </table>
+        </div>
+
+        <div id="bidding-input">
+            <div class="bid-row">
+                <button class="bid-btn" onclick="setLevel(1)">1</button>
+                <button class="bid-btn" onclick="setLevel(2)">2</button>
+                <button class="bid-btn" onclick="setLevel(3)">3</button>
+                <button class="bid-btn" onclick="setLevel(4)">4</button>
+                <button class="bid-btn" onclick="setLevel(5)">5</button>
+                <button class="bid-btn" onclick="setLevel(6)">6</button>
+                <button class="bid-btn" onclick="setLevel(7)">7</button>
+            </div>
+            <div class="bid-row">
+                <button class="bid-btn" onclick="setStrain('C')">♣</button>
+                <button class="bid-btn" onclick="setStrain('D')">♦</button>
+                <button class="bid-btn" onclick="setStrain('H')">♥</button>
+                <button class="bid-btn" onclick="setStrain('S')">♠</button>
+                <button class="bid-btn" onclick="setStrain('NT')">NT</button>
+            </div>
+            <div class="bid-row">
+                <button class="bid-btn" style="background:#484f58" onclick="selectSpecial('Pass')">Pass</button>
+                <button class="bid-btn" style="background:#d12e2e" onclick="selectSpecial('X')">X</button>
+                <button class="bid-btn" style="background:#7d1a1a" onclick="selectSpecial('XX')">XX</button>
+            </div>
+            <button class="bid-btn" id="confirm-bid-btn" onclick="submitFinalBid()">Confirm Bid</button>
         </div>
     </div>
 
-    <div id="claim-approval" style="display:none; background: #1c2330; padding: 15px; border-radius: 8px; border: 2px solid #d12e2e; text-align: center; z-index: 3000;">
-        <p id="claim-msg" style="margin-bottom: 10px; font-weight: bold;"></p>
-        <div style="display: flex; gap: 10px;">
-            <button onclick="respondClaim('approve')" style="flex:1; background: #238636; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer;">Approve</button>
-            <button onclick="respondClaim('reject')" style="flex:1; background: #d12e2e; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer;">Reject</button>
+    <div class="player-area" style="grid-area: right">
+        <div class="name-tag" id="tag-right">
+            <span id="name-right"></span>
+            <span class="score-pill">Tricks: <span id="score-right">0</span></span>
         </div>
+        <div class="hand-container" id="hand-right"></div>
     </div>
 
-    <div id="history-container">
-        <table id="bid-table">
-            <thead><tr><th>N</th><th>E</th><th>S</th><th>W</th></tr></thead>
-            <tbody id="bid-history-body"></tbody>
-        </table>
-    </div>
-
-    <div id="bidding-input">
-        <div class="bid-row">
-            <button class="bid-btn" onclick="setLevel(1)">1</button>
-            <button class="bid-btn" onclick="setLevel(2)">2</button>
-            <button class="bid-btn" onclick="setLevel(3)">3</button>
-            <button class="bid-btn" onclick="setLevel(4)">4</button>
-            <button class="bid-btn" onclick="setLevel(5)">5</button>
-            <button class="bid-btn" onclick="setLevel(6)">6</button>
-            <button class="bid-btn" onclick="setLevel(7)">7</button>
+    <div class="player-area" style="grid-area: bottom">
+        <div class="name-tag" id="tag-bottom">
+            <span id="name-bottom"></span>
+            <span class="score-pill">Tricks: <span id="score-bottom">0</span></span>
         </div>
-        <div class="bid-row">
-            <button class="bid-btn" onclick="setStrain('C')">♣</button>
-            <button class="bid-btn" onclick="setStrain('D')">♦</button>
-            <button class="bid-btn" onclick="setStrain('H')">♥</button>
-            <button class="bid-btn" onclick="setStrain('S')">♠</button>
-            <button class="bid-btn" onclick="setStrain('NT')">NT</button>
-        </div>
-        <div class="bid-row">
-            <button class="bid-btn" style="background:#484f58" onclick="selectSpecial('Pass')">Pass</button>
-            <button class="bid-btn" style="background:#d12e2e" onclick="selectSpecial('X')">X</button>
-            <button class="bid-btn" style="background:#7d1a1a" onclick="selectSpecial('XX')">XX</button>
-        </div>
-        <button class="bid-btn" id="confirm-bid-btn" onclick="submitFinalBid()">Confirm Bid</button>
+        <div class="hand-container" id="hand-bottom"></div>
     </div>
-</div>
-
-
-
-<div class="player-area" style="grid-area: right">
-    <div class="name-tag" id="tag-right">
-        <span id="name-right"></span>
-        <span class="score-pill">Tricks: <span id="score-right">0</span></span>
-    </div>
-    <div class="hand-container" id="hand-right"></div>
-</div>
-
-<div class="player-area" style="grid-area: bottom">
-    <div class="name-tag" id="tag-bottom">
-        <span id="name-bottom"></span>
-        <span class="score-pill">Tricks: <span id="score-bottom">0</span></span>
-    </div>
-    <div class="hand-container" id="hand-bottom"></div>
-</div>
-    
 </div>
 
 <script>
@@ -189,127 +190,169 @@ socket.on('game_state_update', (data) => {
     const isPlay = (game.phase === 'play');
     const isBidding = (game.phase === 'bidding');
     const isWaiting = (game.phase === 'waiting');
+    const isPickingDeclarer = (game.phase === 'picking_declarer');
 
-    // --- RESTORED DEAL BUTTON LOGIC ---
-    // The button shows only if we are waiting for a new round AND I am the dealer
-    const dealBtn = document.getElementById('deal-btn');
-    if (isWaiting && game.dealer === myDir) {
-        dealBtn.style.display = 'block';
+    // 1. UI VISIBILITY
+    document.getElementById('history-container').style.display = (isBidding || isPickingDeclarer) ? 'block' : 'none';
+    document.getElementById('bidding-input').style.display = (isBidding && game.current_bidder === myDir) ? 'flex' : 'none';
+    
+    // 2. HEADER & STATUS UPDATES
+    const bidDisplay = document.getElementById('current-bid-display');
+    if (game.highest_bid && game.highest_bid.level > 0) {
+        const owner = game.declarer || "TBD";
+        bidDisplay.innerText = `Bid: ${game.highest_bid.level}${SUIT_SYMBOLS[game.highest_bid.strain]} (${owner})`;
     } else {
-        dealBtn.style.display = 'none';
+        bidDisplay.innerText = "";
     }
 
-    // Update Status Message
+    document.getElementById('deal-btn').style.display = (isWaiting && game.dealer === myDir) ? 'block' : 'none';
+    // If you have a declarer-select element:
+    const decSelect = document.getElementById('declarer-select');
+    if (decSelect) decSelect.style.display = (isPickingDeclarer && game.dealer === myDir) ? 'inline-block' : 'none';
+
     const statusMsg = document.getElementById('status-msg');
     if (isWaiting) statusMsg.innerText = "Waiting for Deal...";
-    if (isBidding) statusMsg.innerText = (game.current_bidder === myDir) ? "YOUR BID" : `Waiting for ${game.current_bidder}...`;
-    if (isPlay) statusMsg.innerText = (game.current_player === myDir) ? "YOUR TURN" : `Waiting for ${game.current_player}...`;
+    else if (isPickingDeclarer) statusMsg.innerText = (game.dealer === myDir) ? "CHOOSE DECLARER" : `Dealer ${game.dealer} is choosing...`;
+    else if (isBidding) statusMsg.innerText = (game.current_bidder === myDir) ? "YOUR BID" : `Waiting for ${game.current_bidder}...`;
+    else if (isPlay) statusMsg.innerText = (game.current_player === myDir) ? "YOUR TURN" : `Waiting for ${game.current_player}...`;
 
-    // 1. UPDATE TEAM SCORES
-    ['N','E','S','W'].forEach(dir => {
-        const pos = getLocalPos(dir);
-        const team = (dir === 'N' || dir === 'S') ? 'NS' : 'EW';
-        
-        // Update names
-        const nameSpan = document.getElementById(`name-${pos}`);
-        if (nameSpan) nameSpan.innerText = players[dir] ? `${dir}: ${players[dir].name}` : `${dir}: Empty`;
-        
-        // Update scores
-        const scoreSpan = document.getElementById(`score-${pos}`);
-        if (scoreSpan) scoreSpan.innerText = game.tricks_won[team] || 0;
+    // 3. PLAYER NAMES, SCORES, AND TURN HIGHLIGHTS
+    ['N', 'E', 'S', 'W'].forEach(dir => {
+        const localPos = getLocalPos(dir);
+        const nameEl = document.getElementById(`name-${localPos}`);
+        const scoreEl = document.getElementById(`score-${localPos}`);
+        const tagEl = document.getElementById(`tag-${localPos}`);
 
-        // Highlight active turn
-        const tag = document.getElementById(`tag-${pos}`);
-        const isHisTurn = isBidding ? (game.current_bidder === dir) : (game.current_player === dir);
-        tag.classList.toggle('active-turn', isHisTurn);
+        // Update Name and Score
+        if (nameEl) nameEl.innerText = (players[dir] ? players[dir].name : dir);
+        if (scoreEl) {
+            const team = (dir === 'N' || dir === 'S') ? 'NS' : 'EW';
+            scoreEl.innerText = game.tricks_won[team] || 0;
+        }
+
+        // Highlight Active Turn
+        if (tagEl) {
+            const isTurn = (isBidding && game.current_bidder === dir) || (isPlay && game.current_player === dir);
+            if (isTurn) {
+                tagEl.classList.add('active-turn');
+                tagEl.style.border = "2px solid var(--accent)";
+            } else {
+                tagEl.classList.remove('active-turn');
+                tagEl.style.border = "2px solid transparent";
+            }
+        }
     });
 
-    // 2. CLEAR CENTER ON NEW TRICK
-    if (game.current_trick && game.current_trick.length === 0) {
-        document.getElementById('trick-area').innerHTML = '';
-    } else {
-        renderTrick(game.current_trick || []);
-    }
+    // 4. TRICK AREA (CENTER)
+    renderTrick(game.current_trick || []);
 
-    // 3. SHOW/HIDE BIDDING UI
-    document.getElementById('history-container').style.display = isBidding ? 'block' : 'none';
-    document.getElementById('bidding-input').style.display = (isBidding && game.current_bidder === myDir) ? 'flex' : 'none';
-
-    // 4. RENDER HANDS
-    ['N','E','S','W'].forEach(dir => {
-        renderHand(`hand-${getLocalPos(dir)}`, game.hands[dir], (dir !== myDir));
-    });
-    
-    if (isBidding) renderHistory(game.bid_history, game.dealer);
-
-    // 5. CLAIM UI LOGIC (Restore this at the bottom)
+    // 5. CLAIM LOGIC
     const remaining = 13 - ((game.tricks_won.NS || 0) + (game.tricks_won.EW || 0));
+    const isLeadPlayer = (game.current_trick && game.current_trick.length === 0 && game.current_player === myDir);
     const claimUI = document.getElementById('claim-ui');
-    
-    if (isPlay && game.current_player === myDir && remaining > 0) {
+    if (isPlay && isLeadPlayer && remaining > 0) {
         claimUI.style.display = 'block';
         const select = document.getElementById('claim-count');
-        if (select.options.length !== remaining) { 
-            select.innerHTML = '';
-            for(let i=1; i<=remaining; i++) {
-                let opt = document.createElement('option');
-                opt.value = i; opt.innerText = i;
-                if (i === remaining) opt.selected = true;
-                select.appendChild(opt);
-            }
+        select.innerHTML = '';
+        for(let i=1; i<=remaining; i++) {
+            let opt = document.createElement('option');
+            opt.value = i; opt.innerText = i;
+            if(i === remaining) opt.selected = true;
+            select.appendChild(opt);
         }
     } else {
         claimUI.style.display = 'none';
     }
 
-    // 6. CLAIM APPROVAL POPUP
     const approvalUI = document.getElementById('claim-approval');
-    if (game.claim_data && game.claim_data.claimer !== myDir) {
-        approvalUI.style.display = 'block';
-        document.getElementById('claim-msg').innerText = 
-            `${game.claim_data.claimer} claims ${game.claim_data.amount} tricks`;
+    if (game.claim_data) {
+        const claimer = game.claim_data.claimer;
+        const myTeam = (myDir === 'N' || myDir === 'S') ? 'NS' : 'EW';
+        const claimerTeam = (claimer === 'N' || claimer === 'S') ? 'NS' : 'EW';
+        if (myTeam !== claimerTeam) {
+            approvalUI.style.display = 'block';
+            document.getElementById('claim-msg').innerText = `${claimer} claims ${game.claim_data.amount} tricks.`;
+        } else {
+            approvalUI.style.display = 'none';
+        }
     } else {
         approvalUI.style.display = 'none';
     }
+
+    // 6. RENDER HANDS
+    ['N','E','S','W'].forEach(dir => {
+        const isMe = (dir === myDir);
+        const isDummy = (dir === game.dummy);
+        const dummyRevealed = game.dummy_revealed === true;
+        let shouldShow = isMe || (isDummy && dummyRevealed) || game.reveal_all;
+        
+        renderHand(`hand-${getLocalPos(dir)}`, game.hands[dir], !shouldShow, dir, game);
+    });
+    
+    if (isBidding || isPickingDeclarer) {
+        renderHistory(game.bid_history, game.dealer);
+    }
 });
+    
+    // Ensure the pick declarer function passes your direction for security check
+    function setDeclarer(dir) {
+        socket.emit('set_declarer', { 
+            room_id: roomId, 
+            declarer: dir,
+            direction: myDir // Added this for the backend check
+        });
+    }
+    function requestDeal() { socket.emit('request_deal', { room_id: roomId }); }
 
-// FUNCTIONS TO CALL SERVER
-function sendClaim() {
-    const amt = document.getElementById('claim-count').value;
-    socket.emit('claim_tricks', { room_id: roomId, direction: myDir, amount: amt });
-}
+    function sendClaim() {
+        const amt = document.getElementById('claim-count').value;
+        socket.emit('claim_tricks', { room_id: roomId, direction: myDir, amount: amt });
+    }
 
-function respondClaim(response) {
-    socket.emit('respond_claim', { room_id: roomId, direction: myDir, response: response });
-}
+    function respondClaim(response) {
+        socket.emit('respond_claim', { room_id: roomId, direction: myDir, response: response });
+    }
 
-    function renderHand(containerId, cards, isHidden) {
-        const container = document.getElementById(containerId);
-        container.innerHTML = '';
-        if (!cards) return;
-        cards.forEach((card, index) => {
-            const cardEl = document.createElement('div');
-            cardEl.className = `card ${ (card.suit === 'H' || card.suit === 'D') ? 'red' : '' }`;
-            const x = (index - (cards.length - 1) / 2) * (window.innerWidth < 600 ? 20 : 28);
-            cardEl.style.transform = `translateX(${x}px)`;
-            cardEl.style.zIndex = index;
+    function renderHand(containerId, cards, isHidden, seatDir, game) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    if (!cards) return;
+
+    cards.forEach((card, index) => {
+        const cardEl = document.createElement('div');
+        cardEl.className = `card ${ (card.suit === 'H' || card.suit === 'D') ? 'red' : '' }`;
+        const x = (index - (cards.length - 1) / 2) * (window.innerWidth < 600 ? 20 : 28);
+        cardEl.style.transform = `translateX(${x}px)`;
+        cardEl.style.zIndex = index;
+
+        if (isHidden) {
+            cardEl.style.background = "linear-gradient(135deg, #1e4d8c 0%, #0d2a54 100%)";
+        } else {
+            cardEl.innerHTML = `<div class="card-info"><span class="card-val-top">${card.val}</span><span class="card-suit-top">${SUIT_SYMBOLS[card.suit]}</span></div>`;
             
-            if (isHidden) {
-                cardEl.style.background = "linear-gradient(135deg, #1e4d8c 0%, #0d2a54 100%)";
-            } else {
-                cardEl.innerHTML = `<div class="card-info"><span class="card-val-top">${card.val}</span><span class="card-suit-top">${SUIT_SYMBOLS[card.suit]}</span></div>`;
-                cardEl.onclick = () => {
+            cardEl.onclick = () => {
+                // Determine if it's the current player's turn to play a card from THIS seat
+                const isCurrentSeatTurn = (game.current_player === seatDir);
+                
+                // Determine if I am the one allowed to click it:
+                // 1. It is my seat and my turn.
+                // 2. It is dummy's seat, dummy's turn, and I am the declarer.
+                const canIPlayThis = (seatDir === myDir && game.current_player === myDir) || 
+                                   (seatDir === game.dummy && game.current_player === game.dummy && myDir === game.declarer);
+
+                if (canIPlayThis) {
                     if (cardEl.classList.contains('selected')) {
-                        socket.emit('play_card', { room_id: roomId, direction: myDir, card_index: index });
+                        socket.emit('play_card', { room_id: roomId, direction: myDir, seat: seatDir, card_index: index });
                     } else {
                         document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
                         cardEl.classList.add('selected');
                     }
-                };
-            }
-            container.appendChild(cardEl);
-        });
-    }
+                }
+            };
+        }
+        container.appendChild(cardEl);
+    });
+}
 
     function renderTrick(trick) {
         const area = document.getElementById('trick-area');
@@ -331,7 +374,7 @@ function respondClaim(response) {
         let startIdx = order.indexOf(dealer);
         for(let j=0; j<startIdx; j++) row.appendChild(document.createElement('td'));
 
-        history.forEach((b, i) => {
+        history.forEach((b) => {
             if (row.children.length === 4) { body.appendChild(row); row = document.createElement('tr'); }
             const td = document.createElement('td');
             td.innerText = (b.level > 0 ? b.level : '') + SUIT_SYMBOLS[b.strain];
@@ -357,8 +400,6 @@ function respondClaim(response) {
         curLevel = 0; curStrain = "";
         document.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
     }
-
-    function requestDeal() { socket.emit('request_deal', { room_id: roomId }); }
 </script>
 </body>
 </html>
