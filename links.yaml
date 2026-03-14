@@ -1,0 +1,210 @@
+Social:
+  icon: "👥"
+  color: "#58a6ff"
+  links:
+    Facebook: "https://www.facebook.com"
+    Instagram: "https://www.instagram.com"
+    Twitter / X: "https://www.x.com"
+    LinkedIn: "https://www.linkedin.com"
+    WhatsApp: "https://web.whatsapp.com"
+    TikTok: "https://www.tiktok.com"
+    Reddit: "https://www.reddit.com"
+
+Work:
+  icon: "💼"
+  color: "#3fb950"
+  links:
+    Gmail: "https://mail.google.com"
+    Google Drive: "https://drive.google.com"
+    Google Calendar: "https://calendar.google.com"
+    Notion: "https://www.notion.so"
+    Slack: "https://www.slack.com"
+    Trello: "https://trello.com"
+    Zoom: "https://zoom.us"
+
+Media:
+  icon: "🎬"
+  color: "#f78166"
+  links:
+    YouTube: "https://www.youtube.com"
+    Spotify: "https://www.spotify.com"
+    Netflix: "https://www.netflix.com"
+    Twitch: "https://www.twitch.tv"
+    Disney Plus: "https://www.disneyplus.com"
+
+Tools:
+  icon: "🔧"
+  color: "#ffa657"
+  links:
+    ChatGPT: "https://chat.openai.com"
+    GitHub: "https://www.github.com"
+    Stack Overflow: "https://stackoverflow.com"
+    Figma: "https://www.figma.com"
+    CodePen: "https://codepen.io"
+
+News:
+  icon: "📰"
+  color: "#d2a8ff"
+  links:
+    BBC: "https://www.bbc.com"
+    Reuters: "https://www.reuters.com"
+    Hacker News: "https://news.ycombinator.com"
+    The Guardian: "https://www.theguardian.com"
+    AP News: "https://apnews.com"
+
+Finance:
+  icon: "💰"
+  color: "#79c0ff"
+  links:
+    Yahoo Finance: "https://finance.yahoo.com"
+    Investing.com: "https://www.investing.com"
+    CoinMarketCap: "https://coinmarketcap.com"
+    Bloomberg: "https://www.bloomberg.com"
+    TradingView: "https://www.tradingview.com"
+
+Shopping:
+  icon: "🛒"
+  color: "#ff7b72"
+  links:
+    Amazon: "https://www.amazon.com"
+    eBay: "https://www.ebay.com"
+    AliExpress: "https://www.aliexpress.com"
+    Etsy: "https://www.etsy.com"
+    IKEA: "https://www.ikea.com"
+
+Travel:
+  icon: "✈️"
+  color: "#56d364"
+  links:
+    Google Flights: "https://flights.google.com"
+    Booking.com: "https://www.booking.com"
+    Airbnb: "https://www.airbnb.com"
+    TripAdvisor: "https://www.tripadvisor.com"
+    Google Maps: "https://maps.google.com"
+
+Learning:
+  icon: "📚"
+  color: "#e3b341"
+  links:
+    Coursera: "https://www.coursera.org"
+    Wikipedia: "https://www.wikipedia.org"
+    Khan Academy: "https://www.khanacademy.org"
+    MIT OpenCourseWare: "https://ocw.mit.edu"
+    Udemy: "https://www.udemy.com"
+
+Gaming:
+  icon: "🎮"
+  color: "#f0883e"
+  links:
+    Steam: "https://store.steampowered.com"
+    IGN: "https://www.ign.com"
+    Epic Games: "https://www.epicgames.com"
+    GOG: "https://www.gog.com"
+    GameFAQs: "https://gamefaqs.gamespot.com"
+
+Health:
+  icon: "🏥"
+  color: "#bc8cff"
+  links:
+    WebMD: "https://www.webmd.com"
+    NHS: "https://www.nhs.uk"
+    MyFitnessPal: "https://www.myfitnesspal.com"
+    Healthline: "https://www.healthline.com"
+    Calm: "https://www.calm.com"
+
+Home:
+  icon: "🏠"
+  color: "#63e6be"
+  links:
+    Router: "http://192.168.1.1"
+    NAS: "http://192.168.1.100"
+    Pi-hole: "http://192.168.1.200/admin"
+    Home Assistant: "http://192.168.1.150:8123"
+    Plex: "http://192.168.1.100:32400"
+
+Tech:
+  icon: "🤖"
+  color: "#58a6ff"
+  links:
+    Anthropic Claude: "https://claude.ai"
+    OpenAI: "https://openai.com"
+    Hugging Face: "https://huggingface.co"
+    Product Hunt: "https://www.producthunt.com"
+    TechCrunch: "https://techcrunch.com"
+
+Photos:
+  icon: "📷"
+  color: "#f78166"
+  links:
+    Google Photos: "https://photos.google.com"
+    Unsplash: "https://unsplash.com"
+    Pexels: "https://www.pexels.com"
+    Flickr: "https://www.flickr.com"
+    Imgur: "https://imgur.com"
+
+Food:
+  icon: "🥗"
+  color: "#3fb950"
+  links:
+    Allrecipes: "https://www.allrecipes.com"
+    Tasty: "https://tasty.co"
+    BBC Good Food: "https://www.bbcgoodfood.com"
+    Food Network: "https://www.foodnetwork.com"
+
+Sports:
+  icon: "🏆"
+  color: "#ffa657"
+  links:
+    ESPN: "https://www.espn.com"
+    BBC Sport: "https://www.bbc.com/sport"
+    FlashScore: "https://www.flashscore.com"
+    Sky Sports: "https://www.skysports.com"
+    Transfermarkt: "https://www.transfermarkt.com"
+
+Science:
+  icon: "🔬"
+  color: "#79c0ff"
+  links:
+    NASA: "https://www.nasa.gov"
+    Nature: "https://www.nature.com"
+    Science Daily: "https://www.sciencedaily.com"
+    New Scientist: "https://www.newscientist.com"
+
+Music:
+  icon: "🎵"
+  color: "#d2a8ff"
+  links:
+    Spotify: "https://www.spotify.com"
+    SoundCloud: "https://soundcloud.com"
+    Bandcamp: "https://bandcamp.com"
+    Genius Lyrics: "https://genius.com"
+    Last.fm: "https://www.last.fm"
+
+Art:
+  icon: "🎨"
+  color: "#ff7b72"
+  links:
+    Behance: "https://www.behance.net"
+    Dribbble: "https://dribbble.com"
+    ArtStation: "https://www.artstation.com"
+    Canva: "https://www.canva.com"
+    Adobe Color: "https://color.adobe.com"
+
+Security:
+  icon: "🔒"
+  color: "#56d364"
+  links:
+    Have I Been Pwned: "https://haveibeenpwned.com"
+    VirusTotal: "https://www.virustotal.com"
+    Cloudflare: "https://www.cloudflare.com"
+    Bitwarden: "https://bitwarden.com"
+    1Password: "https://1password.com"
+
+Weather:
+  icon: "☀️"
+  color: "#e3b341"
+  links:
+    Weather.com: "https://weather.com"
+    AccuWeather: "https://www.accuweather.com"
+    Windy: "https://www.windy.com"
+    Rain Radar: "https://www.rainviewer.com"
