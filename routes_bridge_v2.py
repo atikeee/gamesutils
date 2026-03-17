@@ -23,15 +23,38 @@ def configure_routes_bridge_v2(app, socketio):
 
         result = bridge_manager.join_room(room_id, direction, name, passcode)
         return jsonify(result)
-
-
-
+    
+    
     @socketio.on('admin_reset')
     def handle_reset(data):
-        # Admin authentication logic would go here
-        if data.get("password") == "your_long_phrase_here":
-            bridge_manager.reset_room(data['room_id'])
-            emit('room_was_reset', room=f"bridge_room_{data['room_id']}")
+        # Removed password check as requested
+        room_id = str(data['room_id'])
+        bridge_manager.reset_room(room_id)
+        
+        room = bridge_manager.rooms.get(room_id)
+        if room and "force_dealer" in data:
+            room["game"]["dealer"] = data["force_dealer"]
+            room["game"]["current_bidder"] = data["force_dealer"]
+            
+        bridge_manager.save_states()
+        emit('room_was_reset', room=f"bridge_room_{room_id}")
+
+    @socketio.on('admin_set_dealer')
+    def handle_set_dealer(data):
+        room_id = str(data['room_id'])
+        room = bridge_manager.rooms.get(room_id)
+        
+        if room and "force_dealer" in data:
+            # Only change the dealer/bidder without resetting hands or scores
+            room["game"]["dealer"] = data["force_dealer"]
+            room["game"]["current_bidder"] = data["force_dealer"]
+            
+            bridge_manager.save_states()
+            # Notify players of the dealer change immediately
+            emit('game_state_update', {"game": room["game"], "players": room['players']}, room=f"bridge_room_{room_id}")
+
+
+
     @app.route("/bridge_v2/game/<room_id>/<direction>")
     def bridge_v2_game_page(room_id, direction):
         # This renders the actual game board
