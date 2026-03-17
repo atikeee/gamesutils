@@ -14,18 +14,62 @@
 @media (max-width: 600px) { :root { --card-w: 70px; --card-h: 105px; } }
 
 body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-#bid-table, table { border-collapse: collapse; margin: 0 auto; }
-#bid-table th, #bid-table td,
-table th, table td {
-    border: 1px solid #30363d;
-    padding: 6px 14px;
-    text-align: center;
+
+/* in-game bid history table */
+#bid-table {
+    border-collapse: collapse;
+    margin: 0 auto;
 }
-#bid-table th, table th {
+#bid-table th {
     background: #21262d;
     color: var(--accent);
+    padding: 8px 16px;
+    border: 1px solid #30363d;
+    text-align: center;
+    font-size: 1rem;
 }
-#bid-table td, table td { color: var(--text); }
+#bid-table td {
+    padding: 8px 16px;
+    border: 1px solid #30363d;
+    text-align: center;
+    min-width: 44px;
+    font-size: 1rem;
+}
+#bid-table tbody tr:nth-child(even) td { background: #1c2330; }
+#bid-table tbody tr:nth-child(odd)  td { background: #161b22; }
+/* bid buttons */
+.bid-btn {
+    background: #21262d;
+    color: white;
+    border: 1px solid #30363d;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1rem;
+    min-width: 44px;
+}
+.bid-btn:hover { background: #30363d; }
+.bid-btn.active { background: var(--accent); color: #0d1117; }
+
+/* bidding-input layout */
+#bidding-input {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    padding: 10px;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 1px solid #30363d;
+}
+.bid-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+
+
 /* --- HEADER --- */
 #info-header { background: var(--surface); padding: 5px 15px; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; height: 45px; }
 
@@ -89,24 +133,70 @@ table th, table td {
 #hand-left  { margin-left: -35px; }
 #hand-right { margin-right: -35px; transform: rotate(180deg); }
 
-/* --- BUTTONS & CONTROLS --- */
-.control-panel { position: fixed; bottom: 15px; z-index: 4000; display: flex; gap: 8px; }
+/* Replace the control-panel styles */
+.control-panel { position: fixed; bottom: 15px; z-index: 4000; display: flex; flex-direction: column; gap: 6px; }
 #left-controls { left: 10px; }
 #right-controls { right: 10px; }
 
 .ctrl-btn { 
     background: #21262d; color: white; border: 1px solid #30363d; 
-    padding: 10px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; 
+    padding: 10px 14px; border-radius: 6px; font-weight: bold; cursor: pointer;
+    width: 100%;
 }
 .btn-green { background: #238636; border: none; }
 .btn-red { background: #d12e2e; border: none; }
 .ctrl-btn:disabled { opacity: 0.3; }
+.claim-row { display: flex; gap: 6px; }
+.claim-row select { 
+    background: #21262d; color: white; border: 1px solid #30363d; 
+    padding: 10px 8px; border-radius: 6px; font-weight: bold;
+}
+.claim-row .ctrl-btn { flex: 1; }
 
 select#claim-count { background: #21262d; color: white; border: 1px solid #30363d; padding: 8px; border-radius: 4px; }
 
 /* --- SYMBOLS --- */
 .card-info { text-align: left; display: flex; flex-direction: column; line-height: 1.1; font-weight: 900; }
 .card-info-bottom { position: absolute; bottom: 5px; right: 5px; transform: rotate(180deg); display: flex; flex-direction: column; font-weight: 900; }
+    /* --- MODAL --- */
+#modal-content { min-width: 320px; max-width: 90%; }
+#modal-body h3 { 
+    margin: 0 0 15px 0; text-align: center; 
+    color: var(--accent); font-size: 1.1rem; 
+}
+
+/* Bidding history table in modal */
+#modal-body table { 
+    border-collapse: collapse; 
+    width: 100%; 
+    margin: 0 auto; 
+}
+#modal-body table th { 
+    background: #21262d; 
+    color: var(--accent); 
+    padding: 8px 20px; 
+    text-align: center; 
+    border: 1px solid #30363d; 
+    font-size: 1rem;
+}
+#modal-body table td { 
+    padding: 8px 20px; 
+    text-align: center; 
+    border: 1px solid #30363d; 
+    color: var(--text);
+    font-size: 0.95rem;
+    min-width: 48px;
+}
+#modal-body table tr:nth-child(even) td { background: #1c2330; }
+#modal-body table tr:nth-child(odd)  td { background: #161b22; }
+
+/* Last 4 cards in modal */
+.card-container { 
+    display: flex; 
+    justify-content: center; 
+    gap: 12px; 
+    padding: 10px 0; 
+}
     </style>
 </head>
 <body>
@@ -151,21 +241,6 @@ select#claim-count { background: #21262d; color: white; border: 1px solid #30363
     <div class="player-area center">
         <div id="trick-area"></div>
 
-        <div id="claim-ui" style="display:none; background: var(--surface); padding: 10px; border-radius: 8px; border: 1px solid var(--accent); z-index: 3000; margin-bottom: 10px;">
-            <label style="font-size: 0.8rem; display: block; margin-bottom: 5px;">Claim remaining tricks:</label>
-            <div style="display: flex; gap: 5px;">
-                <select id="claim-count" style="flex: 1; background: #21262d; color: white; border: 1px solid #30363d; border-radius: 4px;"></select>
-                <button class="bid-btn" style="padding: 5px 15px; margin: 0;" onclick="sendClaim()">Claim</button>
-            </div>
-        </div>
-
-        <div id="claim-approval" style="display:none; background: #1c2330; padding: 15px; border-radius: 8px; border: 2px solid #d12e2e; text-align: center; z-index: 3000;">
-            <p id="claim-msg" style="margin-bottom: 10px; font-weight: bold;"></p>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="respondClaim('approve')" style="flex:1; background: #238636; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer;">Approve</button>
-                <button onclick="respondClaim('reject')" style="flex:1; background: #d12e2e; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer;">Reject</button>
-            </div>
-        </div>
 
         <div id="history-container">
             <table id="bid-table">
@@ -215,17 +290,27 @@ select#claim-count { background: #21262d; color: white; border: 1px solid #30363
         </div>
         <div class="hand-container" id="hand-bottom"></div>
     </div>
-    <div id="left-controls" class="control-panel">
-        <select id="claim-count"></select>
+<div id="left-controls" class="control-panel">
+    <div class="claim-row">
+        <select id="claim-count">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6" selected>6</option>
+        </select>
         <button id="btn-claim" class="ctrl-btn btn-green" onclick="sendClaim()">Claim</button>
-        <button id="btn-approve" class="ctrl-btn btn-green" onclick="respondClaim('approve')" disabled>Approve</button>
-        <button id="btn-reject" class="ctrl-btn btn-red" onclick="respondClaim('reject')" disabled>Reject</button>
-        </div>
-
-    <div id="right-controls" class="control-panel">
-    <button id="btn-undo" class="ctrl-btn" onclick="requestUndo()">Undo</button>
-    <button id="btn-end" class="ctrl-btn btn-red" onclick="requestEndRound()">End Round</button>
     </div>
+    <button id="btn-approve" class="ctrl-btn btn-green" onclick="respondClaim('approve')" disabled>Approve</button>
+    <button id="btn-reject" class="ctrl-btn btn-red" onclick="respondClaim('reject')" disabled>Reject</button>
+</div>
+
+<div id="right-controls" class="control-panel">
+    <button id="btn-undo" class="ctrl-btn" onclick="requestUndo()">Undo</button>
+    <button id="btn-accept" class="ctrl-btn btn-green" onclick="requestAccept()">Accept</button>
+    <button id="btn-end" class="ctrl-btn btn-red" onclick="requestEndRound()">End Round</button>
+</div>
     
     <div id="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
     <div id="modal-content" style="background:var(--surface); padding:20px; border-radius:8px; min-width:300px; max-width:90%; position:relative;">
@@ -304,9 +389,27 @@ socket.on('game_state_update', (data) => {
         statusMsg.innerText = (game.current_bidder === myDir) ? "YOUR BID" : `Waiting for ${bidderName}...`;
     } else if (isPlay) {
         // Fix: Show "Now Playing: <PlayerName>"
+        // Inside game_state_update, in the isPlay block:
         const activeName = getPlayerName(game.current_player);
         statusMsg.innerText = (game.current_player === myDir) ? "YOUR TURN" : `Now Playing: ${activeName}`;
+        const btnAccept = document.getElementById('btn-accept');
+        if (btnAccept) {
+            const undoRequester = game.undo_requested_by;
+            if (undoRequester) {
+                const reqTeam = (['N','S'].includes(undoRequester)) ? 'NS' : 'EW';
+                const myTeam = (['N','S'].includes(myDir)) ? 'NS' : 'EW';
+                btnAccept.disabled = (reqTeam === myTeam);
+                btnAccept.style.background = (reqTeam !== myTeam) ? '#238636' : '';
+            } else {
+                btnAccept.disabled = true;
+                btnAccept.style.background = '';
+            }
+        }
     }
+    // --- 2. UI VISIBILITY (Bidding & Headers) ---
+    document.getElementById('trick-area').style.display = isPlay ? 'block' : 'none';
+    document.getElementById('history-container').style.display = (isBidding || isPickingDeclarer) ? 'block' : 'none';
+    document.getElementById('bidding-input').style.display = (isBidding && current_bidder === myDir) ? 'flex' : 'none';
     // --- 4. PLAYER TAGS & SCORES ---
     ['N', 'E', 'S', 'W'].forEach(dir => {
         const localPos = getLocalPos(dir);
@@ -343,56 +446,17 @@ socket.on('game_state_update', (data) => {
 
         // Global lock to stop card clicks
         window.gameLocked = isWaitingForResponse;
-
-        // Claim UI Elements
         const btnApprove = document.getElementById('btn-approve');
         const btnReject = document.getElementById('btn-reject');
-        
-        
-        
-        
-        // --- UPDATED CLAIM LOGIC ---
         const btnClaim = document.getElementById('btn-claim');
-        const claimSelect = document.getElementById('claim-count');
-        
-        // Updated condition: check if either table is empty OR full, and it's your turn
+                
         const isTrickEmpty = (!current_trick || current_trick.length === 0);
         const isTrickComplete = (current_trick && current_trick.length === 4);
         const isMyLeadTurn = (isTrickEmpty || isTrickComplete) && (current_player === myDir);
 
-        btnClaim.disabled = !isMyLeadTurn || !!claim_data || remaining === 0;
-        
-        // FORCE POPULATE: If it's your turn and dropdown is empty, fill it
-        if (isMyLeadTurn && !claim_data && (claimSelect.children.length === 0 || claimSelect.dataset.lastRem != remaining)) {
-            claimSelect.innerHTML = '';
-            for(let i=1; i<=remaining; i++) {
-                let opt = document.createElement('option');
-                opt.value = i; opt.innerText = i;
-                if(i === remaining) opt.selected = true;
-                claimSelect.appendChild(opt);
-            }
-            claimSelect.dataset.lastRem = remaining; // Prevent constant flickering
-        }
-        
-        
-        
-        // Enable Claim only if it's your lead, no claim is pending, and cards remain
         btnClaim.disabled = !isMyLeadTurn || isWaitingForResponse || remaining === 0;
-        
-        // Repopulate dropdown only when it's valid to claim and not currently waiting
-        if (isMyLeadTurn && !isWaitingForResponse) {
-            // We only refresh the list if the current count is different to avoid UI flickering
-            if (claimSelect.children.length !== remaining) {
-                claimSelect.innerHTML = '';
-                for(let i=1; i<=remaining; i++) {
-                    let opt = document.createElement('option');
-                    opt.value = i; opt.innerText = i;
-                    if(i === remaining) opt.selected = true;
-                    claimSelect.appendChild(opt);
-                }
-            }
-        }
-
+        btnClaim.innerText = isWaitingForResponse ? "Pending..." : "Claim";
+   
         // Approval Logic: Enable buttons for opponents when a claim is active
         if (isWaitingForResponse) {
             const claimerTeam = (['N', 'S'].includes(claim_data.claimer)) ? 'NS' : 'EW';
@@ -402,12 +466,9 @@ socket.on('game_state_update', (data) => {
             btnApprove.disabled = !isOpponent;
             btnReject.disabled = !isOpponent;
             
-            // Optional: Update button text to show who is claiming
-            btnClaim.innerText = "Pending...";
         } else {
             btnApprove.disabled = true;
             btnReject.disabled = true;
-            btnClaim.innerText = "Claim";
         }
     }
     // --- 6. RENDER HANDS & TRICK ---
@@ -433,13 +494,22 @@ socket.on('game_state_update', (data) => {
     function requestDeal() { socket.emit('request_deal', { room_id: roomId }); }
     
     
-    // --- NEW FUNCTIONS ---
-    function sendClaim() {
-        const count = document.getElementById('claim-count').value;
-        socket.emit('claim_tricks', { room_id: roomId, direction: myDir, amount: count });
+    function requestUndo() {
+    socket.emit('request_undo', { room_id: roomId, direction: myDir });
     }
 
+    function requestAccept() {
+        socket.emit('accept_undo', { room_id: roomId, direction: myDir });
+    }
+function sendClaim() {
+    const count = document.getElementById('claim-count').value;
+    if (!count) return;
+    socket.emit('claim_tricks', { room_id: roomId, direction: myDir, amount: count });
+}
+
     function respondClaim(type) {
+        if (!game.claim_data) return;
+        if (type === 'reject' && !confirm('Reject the claim? All cards will be revealed.')) return;
         socket.emit('respond_claim', { room_id: roomId, direction: myDir, response: type });
     }
 
@@ -525,17 +595,25 @@ socket.on('game_state_update', (data) => {
         let row = document.createElement('tr');
         const order = ["N", "E", "S", "W"];
         let startIdx = order.indexOf(dealer);
-        for(let j=0; j<startIdx; j++) row.appendChild(document.createElement('td'));
+        for (let j = 0; j < startIdx; j++) row.appendChild(document.createElement('td'));
 
         history.forEach((b) => {
             if (row.children.length === 4) { body.appendChild(row); row = document.createElement('tr'); }
             const td = document.createElement('td');
-            td.innerText = (b.level > 0 ? b.level : '') + SUIT_SYMBOLS[b.strain];
+            if (b.strain === 'Pass') {
+                td.innerHTML = '<span style="color:#888">P</span>';
+            } else if (b.strain === 'X') {
+                td.innerHTML = '<span style="color:#d12e2e">X</span>';
+            } else if (b.strain === 'XX') {
+                td.innerHTML = '<span style="color:#7d1a1a">XX</span>';
+            } else {
+                const isRed = (b.strain === 'H' || b.strain === 'D');
+                td.innerHTML = `<span style="color:${isRed ? '#ff4d4d' : 'var(--text)'}">${b.level > 0 ? b.level : ''}${SUIT_SYMBOLS[b.strain]}</span>`;
+            }
             row.appendChild(td);
         });
         body.appendChild(row);
     }
-
     function setLevel(n) { curLevel = n; updateBidButtons(); }
     function setStrain(s) { curStrain = s; updateBidButtons(); }
     function selectSpecial(type) { curLevel = 0; curStrain = type; updateBidButtons(); }
@@ -575,53 +653,74 @@ function toggleModal(type) {
     body.innerHTML = ''; // Clear previous content
 
     if (type === 'bidding-modal') {
-        body.innerHTML = '<h3>Bidding History</h3>';
-        
-        // Create a fresh table to avoid visibility conflicts with the main UI
-        const table = document.createElement('table');
-        table.style.width = "100%";
-        table.style.display = "table"; // Force visibility
-        table.innerHTML = `
-            <thead>
-                <tr><th>N</th><th>E</th><th>S</th><th>W</th></tr>
-            </thead>
-            <tbody id="modal-table-body"></tbody>
-        `;
-        body.appendChild(table);
+    body.innerHTML = '<h3 style="text-align:center; color:var(--accent); margin-bottom:15px;">Bidding History</h3>';
 
-        // Populate the table using the global 'game' object
-        if (game && game.bid_history && game.bid_history.length > 0) {
-            renderHistoryToTarget(game.bid_history, game.dealer, 'modal-table-body');
-        } else {
-            body.innerHTML += '<p style="padding:20px;">No bids have been made yet.</p>';
-        }
+    if (!game || !game.bid_history || game.bid_history.length === 0) {
+        body.innerHTML += '<p style="text-align:center; padding:20px;">No bids yet.</p>';
+    } else {
+        const order = ["N", "E", "S", "W"];
+        const startIdx = order.indexOf(game.dealer);
 
-    } else if (type === 'trick-modal') {
-    body.innerHTML = '<h3>Last 4 Cards Played</h3>';
+        // Build rows array
+        const rows = [];
+        let row = new Array(startIdx).fill('');
+        game.bid_history.forEach(b => {
+            if (row.length === 4) { rows.push(row); row = []; }
+            let cell = '';
+            if (b.strain === 'Pass') cell = '<span style="color:#888">P</span>';
+            else if (b.strain === 'X')  cell = '<span style="color:#d12e2e">X</span>';
+            else if (b.strain === 'XX') cell = '<span style="color:#7d1a1a">XX</span>';
+            else {
+                const isRed = (b.strain === 'H' || b.strain === 'D');
+                cell = `<span style="color:${isRed ? '#ff4d4d' : 'var(--text)'}">${b.level}${SUIT_SYMBOLS[b.strain]}</span>`;
+            }
+            row.push(cell);
+        });
+        while (row.length < 4) row.push('');
+        rows.push(row);
+
+        // Build table
+        let html = `<table style="border-collapse:collapse; width:100%; margin:0 auto;">
+            <thead><tr>`;
+        order.forEach(d => {
+            html += `<th style="background:#21262d; color:var(--accent); padding:10px 20px; border:1px solid #30363d; text-align:center; font-size:1rem;">${d}</th>`;
+        });
+        html += `</tr></thead><tbody>`;
+        rows.forEach((r, ri) => {
+            const bg = ri % 2 === 0 ? '#161b22' : '#1c2330';
+            html += `<tr>`;
+            r.forEach(cell => {
+                html += `<td style="padding:8px 20px; text-align:center; border:1px solid #30363d; background:${bg}; font-size:1rem; min-width:48px;">${cell}</td>`;
+            });
+            html += `</tr>`;
+        });
+        html += `</tbody></table>`;
+        body.innerHTML += html;
+    }
+} else if (type === 'trick-modal') {
+    body.innerHTML = '<h3 style="text-align:center; color:var(--accent); margin-bottom:15px;">Last 4 Cards Played</h3>';
     const trickToShow = game.last_completed_trick || [];
 
     if (trickToShow.length === 0) {
-        body.innerHTML += '<p style="padding:20px;">No tricks finished yet.</p>';
+        body.innerHTML += '<p style="text-align:center; padding:20px;">No tricks finished yet.</p>';
     } else {
-        const container = document.createElement('div');
-        container.style.cssText = 'display:flex; justify-content:center; align-items:center; position:relative; height:140px; margin-top:10px;';
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'display:flex; justify-content:center; gap:12px; padding:10px 0; position:relative; height:140px;';
 
         trickToShow.forEach((item, index) => {
             const c = item.card;
             const isRed = (c.suit === 'H' || c.suit === 'D');
             const cardEl = document.createElement('div');
             cardEl.className = `card ${isRed ? 'red' : ''}`;
-            const x = (index - (trickToShow.length - 1) / 2) * 60; // 60px spacing like hand
-            cardEl.style.cssText = `position:absolute; transform:translateX(${x}px); z-index:${index};`;
+            cardEl.style.cssText = 'position:relative; flex-shrink:0;';
             cardEl.innerHTML = `
                 <div class="card-info">
                     <span>${c.val}</span>
                     <span>${SUIT_SYMBOLS[c.suit]}</span>
                 </div>`;
-            container.appendChild(cardEl);
+            wrap.appendChild(cardEl);
         });
-
-        body.appendChild(container);
+        body.appendChild(wrap);
     }
 }
     
@@ -684,6 +783,9 @@ function renderHands(hands, viewer) {
 
         renderHand(containerId, cards, !shouldShow, seatDir, game);
     });
+}
+function requestAccept() {
+    socket.emit('accept_round', { room_id: roomId, direction: myDir });
 }
 </script>
 </body>

@@ -297,17 +297,31 @@ def configure_routes_bridge_v2(app, socketio):
     def handle_claim(data):
         room_id = str(data['room_id'])
         room = bridge_manager.rooms.get(room_id)
+        if not room:
+            return
         game = room["game"]
         
-        # Only current player can claim
-        if len(game["current_trick"]) == 0 and game["current_player"] == data['direction']:
-            game["claim_data"] = {
-                "claimer": data['direction'],
-                "amount": int(data['amount']),
-                "approvals": []
-            }
-            bridge_manager.save_states()
-            emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")
+        amount = data.get('amount')
+        if amount is None:
+            return
+
+        current_trick = game.get("current_trick", [])
+        isTrickEmpty = len(current_trick) == 0
+        isTrickComplete = len(current_trick) == 4
+        
+        if not (isTrickEmpty or isTrickComplete):
+            return
+
+        if game["current_player"] != data['direction']:
+            return
+
+        game["claim_data"] = {
+            "claimer": data['direction'],
+            "amount": int(amount),
+            "approvals": []
+        }
+        bridge_manager.save_states()
+        emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")
     @socketio.on('respond_claim')
     def handle_claim_response(data):
         room_id = str(data['room_id'])
@@ -442,15 +456,59 @@ def configure_routes_bridge_v2(app, socketio):
             bridge_manager.save_states()
             emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")
 
-    @socketio.on('request_end_round')
-    def handle_end_round_request(data):
-        # Placeholder for End Round logic
-        pass
 
     @socketio.on('request_undo')
     def handle_undo_request(data):
-        # Placeholder for Undo logic
-        pass            
+        room_id = str(data['room_id'])
+        room = bridge_manager.rooms.get(room_id)
+        if not room:
+            return
+        game = room["game"]
+        game["undo_requested_by"] = data['direction']
+        bridge_manager.save_states()
+        emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")
+
+    @socketio.on('accept_undo')
+    def handle_accept_undo(data):
+        room_id = str(data['room_id'])
+        room = bridge_manager.rooms.get(room_id)
+        if not room:
+            return
+        game = room["game"]
+
+        # Only an opponent of the requester can accept
+        requester = game.get("undo_requested_by")
+        if not requester:
+            return
+        req_team = "NS" if requester in ["N", "S"] else "EW"
+        acc_team = "NS" if data['direction'] in ["N", "S"] else "EW"
+        if req_team == acc_team:
+            return
+
+        # Roll back the last played card
+        if game.get("last_completed_trick"):
+            # Undo after a completed trick — restore all 4 cards
+            for play in reversed(game["last_completed_trick"]):
+                game["hands"][play["player"]].insert(0, play["card"])
+            # Reverse the trick score
+            winner = game["current_player"]
+            if winner in ["N", "S"]:
+                game["tricks_won"]["NS"] = max(0, game["tricks_won"]["NS"] - 1)
+            else:
+                game["tricks_won"]["EW"] = max(0, game["tricks_won"]["EW"] - 1)
+            game["current_player"] = game["last_completed_trick"][0]["player"]
+            game["current_trick"] = list(game["last_completed_trick"])
+            game["last_completed_trick"] = []
+        elif game.get("current_trick"):
+            # Undo mid-trick — restore just the last card played
+            last_play = game["current_trick"].pop()
+            game["hands"][last_play["player"]].insert(0, last_play["card"])
+            order = ["N", "E", "S", "W"]
+            game["current_player"] = last_play["player"]
+
+        game["undo_requested_by"] = None
+        bridge_manager.save_states()
+        emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")        
     @socketio.on('force_end_round')
     def handle_force_end(data):
         room_id = str(data['room_id'])
@@ -465,3 +523,15 @@ def configure_routes_bridge_v2(app, socketio):
         
         bridge_manager.save_states()
         emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")
+    @socketio.on('accept_round')
+    def handle_accept_round(data):
+        room_id = str(data['room_id'])
+        room = bridge_manager.rooms.get(room_id)
+        if not room:
+            return
+        # Accept simply ends the round cleanly — same as force end
+        end_round(room["game"], room_id)
+        bridge_manager.save_states()
+        emit('game_state_update', {"game": room["game"], "players": room['players']}, room=f"bridge_room_{room_id}")
+        
+        

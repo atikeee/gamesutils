@@ -3,295 +3,50 @@
         "players": {
             "N": {
                 "name": "n",
-                "passcode": "Spade38"
+                "passcode": "Ocean19"
             },
             "E": {
                 "name": "e",
-                "passcode": "Apple42"
+                "passcode": "Diamond95"
             },
             "S": {
                 "name": "s",
-                "passcode": "Club79"
+                "passcode": "Diamond31"
             },
             "W": {
                 "name": "w",
-                "passcode": "Bridge13"
+                "passcode": "Mountain20"
             }
         },
         "game": {
-            "round": 2,
-            "dealer": "S",
-            "phase": "play",
+            "round": 1,
+            "dealer": "E",
+            "phase": "waiting",
             "hands": {
-                "N": [
-                    {
-                        "suit": "S",
-                        "val": "Q"
-                    },
-                    {
-                        "suit": "S",
-                        "val": "8"
-                    },
-                    {
-                        "suit": "S",
-                        "val": "5"
-                    },
-                    {
-                        "suit": "H",
-                        "val": "Q"
-                    },
-                    {
-                        "suit": "H",
-                        "val": "J"
-                    },
-                    {
-                        "suit": "H",
-                        "val": "6"
-                    },
-                    {
-                        "suit": "C",
-                        "val": "10"
-                    },
-                    {
-                        "suit": "C",
-                        "val": "9"
-                    },
-                    {
-                        "suit": "C",
-                        "val": "4"
-                    },
-                    {
-                        "suit": "C",
-                        "val": "3"
-                    }
-                ],
-                "E": [
-                    {
-                        "suit": "S",
-                        "val": "7"
-                    },
-                    {
-                        "suit": "S",
-                        "val": "4"
-                    },
-                    {
-                        "suit": "H",
-                        "val": "A"
-                    },
-                    {
-                        "suit": "H",
-                        "val": "K"
-                    },
-                    {
-                        "suit": "H",
-                        "val": "10"
-                    },
-                    {
-                        "suit": "H",
-                        "val": "9"
-                    },
-                    {
-                        "suit": "H",
-                        "val": "8"
-                    },
-                    {
-                        "suit": "H",
-                        "val": "7"
-                    },
-                    {
-                        "suit": "H",
-                        "val": "4"
-                    },
-                    {
-                        "suit": "D",
-                        "val": "6"
-                    }
-                ],
-                "S": [
-                    {
-                        "suit": "S",
-                        "val": "A"
-                    },
-                    {
-                        "suit": "S",
-                        "val": "K"
-                    },
-                    {
-                        "suit": "S",
-                        "val": "10"
-                    },
-                    {
-                        "suit": "S",
-                        "val": "2"
-                    },
-                    {
-                        "suit": "C",
-                        "val": "A"
-                    },
-                    {
-                        "suit": "C",
-                        "val": "Q"
-                    },
-                    {
-                        "suit": "C",
-                        "val": "8"
-                    },
-                    {
-                        "suit": "C",
-                        "val": "7"
-                    },
-                    {
-                        "suit": "D",
-                        "val": "A"
-                    },
-                    {
-                        "suit": "D",
-                        "val": "K"
-                    }
-                ],
-                "W": [
-                    {
-                        "suit": "S",
-                        "val": "J"
-                    },
-                    {
-                        "suit": "S",
-                        "val": "9"
-                    },
-                    {
-                        "suit": "S",
-                        "val": "6"
-                    },
-                    {
-                        "suit": "H",
-                        "val": "3"
-                    },
-                    {
-                        "suit": "H",
-                        "val": "2"
-                    },
-                    {
-                        "suit": "C",
-                        "val": "K"
-                    },
-                    {
-                        "suit": "C",
-                        "val": "J"
-                    },
-                    {
-                        "suit": "C",
-                        "val": "6"
-                    },
-                    {
-                        "suit": "C",
-                        "val": "5"
-                    },
-                    {
-                        "suit": "C",
-                        "val": "2"
-                    }
-                ]
+                "N": [],
+                "E": [],
+                "S": [],
+                "W": []
             },
             "tricks_won": {
-                "NS": 1,
-                "EW": 2
+                "NS": 0,
+                "EW": 0
             },
             "highest_bid": {
-                "level": 1,
-                "strain": "C",
-                "player": "S",
-                "db": "None"
+                "level": 0,
+                "strain": null,
+                "bidder": null
             },
-            "bid_history": [
-                {
-                    "player": "S",
-                    "level": 1,
-                    "strain": "C"
-                },
-                {
-                    "player": "W",
-                    "level": 0,
-                    "strain": "Pass"
-                },
-                {
-                    "player": "N",
-                    "level": 0,
-                    "strain": "Pass"
-                },
-                {
-                    "player": "E",
-                    "level": 0,
-                    "strain": "Pass"
-                }
-            ],
+            "bid_history": [],
             "pass_count": 0,
-            "current_bidder": "E",
-            "current_trick": [
-                {
-                    "player": "N",
-                    "card": {
-                        "suit": "D",
-                        "val": "7"
-                    }
-                },
-                {
-                    "player": "E",
-                    "card": {
-                        "suit": "D",
-                        "val": "4"
-                    }
-                },
-                {
-                    "player": "S",
-                    "card": {
-                        "suit": "D",
-                        "val": "9"
-                    }
-                },
-                {
-                    "player": "W",
-                    "card": {
-                        "suit": "D",
-                        "val": "Q"
-                    }
-                }
-            ],
-            "current_player": "W",
+            "current_bidder": "S",
+            "current_trick": [],
+            "current_player": "N",
             "claim_data": null,
-            "declarer": "S",
-            "dummy": "N",
-            "dummy_revealed": true,
-            "last_completed_trick": [
-                {
-                    "player": "N",
-                    "card": {
-                        "suit": "D",
-                        "val": "7"
-                    }
-                },
-                {
-                    "player": "E",
-                    "card": {
-                        "suit": "D",
-                        "val": "4"
-                    }
-                },
-                {
-                    "player": "S",
-                    "card": {
-                        "suit": "D",
-                        "val": "9"
-                    }
-                },
-                {
-                    "player": "W",
-                    "card": {
-                        "suit": "D",
-                        "val": "Q"
-                    }
-                }
-            ],
+            "declarer": "W",
+            "dummy": "E",
             "round_num": 2,
+            "dummy_revealed": false,
             "reveal_all": false
         }
     },
