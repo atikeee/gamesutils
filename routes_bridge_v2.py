@@ -146,62 +146,74 @@ def configure_routes_bridge_v2(app, socketio):
     def handle_submit_bid(data):
         room_id = str(data['room_id'])
         room = bridge_manager.rooms.get(room_id)
+        if not room: return
+        
+        game = room["game"]
         level = int(data.get("level", 0))
         strain = data.get("strain")
         
-        # 1. Bidding Validation Logic
+        # 1. Bidding Validation
         strain_rank = {"C": 1, "D": 2, "H": 3, "S": 4, "NT": 5}
-        last_bid = room["game"].get("highest_bid")
+        last_bid = game.get("highest_bid") # This might be None
         
         is_pass = (strain == "Pass")
         is_double = (strain in ["X", "XX"])
         
         if not is_pass and not is_double:
-            # Check if the new bid is actually higher
-            if last_bid:
+            # If there's an existing bid, validate that the new one is higher
+            if last_bid and last_bid.get('level', 0) > 0:
                 new_val = (level * 10) + strain_rank[strain]
                 old_val = (last_bid['level'] * 10) + strain_rank[last_bid['strain']]
                 if new_val <= old_val:
-                    return  # Ignore bid if it's not higher
+                    return 
 
-            # Update Highest Bid (only for suit/NT bids)
-            room["game"]["highest_bid"] = {
+            game["highest_bid"] = {
                 "level": level, "strain": strain, 
-                "player": room["game"]["current_bidder"],
-                "db": "None"
+                "player": game["current_bidder"], "db": "None"
             }
-        
-        if is_double and last_bid:
-            room["game"]["highest_bid"]["db"] = strain
+        elif is_double and last_bid and last_bid.get('level', 0) > 0:
+            game["highest_bid"]["db"] = strain
 
-        # 2. History & Turn Rotation
-        room["game"]["bid_history"].append({
-            "player": room["game"]["current_bidder"], 
+        # 2. Update History
+        history = game.get("bid_history", [])
+        history.append({
+            "player": game["current_bidder"], 
             "level": level, 
             "strain": strain
         })
-        
-        room["game"]["pass_count"] = (room["game"]["pass_count"] + 1) if is_pass else 0
-        
-        # 3. Phase Transition
-        # 3. Phase Transition
-        if room["game"]["pass_count"] >= 3 and len(room["game"]["bid_history"]) >= 4:
-            if not room["game"]["highest_bid"]:
-                room["game"]["phase"] = "waiting" # All passed (Redeal)
+
+        # 3. Check End of Bidding
+        consecutive_passes = 0
+        for b in reversed(history):
+            if b["strain"] == "Pass":
+                consecutive_passes += 1
             else:
-                # Instead of going to 'play', go to the new selection phase
-                room["game"]["phase"] = "picking_declarer"
-                
-                # Reset these so nobody can play yet
-                room["game"]["current_player"] = None
-                room["game"]["current_bidder"] = None
-        else:
-            order = ["N", "E", "S", "W"]
-            curr_idx = order.index(room["game"]["current_bidder"])
-            room["game"]["current_bidder"] = order[(curr_idx + 1) % 4]
+                break
+
+        # Case A: Pass Out (First 4 passes)
+        if len(history) == 4 and consecutive_passes == 4:
+            # Rotate dealer and increment round
+            game["round"] = game.get("round", 1) + 1
+            bridge_manager.rotate_dealer(room_id)
+            
+            # Reset state for re-deal
+            game["phase"] = "waiting"
+            game["bid_history"] = []
+            game["highest_bid"] = None # Reset to None safely
+            game["hands"] = {"N":[], "E":[], "S":[], "W":[]}
+            game["tricks_won"] = {"NS": 0, "EW": 0}
+
+        # Case B: Auction ends (3 passes after a real bid)
+        elif len(history) > 3 and consecutive_passes == 3:
+            game["phase"] = "picking_declarer"
         
+        else:
+            # Rotate turn clockwise
+            order = ["N", "E", "S", "W"]
+            game["current_bidder"] = order[(order.index(game["current_bidder"]) + 1) % 4]
+
         bridge_manager.save_states()
-        emit('game_state_update', {"game": room['game'], "players": room['players']}, room=f"bridge_room_{room_id}")
+        emit('game_state_update', {"game": game, "players": room['players']}, room=f"bridge_room_{room_id}")    
     @socketio.on('play_card')
     def handle_play_card(data):
         room_id = str(data['room_id'])
@@ -255,6 +267,7 @@ def configure_routes_bridge_v2(app, socketio):
 
         # 5. Determine Next Turn or Trick Winner
         if len(game["current_trick"]) == 4:
+            game["last_completed_trick"] = list(game["current_trick"])
             winner = determine_trick_winner(game["current_trick"], game["highest_bid"])
             
             # Update Team Scores
@@ -265,6 +278,8 @@ def configure_routes_bridge_v2(app, socketio):
                 
             # Trick winner leads the next trick
             game["current_player"] = winner
+            #game["current_trick"] = []
+            
         else:
             # Move to next player clockwise
             order = ["N", "E", "S", "W"]
