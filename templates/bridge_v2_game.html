@@ -6,135 +6,107 @@
     <title>Bridge Game</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        :root { 
-            --bg: #0d1117; --surface: #161b22; --accent: #58a6ff; --text: #e6edf3; 
-            --card-w: 85px; --card-h: 125px; 
-        }
-        @media (max-width: 600px) { :root { --card-w: 70px; --card-h: 105px; } }
 
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-        
-        #info-header { background: var(--surface); padding: 5px 15px; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; height: 45px; }
-        #deal-btn { background: #238636; color: white; border: none; padding: 6px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; }
-
-        #game-table { flex: 1; display: grid; grid-template-areas: ". top ." "left center right" ". bottom ."; grid-template-rows: 1fr 2fr 1.2fr; grid-template-columns: 0.6fr 1.8fr 0.6fr; padding: 5px; }
-        
-        .player-area { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
-        .center { grid-area: center; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
-
-        #bidding-input { 
-            position: absolute; background: rgba(22, 27, 34, 0.98); border: 2px solid var(--accent); 
-            padding: 15px; border-radius: 12px; z-index: 2000; display: none; flex-direction: column; gap: 10px;
-            box-shadow: 0 0 40px rgba(0,0,0,0.9); width: 95%; max-width: 320px;
-        }
-        .bid-row { display: flex; justify-content: space-between; gap: 5px; }
-        .bid-btn { flex: 1; padding: 12px 2px; background: #21262d; border: 1px solid #30363d; color: white; border-radius: 6px; font-weight: bold; font-size: 1.1rem; }
-        .bid-btn.active { background: var(--accent); border-color: white; }
-        #confirm-bid-btn { background: #238636; margin-top: 5px; font-size: 1.2rem; }
-
-        #history-container { display: none; width: 100%; max-height: 150px; overflow-y: auto; background: #1c2330; border-radius: 4px; border: 1px solid #30363d; }
-        #bid-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: center; }
-        #bid-table td { padding: 6px; border: 1px solid #30363d; }
-
-        .hand-container { display: flex; justify-content: center; align-items: center; width: 100%; height: var(--card-h); position: relative; }
-        .card { 
-            width: var(--card-w); height: var(--card-h); background: white; color: black; 
-            border-radius: 8px; position: absolute; display: flex; flex-direction: column; 
-            padding: 5px; box-sizing: border-box; transition: transform 0.2s;
-            box-shadow: -4px 0 10px rgba(0,0,0,0.5); border: 1px solid #777;
-        }
-        .card.selected { transform: translateY(-40px) !important; z-index: 2000 !important; border: 3px solid var(--accent); }
-        .card.red { color: #d12e2e; }
-        
-        .card-info { text-align: left; display: flex; flex-direction: column; line-height: 1.1; font-weight: 900; }
-        .card-info .red {color: #ff4d4d;}
-        .red {    color: #ff4d4d !important; /* Bright red that stands out on dark backgrounds */}
-        .card-val-top { font-size: 1.3rem; }
-        .card-suit-top { font-size: 1.5rem; }
-
-        .name-tag { font-size: 0.8rem; background: #30363d; padding: 4px 12px; border-radius: 6px; z-index: 10; border: 2px solid transparent; }
-        .active-turn { border-color: var(--accent); color: var(--accent); }
-        
-        #trick-area { position: relative; width: 200px; height: 200px; display: flex; align-items: center; justify-content: center; }
-        .played-card { position: absolute; width: var(--card-w); height: var(--card-h); }
-        .pos-top { top: -20px; }
-        .pos-bottom { bottom: -20px; }
-        .pos-right { right: -20px; }
-        .pos-left { left: -20px; }
-
-        .score-pill { margin-left: 8px; color: #8b949e; font-weight: normal; }
-        .control-panel {
-        position: fixed;
-        bottom: 20px;
-        padding: 10px;
-        background: var(--surface);
-        border: 1px solid #30363d;
-        border-radius: 8px;
-        display: none; /* Only show during play phase */
-        z-index: 4000;
-        gap: 10px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    }
-    #left-controls { left: 20px; display: flex; align-items: center; }
-    #right-controls { right: 20px; display: flex; align-items: center; }
-    
-    .ctrl-btn {
-        background: #21262d;
-        color: white;
-        border: 1px solid #30363d;
-        padding: 8px 12px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: bold;
-    }
-    .ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .btn-green { background: #238636; }
-    .btn-red { background: #d12e2e; }
-    
-    #claim-count {
-        background: #0d1117;
-        color: white;
-        border: 1px solid #30363d;
-        padding: 8px;
-        border-radius: 4px;
-    }
-/* Styling for the content inside the Modal */
-#modal-body h3 {
-    margin-top: 0;
-    border-bottom: 1px solid #30363d;
-    padding-bottom: 10px;
+:root { 
+    --bg: #0d1117; --surface: #161b22; --accent: #58a6ff; --text: #e6edf3; 
+    --card-w: 85px; --card-h: 125px; 
 }
+@media (max-width: 600px) { :root { --card-w: 70px; --card-h: 105px; } }
 
-#modal-body table {
-    border-collapse: collapse;
-    margin-top: 10px;
-}
-
-#modal-body th, #modal-body td {
-    padding: 10px;
+body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+#bid-table, table { border-collapse: collapse; margin: 0 auto; }
+#bid-table th, #bid-table td,
+table th, table td {
     border: 1px solid #30363d;
+    padding: 6px 14px;
     text-align: center;
 }
+#bid-table th, table th {
+    background: #21262d;
+    color: var(--accent);
+}
+#bid-table td, table td { color: var(--text); }
+/* --- HEADER --- */
+#info-header { background: var(--surface); padding: 5px 15px; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; height: 45px; }
 
-/* Ensure cards in the modal don't use the absolute 'hand' positioning */
-.card-container {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 15px;
-    padding: 20px;
+/* --- TABLE GRID --- */
+#game-table {
+    display: grid;
+    grid-template-areas: ". top ." "left center right" ". bottom .";
+    grid-template-columns: 100px 1fr 100px;
+    grid-template-rows: 130px 1fr 130px;
+    height: calc(100vh - 45px);
 }
 
-#modal-body .card {
-    position: relative !important; /* Breaks the absolute positioning from the hand */
-    left: auto !important;
-    top: auto !important;
-    margin: 0 !important;
-    transform: none !important;
-    display: inline-block;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+.player-area { display: flex; align-items: center; justify-content: center; position: relative; }
+.center { grid-area: center; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+
+/* --- LABELS (Outer edge positioning) --- */
+[style*="grid-area: bottom"] { flex-direction: column-reverse; }
+[style*="grid-area: top"]    { flex-direction: column; }
+[style*="grid-area: left"]   { flex-direction: row; }
+[style*="grid-area: right"]  { flex-direction: row-reverse; }
+
+.name-tag { font-size: 0.85rem; background: #161b22; padding: 6px 10px; border-radius: 4px; border: 1px solid #30363d; color: #e6edf3; z-index: 100; white-space: nowrap; }
+#tag-left  { transform: rotate(90deg); }
+#tag-right { transform: rotate(-90deg); }
+
+.active-turn { 
+    background: #ffce00 !important; color: #b90000 !important; 
+    border: 2px solid #b90000 !important; font-weight: 900; 
+    box-shadow: 0 0 20px rgba(255, 206, 0, 0.8);
 }
-    
+
+/* --- CARDS --- */
+.card { 
+    width: var(--card-w); height: var(--card-h); background: white; color: black; 
+    border-radius: 8px; display: flex; flex-direction: column; padding: 5px; 
+    box-sizing: border-box; border: 1px solid #777;
+}
+.card.red { color: #ff4d4d !important; }
+
+/* CENTER TRICK AREA (Restore Absolute positioning) */
+#trick-area { position: relative; width: 300px; height: 290px; }
+.played-card { position: absolute !important; }
+.pos-top    { top: 0;    left: 50%; transform: translateX(-50%); }
+.pos-bottom { bottom: 0; left: 50%; transform: translateX(-50%); }
+.pos-left   { left: 0;   top: 50%; transform: translateY(-50%); }
+.pos-right  { right: 0;  top: 50%; transform: translateY(-50%); }
+
+/* --- HAND CONTAINERS --- */
+.hand-container { display: flex; position: relative; justify-content: center; align-items: center; }
+
+/* Top/Bottom Horizontal */
+#hand-top .card, #hand-bottom .card { position: absolute; }
+
+/* Left/Right Vertical */
+#hand-left, #hand-right { flex-direction: column; width: auto; }
+#hand-left .card, #hand-right .card { 
+    position: relative !important; 
+    transform: rotate(90deg) !important; 
+    margin: -48px 0 !important; 
+}
+#hand-left  { margin-left: -35px; }
+#hand-right { margin-right: -35px; transform: rotate(180deg); }
+
+/* --- BUTTONS & CONTROLS --- */
+.control-panel { position: fixed; bottom: 15px; z-index: 4000; display: flex; gap: 8px; }
+#left-controls { left: 10px; }
+#right-controls { right: 10px; }
+
+.ctrl-btn { 
+    background: #21262d; color: white; border: 1px solid #30363d; 
+    padding: 10px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; 
+}
+.btn-green { background: #238636; border: none; }
+.btn-red { background: #d12e2e; border: none; }
+.ctrl-btn:disabled { opacity: 0.3; }
+
+select#claim-count { background: #21262d; color: white; border: 1px solid #30363d; padding: 8px; border-radius: 4px; }
+
+/* --- SYMBOLS --- */
+.card-info { text-align: left; display: flex; flex-direction: column; line-height: 1.1; font-weight: 900; }
+.card-info-bottom { position: absolute; bottom: 5px; right: 5px; transform: rotate(180deg); display: flex; flex-direction: column; font-weight: 900; }
     </style>
 </head>
 <body>
@@ -441,11 +413,7 @@ socket.on('game_state_update', (data) => {
     // --- 6. RENDER HANDS & TRICK ---
     renderTrick(current_trick || []);
 
-    ['N','E','S','W'].forEach(dir => {
-        const shouldShow = (dir === myDir) || (dir === dummy && dummy_revealed) || game.reveal_all;
-        renderHand(`hand-${getLocalPos(dir)}`, hands[dir], !shouldShow, dir, game);
-    });
-    
+    renderHands(hands, myDir);
     if (isBidding || isPickingDeclarer) {
         renderHistory(game.bid_history, game.dealer);
     }
@@ -481,37 +449,46 @@ socket.on('game_state_update', (data) => {
         }
     }
     
-    
-
     function renderHand(containerId, cards, isHidden, seatDir, game) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
     if (!cards) return;
 
+    const isSide = containerId.includes('left') || containerId.includes('right');
+
     cards.forEach((card, index) => {
         const cardEl = document.createElement('div');
-        cardEl.className = `card ${ (card.suit === 'H' || card.suit === 'D') ? 'red' : '' }`;
-        const x = (index - (cards.length - 1) / 2) * (window.innerWidth < 600 ? 20 : 28);
-        cardEl.style.transform = `translateX(${x}px)`;
+        const isRed = (card.suit === 'H' || card.suit === 'D');
+        cardEl.className = `card ${isRed ? 'red' : ''}`;
+        
+        if (!isSide) {
+            // ONLY Top and Bottom get the horizontal fan calculation
+            const x = (index - (cards.length - 1) / 2) * (window.innerWidth < 600 ? 20 : 28);
+            cardEl.style.transform = `translateX(${x}px)`;
+            cardEl.style.position = "absolute";
+        } else {
+            // Side cards MUST be relative to stack top-to-bottom
+            cardEl.style.position = "relative";
+        }
+        
         cardEl.style.zIndex = index;
 
         if (isHidden) {
             cardEl.style.background = "linear-gradient(135deg, #1e4d8c 0%, #0d2a54 100%)";
+            cardEl.style.border = "1px solid #fff";
         } else {
-            cardEl.innerHTML = `<div class="card-info"><span class="card-val-top">${card.val}</span><span class="card-suit-top">${SUIT_SYMBOLS[card.suit]}</span></div>`;
+            cardEl.innerHTML = `
+                <div class="card-info">
+                    <span class="card-val-top">${card.val}</span>
+                    <span class="card-suit-top">${SUIT_SYMBOLS[card.suit]}</span>
+                </div>
+                <div class="card-info-bottom">
+                    <span class="card-val-top">${card.val}</span>
+                    <span class="card-suit-top">${SUIT_SYMBOLS[card.suit]}</span>
+                </div>`;
             
             cardEl.onclick = () => {
-                
-                if (window.gameLocked) {
-                console.log("Game is locked during claim negotiation.");
-            return;
-        }
-    // Determine if it's the current player's turn to play a card from THIS seat
-                const isCurrentSeatTurn = (game.current_player === seatDir);
-                
-                // Determine if I am the one allowed to click it:
-                // 1. It is my seat and my turn.
-                // 2. It is dummy's seat, dummy's turn, and I am the declarer.
+                if (window.gameLocked) return;
                 const canIPlayThis = (seatDir === myDir && game.current_player === myDir) || 
                                    (seatDir === game.dummy && game.current_player === game.dummy && myDir === game.declarer);
 
@@ -528,6 +505,7 @@ socket.on('game_state_update', (data) => {
         container.appendChild(cardEl);
     });
 }
+
 
     function renderTrick(trick) {
         const area = document.getElementById('trick-area');
@@ -619,35 +597,33 @@ function toggleModal(type) {
         }
 
     } else if (type === 'trick-modal') {
-        body.innerHTML = '<h3>Last 4 Cards Played</h3>';
-        
-        // Pull the persistent trick data from the server-synced 'game' object
-        const trickToShow = game.last_completed_trick || [];
+    body.innerHTML = '<h3>Last 4 Cards Played</h3>';
+    const trickToShow = game.last_completed_trick || [];
 
-        if (trickToShow.length === 0) {
-            body.innerHTML += '<p style="padding:20px;">No tricks finished yet.</p>';
-        } else {
-            const container = document.createElement('div');
-            container.className = 'card-container'; // Uses the flexbox CSS below
-            
-            trickToShow.forEach(item => {
-                // The server sends an object: { player: "N", card: {suit: "H", val: "A"} }
-                const c = item.card; 
-                const cardEl = document.createElement('div');
-                cardEl.className = 'card';
-                
-                const isRed = (c.suit === 'H' || c.suit === 'D');
-                const redClass = isRed ? 'red' : '';
-                cardEl.innerHTML = `
-                    <div class="card-info">
-                        <span class="card-val-top ${redClass}">${c.val}</span>
-                        <span class="card-suit-top ${redClass}">${SUIT_SYMBOLS[c.suit]}</span>
-                    </div>`;
-                container.appendChild(cardEl);
-            });
-            body.appendChild(container);
-        }
+    if (trickToShow.length === 0) {
+        body.innerHTML += '<p style="padding:20px;">No tricks finished yet.</p>';
+    } else {
+        const container = document.createElement('div');
+        container.style.cssText = 'display:flex; justify-content:center; align-items:center; position:relative; height:140px; margin-top:10px;';
+
+        trickToShow.forEach((item, index) => {
+            const c = item.card;
+            const isRed = (c.suit === 'H' || c.suit === 'D');
+            const cardEl = document.createElement('div');
+            cardEl.className = `card ${isRed ? 'red' : ''}`;
+            const x = (index - (trickToShow.length - 1) / 2) * 60; // 60px spacing like hand
+            cardEl.style.cssText = `position:absolute; transform:translateX(${x}px); z-index:${index};`;
+            cardEl.innerHTML = `
+                <div class="card-info">
+                    <span>${c.val}</span>
+                    <span>${SUIT_SYMBOLS[c.suit]}</span>
+                </div>`;
+            container.appendChild(cardEl);
+        });
+
+        body.appendChild(container);
     }
+}
     
     overlay.style.display = 'flex';
 }
@@ -685,7 +661,30 @@ function renderHistoryToTarget(history, dealer, targetId) {
     });
     tbody.appendChild(row);
 }
+function renderHands(hands, viewer) {
+    const order = ["N", "E", "S", "W"];
+    const viewerIdx = order.indexOf(viewer);
 
+    // This maps the seat directions to the table positions
+    const positions = {
+        bottom: viewer,
+        right: order[(viewerIdx + 1) % 4],
+        top: order[(viewerIdx + 2) % 4],
+        left: order[(viewerIdx + 3) % 4]
+    };
+
+    Object.keys(positions).forEach(pos => {
+        const seatDir = positions[pos];
+        const containerId = `hand-${pos}`;
+        const cards = hands[seatDir] || [];
+        
+        // Visibility: Show if it's your hand or if it's the revealed dummy
+        const isDummy = (seatDir === game.dummy && game.dummy_revealed);
+        const shouldShow = (seatDir === myDir) || isDummy || game.reveal_all;
+
+        renderHand(containerId, cards, !shouldShow, seatDir, game);
+    });
+}
 </script>
 </body>
 </html>
