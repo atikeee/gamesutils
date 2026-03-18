@@ -3,24 +3,18 @@
         "players": {
             "N": {
                 "name": "n",
-                "passcode": "Ocean19"
+                "passcode": "V7I"
             },
             "E": {
-                "name": "e",
-                "passcode": "Diamond95"
+                "name": "N",
+                "passcode": "OE0"
             },
-            "S": {
-                "name": "s",
-                "passcode": "Diamond31"
-            },
-            "W": {
-                "name": "w",
-                "passcode": "Mountain20"
-            }
+            "S": null,
+            "W": null
         },
         "game": {
             "round": 1,
-            "dealer": "E",
+            "dealer": "N",
             "phase": "waiting",
             "hands": {
                 "N": [],
@@ -32,22 +26,13 @@
                 "NS": 0,
                 "EW": 0
             },
-            "highest_bid": {
-                "level": 0,
-                "strain": null,
-                "bidder": null
-            },
+            "highest_bid": null,
             "bid_history": [],
             "pass_count": 0,
-            "current_bidder": "S",
+            "current_bidder": null,
             "current_trick": [],
-            "current_player": "N",
-            "claim_data": null,
-            "declarer": "W",
-            "dummy": "E",
-            "round_num": 2,
-            "dummy_revealed": false,
-            "reveal_all": false
+            "current_player": null,
+            "claim_data": null
         }
     },
     "2": {

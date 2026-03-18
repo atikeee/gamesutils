@@ -206,6 +206,9 @@ select#claim-count { background: #21262d; color: white; border: 1px solid #30363
         <span id="status-msg" style="font-weight: bold; color: #fff;">...</span> | 
         <span id="current-bid-display" style="color: var(--accent); font-weight: bold;"></span>
     </div>
+    <div id="my-passcode-display" style="font-size:0.75rem; color:#8b949e; letter-spacing:0.1em;">
+        Pass: <span id="my-passcode" style="color:var(--accent); font-weight:bold;">{{ passcode }}</span>
+    </div>
     <div id="extra-controls" style="padding: 5px; display: flex; gap: 10px;">
     <button onclick="toggleModal('bidding-modal')">View Bidding</button>
     <button onclick="toggleModal('trick-modal')">Last 4 Cards</button>
@@ -338,6 +341,9 @@ select#claim-count { background: #21262d; color: white; border: 1px solid #30363
         const diff = (order.indexOf(dir) - order.indexOf(myDir) + 4) % 4;
         return ["bottom", "right", "top", "left"][diff];
     }
+socket.on('room_was_reset', () => {
+    window.location.href = '/bridge_v2';
+});
 
 socket.on('game_state_update', (data) => {
     game = data.game;

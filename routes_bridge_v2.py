@@ -16,26 +16,39 @@ def configure_routes_bridge_v2(app, socketio):
     @app.route("/bridge_v2/join", methods=["POST"])
     def bridge_v2_join():
         data = request.json
-        room_id = data.get("room_id")
-        direction = data.get("direction") # N, E, S, or W
-        name = data.get("name")
-        passcode = data.get("passcode") # None for first timers
+        room_id = str(data.get("room_id"))
+        direction = data.get("direction")
+        name = data.get("name", "").strip()
+        passcode = (data.get("passcode") or "").strip().upper()  # handles None safely
+
+        if not room_id or not direction or not name:
+            return jsonify({"status": "error", "message": "Missing fields"})
 
         result = bridge_manager.join_room(room_id, direction, name, passcode)
+
+        if result["status"] == "ok":
+            session['bridge_room_id'] = room_id
+            session['bridge_direction'] = direction
+            session['bridge_passcode'] = result["passcode"]
+
         return jsonify(result)
-    
-    
+    @app.route("/bridge_v2/check_seats/<room_id>")
+    def check_seats(room_id):
+        room = bridge_manager.rooms.get(str(room_id))
+        if not room:
+            return jsonify({})
+        status = {}
+        for k, v in room["players"].items():
+            if v is None:
+                status[k] = "empty"
+            else:
+                status[k] = "occupied"  # has passcode set
+        return jsonify(status)
+        
     @socketio.on('admin_reset')
     def handle_reset(data):
-        # Removed password check as requested
         room_id = str(data['room_id'])
-        bridge_manager.reset_room(room_id)
-        
-        room = bridge_manager.rooms.get(room_id)
-        if room and "force_dealer" in data:
-            room["game"]["dealer"] = data["force_dealer"]
-            room["game"]["current_bidder"] = data["force_dealer"]
-            
+        bridge_manager.rooms[room_id] = bridge_manager._new_room()
         bridge_manager.save_states()
         emit('room_was_reset', room=f"bridge_room_{room_id}")
 
@@ -55,20 +68,19 @@ def configure_routes_bridge_v2(app, socketio):
 
 
 
-    @app.route("/bridge_v2/game/<room_id>/<direction>")
-    def bridge_v2_game_page(room_id, direction):
-        # This renders the actual game board
-        return render_template("bridge_v2_game.html", room_id=room_id, direction=direction)
+    @app.route("/bridge_v2/play")
+    def bridge_v2_play():
+        room_id = session.get('bridge_room_id')
+        direction = session.get('bridge_direction')
+        passcode = session.get('bridge_passcode', '')
+        if not room_id or not direction:
+            return redirect('/bridge_v2')
+        return render_template("bridge_v2_game.html", 
+                               room_id=room_id, 
+                               direction=direction,
+                               passcode=passcode)
 
-    @app.route("/bridge_v2/check_seats/<room_id>")
-    def check_seats(room_id):
-        # Helper to tell the frontend which seats are already taken
-        room = bridge_manager.rooms.get(str(room_id))
-        if not room:
-            return jsonify({})
-        # Return a dict like {"N": True, "E": False...} where True means occupied
-        status = {k: (v is not None) for k, v in room["players"].items()}
-        return jsonify(status)            
+         
 
     @app.route("/bridge_v2/admin", methods=["GET", "POST"])
     def bridge_admin():
@@ -94,16 +106,10 @@ def configure_routes_bridge_v2(app, socketio):
     def admin_reset_room(room_id):
         if not session.get('bridge_admin'):
             return jsonify({"status": "error", "message": "Unauthorized"}), 401
-        
-        if bridge_manager.reset_room(room_id):
-            # Tell all players in this room to kick back to lobby
-            socketio.emit('room_reset_broadcast', room=f"bridge_room_{room_id}")
-            return jsonify({"status": "success"})
-        return jsonify({"status": "error"}), 400  
-        
-
-
-    
+        bridge_manager.rooms[str(room_id)] = bridge_manager.get_default_room_state()
+        bridge_manager.save_states()
+        socketio.emit('room_was_reset', room=f"bridge_room_{room_id}")
+        return jsonify({"status": "success"})
     
 
 

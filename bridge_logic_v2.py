@@ -35,38 +35,37 @@ class BridgeManager:
         except FileNotFoundError:
             print("CRITICAL: admin_config.txt not found!")
             return False
-
-    def join_room(self, room_id, direction, name, provided_passcode=None):
-        """Handles player registration and re-entry."""
-        room = self.rooms.get(str(room_id))
-        if not room: return {"error": "Room not found"}
-
-        player = room["players"][direction]
-
-        # Case 1: Seat is empty - Register New Player
-        if player is None:
-            new_passcode = random.choice(WORDS) + str(random.randint(10, 99))
-            room["players"][direction] = {
-                "name": name,
-                "passcode": new_passcode
-            }
-            self.save_states()
-            return {"status": "success", "passcode": new_passcode, "message": "Registered"}
-
-        # Case 2: Seat is occupied - Re-entry Check
-        if player["name"] == name and player["passcode"] == provided_passcode:
-            return {"status": "success", "message": "Welcome back"}
-        
-        return {"error": "Seat occupied or wrong passcode"}
-
     def reset_room(self, room_id):
-        """Wipes a specific room back to default."""
-        room_id_str = str(room_id)
-        if room_id_str in self.rooms:
-            self.rooms[room_id_str] = self.get_default_room_state()
-            self.save_states()
-            return True
-        return False
+        room_id = str(room_id)
+        self.rooms[room_id] = self.get_default_room_state()
+        self.save_states()
+        return True
+
+    def join_room(self, room_id, direction, name, passcode=None):
+        import random, string
+        room_id = str(room_id)
+        if room_id not in self.rooms:
+            self.rooms[room_id] = self.get_default_room_state()
+
+        room = self.rooms[room_id]
+        existing = room["players"].get(direction)
+
+        if existing is not None:
+            # Seat is taken — must verify name + passcode (case insensitive)
+            if (existing["name"].strip().lower() != name.lower() or
+                existing["passcode"].upper() != (passcode or "").upper()):
+                return {"status": "error", "message": "Wrong name or passcode for this seat"}
+            # Correct — allow rejoin
+            return {"status": "ok", "passcode": existing["passcode"], "is_new": False}
+
+        # New seat claim — no passcode needed
+        # Generate a memorable 6-char passcode for this seat
+        passcode = ''.join(random.choices(string.ascii_uppercase + string.digits, k=3))
+        room["players"][direction] = {"name": name, "passcode": passcode}
+        self.save_states()
+        return {"status": "ok", "passcode": passcode, "is_new": True}
+
+
     def deal_cards(self, room_id):
         room = self.rooms.get(str(room_id))
         
