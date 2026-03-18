@@ -13,7 +13,8 @@ import random
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY']='secret!'
+app.config['SECRET_KEY'] = 'bridge-game-secret-2024-xkq'  # fixed, not 'secret!'
+app.config['SESSION_TYPE'] = 'filesystem'  # not needed but helps debug
 socketio = SocketIO(app)
 configure_routes(app,socketio)
 configure_routes_links(app, socketio)

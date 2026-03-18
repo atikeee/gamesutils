@@ -9,194 +9,236 @@
 
 :root { 
     --bg: #0d1117; --surface: #161b22; --accent: #58a6ff; --text: #e6edf3; 
-    --card-w: 85px; --card-h: 125px; 
+    --card-w: 100px; --card-h: 145px;        /* bigger hand cards */
+    --trick-card-w: 52px; --trick-card-h: 72px;  /* trick cards stay same */
+    --header-h: 40px;
+    --bottom-bar-h: 48px;
 }
-@media (max-width: 600px) { :root { --card-w: 70px; --card-h: 105px; } }
-
-body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-
-/* in-game bid history table */
-#bid-table {
-    border-collapse: collapse;
-    margin: 0 auto;
-}
-#bid-table th {
-    background: #21262d;
-    color: var(--accent);
-    padding: 8px 16px;
-    border: 1px solid #30363d;
-    text-align: center;
-    font-size: 1rem;
-}
-#bid-table td {
-    padding: 8px 16px;
-    border: 1px solid #30363d;
-    text-align: center;
-    min-width: 44px;
-    font-size: 1rem;
-}
-#bid-table tbody tr:nth-child(even) td { background: #1c2330; }
-#bid-table tbody tr:nth-child(odd)  td { background: #161b22; }
-/* bid buttons */
-.bid-btn {
-    background: #21262d;
-    color: white;
-    border: 1px solid #30363d;
-    padding: 10px 14px;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    font-size: 1rem;
-    min-width: 44px;
-}
-.bid-btn:hover { background: #30363d; }
-.bid-btn.active { background: var(--accent); color: #0d1117; }
-
-/* bidding-input layout */
-#bidding-input {
-    display: none;
-    flex-direction: column;
-    gap: 8px;
-    align-items: center;
-    padding: 10px;
-    background: var(--surface);
-    border-radius: 8px;
-    border: 1px solid #30363d;
-}
-.bid-row {
-    display: flex;
-    gap: 6px;
-    justify-content: center;
+@media (max-width: 600px) { 
+    :root { 
+        --card-w: 80px; --card-h: 118px;     /* bigger than before on mobile */
+        --trick-card-w: 42px; --trick-card-h: 58px;
+        --header-h: 30px;
+        --bottom-bar-h: 44px;
+    } 
 }
 
+* { box-sizing: border-box; }
+body { 
+    background: var(--bg); color: var(--text); font-family: sans-serif; 
+    margin: 0; height: 100vh; overflow: hidden; 
+    display: flex; flex-direction: column; 
+}
 
 /* --- HEADER --- */
-#info-header { background: var(--surface); padding: 5px 15px; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; height: 45px; }
+#info-header { 
+    background: var(--surface); 
+    padding: 0 8px; 
+    border-bottom: 1px solid #30363d; 
+    display: flex; justify-content: space-between; align-items: center; 
+    height: var(--header-h);
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+#info-header button {
+    padding: 3px 7px; font-size: 0.7rem;
+    background: #21262d; color: white; border: 1px solid #30363d; border-radius: 4px; cursor: pointer;
+}
+#extra-controls { display: flex; gap: 5px; }
 
 /* --- TABLE GRID --- */
 #game-table {
     display: grid;
-    grid-template-areas: ". top ." "left center right" ". bottom .";
-    grid-template-columns: 100px 1fr 100px;
-    grid-template-rows: 130px 1fr 130px;
-    height: calc(100vh - 45px);
+    grid-template-areas: 
+        "top top top"
+        "left center right"
+        "bottom bottom bottom";
+    grid-template-columns: 80px 1fr 80px;
+    grid-template-rows: 120px 1fr 120px;
+    height: calc(100vh - var(--header-h) - var(--bottom-bar-h));
+    flex: 1;
+    overflow: hidden;
+}
+@media (max-width: 600px) {
+    #game-table {
+        grid-template-columns: 65px 1fr 65px;
+        grid-template-rows: 100px 1fr 100px;
+    }
 }
 
-.player-area { display: flex; align-items: center; justify-content: center; position: relative; }
 .center { grid-area: center; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+/* Bottom hand — cards anchor to bottom, grow upward, nothing clipped */
+[style*="grid-area: bottom"] { 
+    flex-direction: column; 
+    align-items: center;
+    justify-content: flex-end;  /* push everything to bottom edge */
+    overflow: visible;          /* don't clip cards */
+    padding-bottom: 4px;
+}
 
-/* --- LABELS (Outer edge positioning) --- */
-[style*="grid-area: bottom"] { flex-direction: column-reverse; }
-[style*="grid-area: top"]    { flex-direction: column; }
-[style*="grid-area: left"]   { flex-direction: row; }
-[style*="grid-area: right"]  { flex-direction: row-reverse; }
+/* Top hand — cards anchor to top edge */
+[style*="grid-area: top"] { 
+    flex-direction: column; 
+    align-items: center;
+    justify-content: flex-start;  /* push everything to top edge */
+    overflow: visible;
+    padding-top: 4px;
+}
 
-.name-tag { font-size: 0.85rem; background: #161b22; padding: 6px 10px; border-radius: 4px; border: 1px solid #30363d; color: #e6edf3; z-index: 100; white-space: nowrap; }
+[style*="grid-area: left"]  { flex-direction: row; }
+[style*="grid-area: right"] { flex-direction: row-reverse; }
+
+/* Allow overflow on player areas so cards aren't clipped */
+.player-area { 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    position: relative; 
+    overflow: visible;   /* was overflow: hidden — this was the main culprit */
+}
+.name-tag { 
+    font-size: 0.7rem; background: #161b22; padding: 3px 6px; 
+    border-radius: 4px; border: 1px solid #30363d; color: #e6edf3; 
+    z-index: 100; white-space: nowrap; flex-shrink: 0;
+}
 #tag-left  { transform: rotate(90deg); }
 #tag-right { transform: rotate(-90deg); }
 
 .active-turn { 
     background: #ffce00 !important; color: #b90000 !important; 
     border: 2px solid #b90000 !important; font-weight: 900; 
-    box-shadow: 0 0 20px rgba(255, 206, 0, 0.8);
+    box-shadow: 0 0 12px rgba(255,206,0,0.8);
 }
 
-/* --- CARDS --- */
+/* --- CARDS (hand) --- */
 .card { 
-    width: var(--card-w); height: var(--card-h); background: white; color: black; 
-    border-radius: 8px; display: flex; flex-direction: column; padding: 5px; 
-    box-sizing: border-box; border: 1px solid #777;
+    width: var(--card-w); height: var(--card-h); 
+    background: white; color: black; 
+    border-radius: 6px; 
+    display: flex; 
+    flex-direction: column;
+    padding: 4px 5px;
+    box-sizing: border-box; 
+    border: 1px solid #777; 
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
 }
-.card.red { color: #ff4d4d !important; }
+.card.red { color: #e00 !important; }
 
-/* CENTER TRICK AREA (Restore Absolute positioning) */
-#trick-area { position: relative; width: 300px; height: 290px; }
-.played-card { position: absolute !important; }
+.card-info { 
+    display: flex; 
+    flex-direction: column; 
+    line-height: 1.1; 
+    font-weight: 900; 
+    font-size: 0.85rem;
+    text-align: left;
+    flex-shrink: 0;
+}
+
+/* Hide bottom-right label completely — not needed for fanned hand */
+.card-info-bottom { display: none; }
+
+
+/* --- CENTER TRICK AREA --- small cards, big font --- */
+#trick-area { position: relative; width: 220px; height: 200px; flex-shrink: 0; }
+@media (max-width: 600px) {
+    #trick-area { width: 170px; height: 158px; }
+}
+.played-card { 
+    position: absolute !important;
+    width: var(--trick-card-w) !important; 
+    height: var(--trick-card-h) !important;
+    padding: 3px !important;
+    border-radius: 5px !important;
+}
+.played-card .card-info { font-size: 1rem; }
 .pos-top    { top: 0;    left: 50%; transform: translateX(-50%); }
 .pos-bottom { bottom: 0; left: 50%; transform: translateX(-50%); }
 .pos-left   { left: 0;   top: 50%; transform: translateY(-50%); }
 .pos-right  { right: 0;  top: 50%; transform: translateY(-50%); }
 
 /* --- HAND CONTAINERS --- */
-.hand-container { display: flex; position: relative; justify-content: center; align-items: center; }
+.hand-container { display: flex; position: relative; justify-content: center; align-items: center; width: 100%; }
 
-/* Top/Bottom Horizontal */
+/* Top/Bottom — full width fan */
+#hand-top, #hand-bottom { width: 100%; }
 #hand-top .card, #hand-bottom .card { position: absolute; }
 
-/* Left/Right Vertical */
+/* Left/Right — rotated stack, clipped on outer edge */
 #hand-left, #hand-right { flex-direction: column; width: auto; }
+
 #hand-left .card, #hand-right .card { 
     position: relative !important; 
     transform: rotate(90deg) !important; 
-    margin: -48px 0 !important; 
-}
-#hand-left  { margin-left: -35px; }
-#hand-right { margin-right: -35px; transform: rotate(180deg); }
-
-/* Replace the control-panel styles */
-.control-panel { position: fixed; bottom: 15px; z-index: 4000; display: flex; flex-direction: column; gap: 6px; }
-#left-controls { left: 10px; }
-#right-controls { right: 10px; }
-
-.ctrl-btn { 
-    background: #21262d; color: white; border: 1px solid #30363d; 
-    padding: 10px 14px; border-radius: 6px; font-weight: bold; cursor: pointer;
-    width: 100%;
-}
-.btn-green { background: #238636; border: none; }
-.btn-red { background: #d12e2e; border: none; }
-.ctrl-btn:disabled { opacity: 0.3; }
-.claim-row { display: flex; gap: 6px; }
-.claim-row select { 
-    background: #21262d; color: white; border: 1px solid #30363d; 
-    padding: 10px 8px; border-radius: 6px; font-weight: bold;
-}
-.claim-row .ctrl-btn { flex: 1; }
-
-select#claim-count { background: #21262d; color: white; border: 1px solid #30363d; padding: 8px; border-radius: 4px; }
-
-/* --- SYMBOLS --- */
-.card-info { text-align: left; display: flex; flex-direction: column; line-height: 1.1; font-weight: 900; }
-.card-info-bottom { position: absolute; bottom: 5px; right: 5px; transform: rotate(180deg); display: flex; flex-direction: column; font-weight: 900; }
-    /* --- MODAL --- */
-#modal-content { min-width: 320px; max-width: 90%; }
-#modal-body h3 { 
-    margin: 0 0 15px 0; text-align: center; 
-    color: var(--accent); font-size: 1.1rem; 
+    margin: -45px 0 !important;   /* was -40px, less negative = more spacing */
 }
 
-/* Bidding history table in modal */
-#modal-body table { 
-    border-collapse: collapse; 
-    width: 100%; 
-    margin: 0 auto; 
+
+#hand-left  { margin-left: -20px; transform: translateX(-28%); }
+#hand-right { margin-right: -20px; transform: rotate(180deg) translateX(-28%); }
+
+/* --- BOTTOM ACTION BAR (replaces fixed corner panels) --- */
+#action-bar {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: var(--bottom-bar-h);
+    background: #0d1117;
+    border-top: 1px solid #30363d;
+    z-index: 4000;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    padding: 0 8px;
 }
-#modal-body table th { 
-    background: #21262d; 
-    color: var(--accent); 
-    padding: 8px 20px; 
-    text-align: center; 
-    border: 1px solid #30363d; 
-    font-size: 1rem;
+.act-btn {
+    flex: 1;
+    height: 34px;
+    background: #21262d; color: white; border: 1px solid #30363d;
+    border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 0.72rem;
+    white-space: nowrap; padding: 0 4px;
 }
-#modal-body table td { 
-    padding: 8px 20px; 
-    text-align: center; 
-    border: 1px solid #30363d; 
-    color: var(--text);
-    font-size: 0.95rem;
-    min-width: 48px;
+.act-btn.green { background: #238636; border-color: #238636; }
+.act-btn.red   { background: #d12e2e; border-color: #d12e2e; }
+.act-btn:disabled { opacity: 0.3; }
+#claim-select {
+    height: 34px; width: 44px;
+    background: #21262d; color: white; border: 1px solid #30363d;
+    border-radius: 5px; font-weight: bold; font-size: 0.8rem; flex-shrink: 0;
 }
+
+/* Hide old corner panels */
+#left-controls, #right-controls { display: none !important; }
+
+/* --- BID BUTTONS --- */
+.bid-btn {
+    background: #21262d; color: white; border: 1px solid #30363d;
+    padding: 8px 10px; border-radius: 6px; font-weight: bold;
+    cursor: pointer; font-size: 0.9rem; min-width: 36px;
+}
+.bid-btn:hover { background: #30363d; }
+.bid-btn.active { background: var(--accent); color: #0d1117; }
+#bidding-input { display: none; flex-direction: column; gap: 6px; align-items: center; padding: 8px; background: var(--surface); border-radius: 8px; border: 1px solid #30363d; }
+.bid-row { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+
+/* --- BID TABLE --- */
+#bid-table { border-collapse: collapse; margin: 0 auto; }
+#bid-table th { background: #21262d; color: var(--accent); padding: 6px 12px; border: 1px solid #30363d; text-align: center; font-size: 0.9rem; }
+#bid-table td { padding: 6px 12px; border: 1px solid #30363d; text-align: center; min-width: 36px; font-size: 0.9rem; }
+#bid-table tbody tr:nth-child(even) td { background: #1c2330; }
+#bid-table tbody tr:nth-child(odd)  td { background: #161b22; }
+
+/* --- MODAL --- */
+#modal-content { min-width: 280px; max-width: 95%; }
+#modal-body h3 { margin: 0 0 12px 0; text-align: center; color: var(--accent); font-size: 1rem; }
+#modal-body table { border-collapse: collapse; width: 100%; margin: 0 auto; }
+#modal-body table th { background: #21262d; color: var(--accent); padding: 8px 16px; text-align: center; border: 1px solid #30363d; font-size: 0.95rem; }
+#modal-body table td { padding: 8px 16px; text-align: center; border: 1px solid #30363d; color: var(--text); font-size: 0.9rem; min-width: 44px; }
 #modal-body table tr:nth-child(even) td { background: #1c2330; }
 #modal-body table tr:nth-child(odd)  td { background: #161b22; }
-
-/* Last 4 cards in modal */
-.card-container { 
-    display: flex; 
-    justify-content: center; 
-    gap: 12px; 
-    padding: 10px 0; 
-}
+#modal-body .card { position: relative !important; transform: none !important; flex-shrink: 0; }
+#action-bar { display: flex; } /* was display: none */
     </style>
 </head>
 <body>
@@ -213,16 +255,7 @@ select#claim-count { background: #21262d; color: white; border: 1px solid #30363
     <button onclick="toggleModal('bidding-modal')">View Bidding</button>
     <button onclick="toggleModal('trick-modal')">Last 4 Cards</button>
     </div>
-    <div id="dealer-controls">
-        <button id="deal-btn" onclick="requestDeal()" style="display:none;">Deal</button>
-        <div id="declarer-select" style="display:none;">
-            <span style="font-size: 0.8rem;">Pick Declarer:</span>
-            <button class="bid-btn" style="padding: 2px 8px;" onclick="setDeclarer('N')">N</button>
-            <button class="bid-btn" style="padding: 2px 8px;" onclick="setDeclarer('E')">E</button>
-            <button class="bid-btn" style="padding: 2px 8px;" onclick="setDeclarer('S')">S</button>
-            <button class="bid-btn" style="padding: 2px 8px;" onclick="setDeclarer('W')">W</button>
-        </div>
-    </div>
+
 </div>
 <div id="game-table">
     <div class="player-area" style="grid-area: top">
@@ -242,6 +275,21 @@ select#claim-count { background: #21262d; color: white; border: 1px solid #30363
     </div>
 
     <div class="player-area center">
+            <div id="dealer-controls" style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+            <button id="deal-btn" onclick="requestDeal()" 
+                style="display:none; padding:12px 30px; background:#238636; color:white; border:none; border-radius:8px; font-size:1.1rem; font-weight:bold; cursor:pointer;">
+                DEAL CARDS
+            </button>
+            <div id="declarer-select" style="display:none; text-align:center;">
+                <div style="font-size:0.85rem; margin-bottom:6px;">Pick Declarer:</div>
+                <div style="display:flex; gap:6px;">
+                    <button class="bid-btn" onclick="setDeclarer('N')">N</button>
+                    <button class="bid-btn" onclick="setDeclarer('E')">E</button>
+                    <button class="bid-btn" onclick="setDeclarer('S')">S</button>
+                    <button class="bid-btn" onclick="setDeclarer('W')">W</button>
+                </div>
+            </div>
+        </div>
         <div id="trick-area"></div>
 
 
@@ -293,26 +341,21 @@ select#claim-count { background: #21262d; color: white; border: 1px solid #30363
         </div>
         <div class="hand-container" id="hand-bottom"></div>
     </div>
-<div id="left-controls" class="control-panel">
-    <div class="claim-row">
-        <select id="claim-count">
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6" selected>6</option>
-        </select>
-        <button id="btn-claim" class="ctrl-btn btn-green" onclick="sendClaim()">Claim</button>
-    </div>
-    <button id="btn-approve" class="ctrl-btn btn-green" onclick="respondClaim('approve')" disabled>Approve</button>
-    <button id="btn-reject" class="ctrl-btn btn-red" onclick="respondClaim('reject')" disabled>Reject</button>
-</div>
-
-<div id="right-controls" class="control-panel">
-    <button id="btn-undo" class="ctrl-btn" onclick="requestUndo()">Undo</button>
-    <button id="btn-accept" class="ctrl-btn btn-green" onclick="requestAccept()">Accept</button>
-    <button id="btn-end" class="ctrl-btn btn-red" onclick="requestEndRound()">End Round</button>
+<div id="action-bar">
+    <select id="claim-count" class="act-select" style="height:34px;width:44px;background:#21262d;color:white;border:1px solid #30363d;border-radius:5px;font-weight:bold;font-size:0.8rem;">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6" selected>6</option>
+    </select>
+    <button id="btn-claim"   class="act-btn green" onclick="sendClaim()">Claim</button>
+    <button id="btn-approve" class="act-btn green" onclick="respondClaim('approve')" disabled>✓ OK</button>
+    <button id="btn-reject"  class="act-btn red"   onclick="respondClaim('reject')"  disabled>✗ No</button>
+    <button id="btn-undo"    class="act-btn"       onclick="requestUndo()">Undo</button>
+    <button id="btn-accept"  class="act-btn green" onclick="requestAccept()" disabled>Accept</button>
+    <button id="btn-end"     class="act-btn red"   onclick="requestEndRound()">End</button>
 </div>
     
     <div id="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
@@ -437,10 +480,14 @@ socket.on('game_state_update', (data) => {
     });
 
     // --- 5. GAME CONTROL PANELS (Bottom Corners) ---
-    const leftPanel = document.getElementById('left-controls');
-    const rightPanel = document.getElementById('right-controls');
-    leftPanel.style.display = isPlay ? 'flex' : 'none';
-    rightPanel.style.display = isPlay ? 'flex' : 'none';
+    document.getElementById('action-bar').style.display = 'flex'; // always visible
+    const inPlay = isPlay;
+    document.getElementById('btn-claim').disabled  = !inPlay;
+    document.getElementById('btn-approve').disabled = !inPlay;
+    document.getElementById('btn-reject').disabled  = !inPlay;
+    document.getElementById('btn-undo').disabled    = !inPlay;
+    document.getElementById('btn-accept').disabled  = !inPlay;
+    document.getElementById('btn-end').disabled     = !inPlay;
 
     if (isPlay) {
         const remaining = 13 - (game.tricks_won.NS + game.tricks_won.EW);
@@ -536,17 +583,22 @@ function sendClaim() {
         const cardEl = document.createElement('div');
         const isRed = (card.suit === 'H' || card.suit === 'D');
         cardEl.className = `card ${isRed ? 'red' : ''}`;
-        
+
         if (!isSide) {
-            // ONLY Top and Bottom get the horizontal fan calculation
-            const x = (index - (cards.length - 1) / 2) * (window.innerWidth < 600 ? 20 : 28);
+            // Use container width to spread cards across full available space
+            const containerW = container.offsetWidth || window.innerWidth;
+            const cardW = parseInt(getComputedStyle(document.documentElement)
+                            .getPropertyValue('--card-w')) || 80;
+            // Max spacing so all 13 cards fit within container
+            const maxSpread = (containerW - cardW) / Math.max(cards.length - 1, 1);
+            const spacing = Math.min(maxSpread, 38); // cap at 38px so cards don't get too spread
+            const x = (index - (cards.length - 1) / 2) * spacing;
             cardEl.style.transform = `translateX(${x}px)`;
             cardEl.style.position = "absolute";
         } else {
-            // Side cards MUST be relative to stack top-to-bottom
             cardEl.style.position = "relative";
         }
-        
+
         cardEl.style.zIndex = index;
 
         if (isHidden) {
@@ -555,19 +607,13 @@ function sendClaim() {
         } else {
             cardEl.innerHTML = `
                 <div class="card-info">
-                    <span class="card-val-top">${card.val}</span>
-                    <span class="card-suit-top">${SUIT_SYMBOLS[card.suit]}</span>
-                </div>
-                <div class="card-info-bottom">
-                    <span class="card-val-top">${card.val}</span>
-                    <span class="card-suit-top">${SUIT_SYMBOLS[card.suit]}</span>
+                    <span>${card.val}</span>
+                    <span>${SUIT_SYMBOLS[card.suit]}</span>
                 </div>`;
-            
             cardEl.onclick = () => {
                 if (window.gameLocked) return;
                 const canIPlayThis = (seatDir === myDir && game.current_player === myDir) || 
-                                   (seatDir === game.dummy && game.current_player === game.dummy && myDir === game.declarer);
-
+                    (seatDir === game.dummy && game.current_player === game.dummy && myDir === game.declarer);
                 if (canIPlayThis) {
                     if (cardEl.classList.contains('selected')) {
                         socket.emit('play_card', { room_id: roomId, direction: myDir, seat: seatDir, card_index: index });
@@ -581,7 +627,6 @@ function sendClaim() {
         container.appendChild(cardEl);
     });
 }
-
 
     function renderTrick(trick) {
         const area = document.getElementById('trick-area');

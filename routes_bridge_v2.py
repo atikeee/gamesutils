@@ -44,11 +44,11 @@ def configure_routes_bridge_v2(app, socketio):
             else:
                 status[k] = "occupied"  # has passcode set
         return jsonify(status)
-        
+            
     @socketio.on('admin_reset')
     def handle_reset(data):
         room_id = str(data['room_id'])
-        bridge_manager.rooms[room_id] = bridge_manager._new_room()
+        bridge_manager.rooms[room_id] = bridge_manager.get_default_room_state()
         bridge_manager.save_states()
         emit('room_was_reset', room=f"bridge_room_{room_id}")
 
@@ -73,6 +73,9 @@ def configure_routes_bridge_v2(app, socketio):
         room_id = session.get('bridge_room_id')
         direction = session.get('bridge_direction')
         passcode = session.get('bridge_passcode', '')
+        
+        print(f"DEBUG play: room={room_id} dir={direction} session keys={list(session.keys())}")
+        
         if not room_id or not direction:
             return redirect('/bridge_v2')
         return render_template("bridge_v2_game.html", 
