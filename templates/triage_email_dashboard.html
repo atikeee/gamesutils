@@ -1,0 +1,147 @@
+<style>
+    textarea { 
+        width: 100%; 
+        min-height: 50px; /* Base height */
+        resize: vertical;  /* Allows user to expand if needed */
+        font-family: inherit;
+        padding: 5px;
+        box-sizing: border-box;
+    }
+    .common-note { width: 100%; min-height: 80px; }
+    body { font-family: sans-serif; background: #f9f9f9; padding: 20px; }
+    .section-container { margin-bottom: 40px; border-bottom: 2px solid #ccc; padding-bottom: 20px; }
+    .common-data { background: #eee; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    table, th, td { border: 1px solid #999; }
+    th, td { padding: 8px; text-align: left; }
+    .status-processed { background-color: #d4edda !important; }
+    .changed { background-color: #fff3cd !important; border: 2px solid #ffc107; }
+    #floating-save { position: fixed; top: 20px; right: 20px; padding: 15px 25px; background: #238636; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 1000; }
+    /* Specifically target the Status column (4th column in your table) */
+    table td:nth-child(4), 
+    table th:nth-child(4) {
+        width: 70px; /* Forces browser to give it only the space it needs */
+        white-space: nowrap; /* Prevents the cell from wrapping */
+    }
+    table td:nth-child(5), 
+    table th:nth-child(5) {
+        width: 20px; /* Forces browser to give it only the space it needs */
+        white-space: nowrap; /* Prevents the cell from wrapping */
+    }
+
+    /* Ensure the dropdown itself behaves */
+    .status-select {
+        width: 100%;
+        padding: 4px;
+        box-sizing: border-box;
+        cursor: pointer;
+    }
+    .preview-tooltip {
+    display: none;
+    position: absolute;
+    width: 400px;
+    height: 300px;
+    background: white;
+    border: 1px solid #ccc;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    overflow: hidden;
+}
+.preview-tooltip iframe { width: 100%; height: 100%; border: none; }
+</style>
+
+<button id="floating-save" onclick="saveAll()">Save All Changes</button>
+
+{% for section_name, section in data.items() %}
+<div class="section-container" id="sec-{{ loop.index }}">
+    <h2>{{ loop.index }}. {{ section_name }}</h2>
+    
+    <div class="common-data">
+        <p>RFC: <a href="{{ section.rfc }}">{{ section.rfc }}</a></p>
+        <p>Dashboard: <a href="{{ section.dashboard }}">{{ section.dashboard }}</a></p>
+        <p>Notes: 
+    <textarea class="common-note" data-section="{{ section_name }}">{{ section.notes }}</textarea>
+</p>
+    </div>
+
+    <table>
+        {% for item_id, item in section.ind_dats.items() %}
+        <tr data-item-id="{{ item_id }}" data-section="{{ section_name }}" 
+    data-server="{{ item.server | striptags | trim }}" 
+    class="{% if item.status and item.status != '' %}status-processed{% endif %}">
+    
+    <td>{{ item.percent }}</td>
+    <td>{{ item.server | safe }}</td>
+    <td>{{ item.path }}</td>
+    <td>
+        <select class="status-select" onchange="markChanged(this)">
+            <option value="" {% if item.status == '' %}selected{% endif %}>new</option>
+            <option value="ITS" {% if item.status == 'ITS' %}selected{% endif %}>ITS</option>
+            <option value="email" {% if item.status == 'email' %}selected{% endif %}>email</option>
+        </select>
+    </td>
+    <td style="text-align: center;">
+    <a href="{{ item.link }}" title="Open Email" style="text-decoration: none; font-size: 1.2rem;">&#9993;</a>
+    </td>
+    <td><textarea class="item-note" onchange="markChanged(this)">{{ item.notes }}</textarea></td>
+</tr>
+        {% endfor %}
+    </table>
+</div>
+{% endfor %}
+
+<script>
+// SORTING: Run this when the page loads
+document.querySelectorAll('table').forEach(table => {
+    let rows = Array.from(table.querySelectorAll('tr'));
+    rows.sort((a, b) => a.dataset.server.localeCompare(b.dataset.server));
+    rows.forEach(row => table.appendChild(row));
+});
+
+function markChanged(el) {
+    let tr = el.closest('tr');
+    tr.classList.add('changed');
+    tr.classList.remove('status-processed'); // Remove green if they start editing again
+}
+
+function saveAll() {
+    let updates = { items: [], common_notes: {} };
+
+    // 1. Collect Table Changes (Now captures multiline from textarea)
+    document.querySelectorAll('.changed').forEach(tr => {
+        updates.items.push({
+            section: tr.dataset.section,
+            item_id: tr.dataset.itemId,
+            status: tr.querySelector('.status-select').value,
+            notes: tr.querySelector('.item-note').value // Captures multiline
+        });
+    });
+
+    // 2. Collect Common Notes (Now captures multiline from textarea)
+    document.querySelectorAll('.common-note').forEach(textarea => {
+        updates.common_notes[textarea.dataset.section] = textarea.value; // Captures multiline
+    });
+
+    fetch('/triage_email_api/update_batch', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(updates)
+    }).then(r => r.json()).then(() => location.reload());
+}
+function setupHoverPreview() {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'preview-tooltip';
+    document.body.appendChild(tooltip);
+
+    document.querySelectorAll('a[title="Open Email"]').forEach(link => {
+        link.addEventListener('mouseenter', (e) => {
+            tooltip.innerHTML = `<iframe src="${e.target.href}"></iframe>`;
+            tooltip.style.display = 'block';
+            tooltip.style.left = (e.pageX + 10) + 'px';
+            tooltip.style.top = (e.pageY + 10) + 'px';
+        });
+
+        link.addEventListener('mouseleave', () => tooltip.style.display = 'none');
+    });
+}
+</script>
