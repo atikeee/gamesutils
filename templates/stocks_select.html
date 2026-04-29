@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Manage Watchlist — Market Desk</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --paper:    #f5f0e8;
+    --paper2:   #ede8de;
+    --ink:      #1a1814;
+    --ink-mid:  #4a4540;
+    --ink-soft: #8a8278;
+    --rule:     #d8d0c4;
+    --up:       #1a7a4a;
+    --up-bg:    #e8f5ee;
+    --dn:       #c0392b;
+    --dn-bg:    #fdecea;
+    --amber:    #c87800;
+    --teal:     #0e6b7c;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .site-header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    height: 56px;
+    gap: 1.5rem;
+  }
+
+  .logo { font-family: 'DM Serif Display', serif; font-size: 1.3rem; }
+  .logo span { color: #f0c040; }
+
+  .header-nav { display: flex; gap: .5rem; margin-left: auto; }
+
+  .nav-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem;
+    letter-spacing: .08em;
+    padding: .4rem .9rem;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,.2);
+    color: rgba(255,255,255,.7);
+    background: transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all .15s;
+  }
+  .nav-btn:hover, .nav-btn.active { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.4); }
+
+  /* ── LAYOUT ── */
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2rem 2rem 4rem;
+  }
+
+  .page-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.8rem;
+    font-weight: 400;
+    margin-bottom: .4rem;
+  }
+
+  .page-sub {
+    font-size: .85rem;
+    color: var(--ink-soft);
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 1.25rem;
+  }
+
+  /* ── ADD FORM ── */
+  .add-section {
+    background: var(--paper2);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .add-section h2 {
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: .9rem;
+  }
+
+  .add-row { display: flex; gap: .5rem; position: relative; }
+
+  .add-row input {
+    flex: 1;
+    padding: .65rem 1rem;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: .9rem;
+    color: var(--ink);
+    text-transform: uppercase;
+    outline: none;
+    transition: border-color .15s;
+  }
+
+  .add-row input::placeholder { text-transform: none; color: var(--ink-soft); }
+  .add-row input:focus { border-color: var(--teal); }
+
+  .add-row button {
+    padding: .65rem 1.5rem;
+    background: var(--teal);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: .85rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity .15s;
+  }
+  .add-row button:hover { opacity: .85; }
+
+  /* autocomplete */
+  .autocomplete {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 5rem;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    box-shadow: 0 4px 16px rgba(26,24,20,.12);
+    display: none;
+    z-index: 100;
+    overflow: hidden;
+  }
+  .autocomplete.open { display: block; }
+
+  .ac-item {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .65rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--rule);
+    transition: background .12s;
+  }
+  .ac-item:last-child { border-bottom: none; }
+  .ac-item:hover { background: var(--paper2); }
+
+  .ac-sym { font-family: 'DM Mono', monospace; font-size: .82rem; color: var(--teal); min-width: 60px; }
+  .ac-name { font-size: .8rem; color: var(--ink-soft); }
+
+  .add-msg {
+    margin-top: .6rem;
+    font-family: 'DM Mono', monospace;
+    font-size: .72rem;
+    min-height: 1em;
+  }
+  .add-msg.ok  { color: var(--up); }
+  .add-msg.err { color: var(--dn); }
+
+  /* ── WATCHLIST TABLE ── */
+  .wl-section h2 {
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: .9rem;
+  }
+
+  .wl-list { border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+
+  .wl-empty {
+    padding: 2.5rem;
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: .85rem;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .wl-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: .85rem 1.25rem;
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+    transition: background .12s;
+  }
+  .wl-row:last-child { border-bottom: none; }
+  .wl-row:hover { background: var(--paper2); }
+
+  .drag-handle {
+    color: var(--rule);
+    cursor: grab;
+    font-size: 1rem;
+    padding: 0 .25rem;
+    user-select: none;
+  }
+  .drag-handle:active { cursor: grabbing; }
+
+  .wl-sym {
+    font-family: 'DM Mono', monospace;
+    font-size: .95rem;
+    color: var(--teal);
+    font-weight: 500;
+    min-width: 72px;
+  }
+
+  .wl-name { font-size: .82rem; color: var(--ink-mid); flex: 1; }
+
+  .wl-view {
+    font-family: 'DM Mono', monospace;
+    font-size: .68rem;
+    padding: .3rem .7rem;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    transition: all .12s;
+  }
+  .wl-view:hover { border-color: var(--teal); color: var(--teal); }
+
+  .remove-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: .68rem;
+    padding: .3rem .7rem;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    color: var(--ink-soft);
+    background: transparent;
+    cursor: pointer;
+    transition: all .12s;
+  }
+  .remove-btn:hover { border-color: var(--dn); color: var(--dn); background: var(--dn-bg); }
+
+  .wl-row.dragging { opacity: .4; }
+  .wl-row.drag-over { border-top: 2px solid var(--teal); }
+
+  /* toast */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'DM Mono', monospace;
+    font-size: .75rem;
+    padding: .65rem 1.25rem;
+    border-radius: 4px;
+    opacity: 0;
+    transition: all .3s;
+    z-index: 300;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo">Market<span>·</span>Desk</div>
+  <nav class="header-nav">
+    <a class="nav-btn" href="/stocks">Watchlist</a>
+    <a class="nav-btn active" href="/stocks/select">Manage</a>
+  </nav>
+</header>
+
+<div class="page">
+  <h1 class="page-title">Manage Watchlist</h1>
+  <p class="page-sub">Add or remove stocks. Drag rows to reorder — order is saved automatically.</p>
+
+  <!-- add form -->
+  <div class="add-section">
+    <h2>Add a Stock</h2>
+    <div class="add-row">
+      <input id="sym-input" type="text" placeholder="Search ticker or company name…" autocomplete="off"/>
+      <button id="add-btn">Add to Watchlist</button>
+      <div class="autocomplete" id="ac-drop"></div>
+    </div>
+    <div class="add-msg" id="add-msg"></div>
+  </div>
+
+  <!-- current watchlist -->
+  <div class="wl-section">
+    <h2>Current Watchlist</h2>
+    <div class="wl-list" id="wl-list">
+      {% if watchlist %}
+        {% for s in watchlist %}
+        <div class="wl-row" draggable="true" data-symbol="{{ s.symbol }}">
+          <span class="drag-handle" title="Drag to reorder">⠿</span>
+          <span class="wl-sym">{{ s.symbol }}</span>
+          <span class="wl-name">{{ s.name }}</span>
+          <a class="wl-view" href="/stocks/detail/{{ s.symbol }}">View →</a>
+          <button class="remove-btn" data-symbol="{{ s.symbol }}">Remove</button>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="wl-empty">No stocks in watchlist yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── toast ─────────────────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // ── autocomplete ──────────────────────────────────────────────
+  const input  = document.getElementById('sym-input');
+  const drop   = document.getElementById('ac-drop');
+  const addMsg = document.getElementById('add-msg');
+  let debounce = null;
+  let picked   = null;   // {symbol, name}
+
+  input.addEventListener('input', () => {
+    picked = null;
+    clearTimeout(debounce);
+    const q = input.value.trim();
+    if (!q) { drop.classList.remove('open'); return; }
+    debounce = setTimeout(async () => {
+      const res  = await fetch(`/stocks/api/search?q=${encodeURIComponent(q)}`);
+      const json = await res.json();
+      const hits = json.results || [];
+      if (!hits.length) { drop.classList.remove('open'); return; }
+      drop.innerHTML = hits.map(r => `
+        <div class="ac-item" data-sym="${r.symbol}" data-name="${r.name}">
+          <span class="ac-sym">${r.symbol}</span>
+          <span class="ac-name">${r.name}</span>
+        </div>`).join('');
+      drop.classList.add('open');
+      drop.querySelectorAll('.ac-item').forEach(el => {
+        el.addEventListener('click', () => {
+          picked = { symbol: el.dataset.sym, name: el.dataset.name };
+          input.value = el.dataset.sym;
+          drop.classList.remove('open');
+        });
+      });
+    }, 280);
+  });
+
+  document.addEventListener('click', e => {
+    if (!drop.contains(e.target) && e.target !== input) drop.classList.remove('open');
+  });
+
+  // ── add stock ─────────────────────────────────────────────────
+  document.getElementById('add-btn').addEventListener('click', async () => {
+    const sym  = (picked?.symbol || input.value.trim()).toUpperCase();
+    const name = picked?.name || sym;
+    if (!sym) return;
+    const res  = await fetch('/stocks/select/add', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ symbol: sym, name })
+    });
+    const json = await res.json();
+
+    if (json.status === 'success') {
+      addMsg.textContent = `✓ ${sym} added`;
+      addMsg.className   = 'add-msg ok';
+      input.value = '';
+      picked = null;
+      appendRow(sym, name);
+      showToast(`${sym} added to watchlist`);
+    } else if (json.status === 'exists') {
+      addMsg.textContent = `${sym} is already in your watchlist`;
+      addMsg.className   = 'add-msg err';
+    } else {
+      addMsg.textContent = json.message || 'Error adding stock';
+      addMsg.className   = 'add-msg err';
+    }
+    setTimeout(() => { addMsg.textContent = ''; addMsg.className = 'add-msg'; }, 3000);
+  });
+
+  function appendRow(symbol, name) {
+    const list = document.getElementById('wl-list');
+    const empty = list.querySelector('.wl-empty');
+    if (empty) empty.remove();
+
+    const row = document.createElement('div');
+    row.className   = 'wl-row';
+    row.draggable   = true;
+    row.dataset.symbol = symbol;
+    row.innerHTML = `
+      <span class="drag-handle" title="Drag to reorder">⠿</span>
+      <span class="wl-sym">${symbol}</span>
+      <span class="wl-name">${name}</span>
+      <a class="wl-view" href="/stocks/detail/${symbol}">View →</a>
+      <button class="remove-btn" data-symbol="${symbol}">Remove</button>
+    `;
+    list.appendChild(row);
+    wireRow(row);
+    initDrag(row);
+  }
+
+  // ── remove ────────────────────────────────────────────────────
+  function wireRow(row) {
+    row.querySelector('.remove-btn').addEventListener('click', async (e) => {
+      const sym = e.target.dataset.symbol;
+      await fetch('/stocks/select/remove', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ symbol: sym })
+      });
+      row.remove();
+      if (!document.querySelectorAll('.wl-row').length) {
+        document.getElementById('wl-list').innerHTML = '<div class="wl-empty">No stocks in watchlist yet.</div>';
+      }
+      showToast(`${sym} removed`);
+    });
+  }
+
+  // ── drag-to-reorder ───────────────────────────────────────────
+  let dragSrc = null;
+
+  function initDrag(row) {
+    row.addEventListener('dragstart', () => {
+      dragSrc = row;
+      setTimeout(() => row.classList.add('dragging'), 0);
+    });
+    row.addEventListener('dragend', async () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('.wl-row').forEach(r => r.classList.remove('drag-over'));
+      // save new order
+      const symbols = [...document.querySelectorAll('.wl-row')].map(r => r.dataset.symbol);
+      await fetch('/stocks/select/reorder', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ symbols })
+      });
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      document.querySelectorAll('.wl-row').forEach(r => r.classList.remove('drag-over'));
+      if (row !== dragSrc) row.classList.add('drag-over');
+    });
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      if (dragSrc && dragSrc !== row) {
+        const list = document.getElementById('wl-list');
+        const rows = [...list.querySelectorAll('.wl-row')];
+        const srcI = rows.indexOf(dragSrc);
+        const dstI = rows.indexOf(row);
+        if (srcI < dstI) list.insertBefore(dragSrc, row.nextSibling);
+        else             list.insertBefore(dragSrc, row);
+      }
+    });
+  }
+
+  // init drag on existing rows
+  document.querySelectorAll('.wl-row').forEach(row => {
+    wireRow(row);
+    initDrag(row);
+  });
+</script>
+</body>
+</html>
