@@ -7,6 +7,8 @@ from routes_links import configure_routes_links
 from routes_launcher import configure_routes_launcher
 from routes_triage_email import configure_routes_triage_email
 from flask_socketio import SocketIO, emit
+from routes_stocks import configure_routes_stocks
+
 
 import random
 
@@ -25,6 +27,7 @@ configure_routes_launcher(app, socketio)
 # Add the new Bridge V2 configuration
 configure_routes_bridge_v2(app, socketio)
 configure_routes_triage_email(app)
+configure_routes_stocks(app, socketio)
 
 if __name__ == '__main__':
     #app.run(debug=True, host='0.0.0.0')

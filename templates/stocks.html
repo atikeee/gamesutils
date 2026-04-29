@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Stock Market</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --border: #1e1e2e;
+    --accent: #00ff88;
+    --accent2: #0099ff;
+    --muted: #444466;
+    --text: #e0e0f0;
+    --text-dim: #8888aa;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 720px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: .7rem;
+    letter-spacing: .25em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: .75rem;
+  }
+
+  h1 {
+    font-size: clamp(2.2rem, 6vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1;
+    background: linear-gradient(135deg, #fff 40%, var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    margin-top: .75rem;
+    color: var(--text-dim);
+    font-size: .95rem;
+  }
+
+  /* search box */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 2rem;
+  }
+
+  .search-wrap input {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color .2s;
+    text-transform: uppercase;
+  }
+
+  .search-wrap input::placeholder { text-transform: none; color: var(--muted); }
+
+  .search-wrap input:focus { border-color: var(--accent); }
+
+  .search-wrap button {
+    position: absolute;
+    right: 6px; top: 6px; bottom: 6px;
+    padding: 0 1.25rem;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 5px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: .85rem;
+    cursor: pointer;
+    letter-spacing: .05em;
+    transition: opacity .2s;
+  }
+
+  .search-wrap button:hover { opacity: .85; }
+
+  /* autocomplete dropdown */
+  .autocomplete {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    display: none;
+    z-index: 100;
+  }
+
+  .autocomplete.open { display: block; }
+
+  .ac-item {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .75rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background .15s;
+  }
+
+  .ac-item:last-child { border-bottom: none; }
+  .ac-item:hover { background: rgba(0,255,136,.05); }
+
+  .ac-sym {
+    font-family: 'Space Mono', monospace;
+    font-size: .85rem;
+    color: var(--accent);
+    min-width: 64px;
+  }
+
+  .ac-name { font-size: .85rem; color: var(--text-dim); }
+
+  /* popular grid */
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: .65rem;
+    letter-spacing: .2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .popular-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: .65rem;
+  }
+
+  .pop-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .85rem 1rem;
+    cursor: pointer;
+    transition: border-color .2s, transform .15s;
+    text-decoration: none;
+    display: block;
+  }
+
+  .pop-card:hover {
+    border-color: var(--accent2);
+    transform: translateY(-2px);
+  }
+
+  .pop-sym {
+    font-family: 'Space Mono', monospace;
+    font-size: .9rem;
+    color: var(--accent2);
+    font-weight: 700;
+  }
+
+  .pop-name {
+    font-size: .75rem;
+    color: var(--text-dim);
+    margin-top: .2rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="eyebrow">Market Terminal</div>
+    <h1>Stock<br>Dashboard</h1>
+    <p class="subtitle">Enter a ticker symbol or pick from popular stocks</p>
+  </header>
+
+  <div class="search-wrap">
+    <input id="sym-input" type="text" placeholder="Search symbol or company name…" autocomplete="off"/>
+    <button id="go-btn">View →</button>
+    <div class="autocomplete" id="ac-drop"></div>
+  </div>
+
+  <div class="section-label">Popular</div>
+  <div class="popular-grid">
+    {% for s in popular %}
+    <a class="pop-card" href="/stocks/dashboard?symbol={{ s.symbol }}&period=1mo">
+      <div class="pop-sym">{{ s.symbol }}</div>
+      <div class="pop-name">{{ s.name }}</div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  const input   = document.getElementById('sym-input');
+  const drop    = document.getElementById('ac-drop');
+  const goBtn   = document.getElementById('go-btn');
+  let debounce  = null;
+  let selected  = null;
+
+  function navigate(symbol) {
+    if (!symbol) return;
+    window.location = `/stocks/dashboard?symbol=${symbol.toUpperCase()}&period=1mo`;
+  }
+
+  goBtn.addEventListener('click', () => navigate(selected || input.value.trim()));
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') navigate(selected || input.value.trim()); });
+
+  input.addEventListener('input', () => {
+    selected = null;
+    clearTimeout(debounce);
+    const q = input.value.trim();
+    if (q.length < 1) { drop.classList.remove('open'); return; }
+    debounce = setTimeout(async () => {
+      const res  = await fetch(`/stocks/api/search?q=${encodeURIComponent(q)}`);
+      const json = await res.json();
+      const hits = json.results || [];
+      if (!hits.length) { drop.classList.remove('open'); return; }
+      drop.innerHTML = hits.map(r => `
+        <div class="ac-item" data-sym="${r.symbol}">
+          <span class="ac-sym">${r.symbol}</span>
+          <span class="ac-name">${r.name}</span>
+        </div>`).join('');
+      drop.classList.add('open');
+      drop.querySelectorAll('.ac-item').forEach(el => {
+        el.addEventListener('click', () => {
+          selected = el.dataset.sym;
+          input.value = el.dataset.sym;
+          drop.classList.remove('open');
+          navigate(selected);
+        });
+      });
+    }, 300);
+  });
+
+  document.addEventListener('click', e => {
+    if (!drop.contains(e.target) && e.target !== input) drop.classList.remove('open');
+  });
+</script>
+</body>
+</html>

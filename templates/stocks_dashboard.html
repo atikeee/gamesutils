@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>{{ symbol }} — Stock Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #16161f;
+    --border: #1e1e2e;
+    --accent: #00ff88;
+    --accent2: #0099ff;
+    --danger: #ff4466;
+    --muted: #444466;
+    --text: #e0e0f0;
+    --text-dim: #8888aa;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── TOPBAR ─────────────────────────────────────────────────── */
+  .topbar {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,10,15,.9);
+    backdrop-filter: blur(12px);
+    flex-wrap: wrap;
+  }
+
+  .topbar-left { display: flex; align-items: center; gap: 1rem; }
+
+  .back-link {
+    font-family: 'Space Mono', monospace;
+    font-size: .7rem;
+    color: var(--text-dim);
+    text-decoration: none;
+    letter-spacing: .1em;
+    transition: color .2s;
+  }
+  .back-link:hover { color: var(--accent); }
+
+  .symbol-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: .05em;
+  }
+
+  .company-name {
+    font-size: .85rem;
+    color: var(--text-dim);
+  }
+
+  /* period pills */
+  .period-pills { display: flex; gap: .35rem; }
+
+  .pill {
+    font-family: 'Space Mono', monospace;
+    font-size: .7rem;
+    padding: .3rem .75rem;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    background: transparent;
+    transition: all .15s;
+    letter-spacing: .05em;
+  }
+
+  .pill:hover { border-color: var(--accent2); color: var(--accent2); }
+  .pill.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 700; }
+
+  /* refresh indicator */
+  .refresh-info {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: .65rem;
+    color: var(--muted);
+  }
+
+  .refresh-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .2; }
+  }
+
+  /* ── LAYOUT ─────────────────────────────────────────────────── */
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    grid-template-rows: auto auto 1fr;
+    gap: 1rem;
+  }
+
+  @media (max-width: 900px) {
+    .page { grid-template-columns: 1fr; }
+  }
+
+  /* ── PRICE HERO ─────────────────────────────────────────────── */
+  .price-hero {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .price-main .price {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .price-main .currency {
+    font-size: .9rem;
+    color: var(--text-dim);
+    margin-right: .25rem;
+  }
+
+  .change-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    margin-top: .5rem;
+    padding: .3rem .75rem;
+    border-radius: 100px;
+    font-family: 'Space Mono', monospace;
+    font-size: .8rem;
+    font-weight: 700;
+  }
+
+  .change-pill.up   { background: rgba(0,255,136,.12); color: var(--accent); }
+  .change-pill.down { background: rgba(255,68,102,.12); color: var(--danger); }
+
+  .stats-row {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-left: auto;
+  }
+
+  .stat { text-align: right; }
+  .stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: .6rem;
+    color: var(--muted);
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    margin-bottom: .2rem;
+  }
+  .stat-val {
+    font-family: 'Space Mono', monospace;
+    font-size: .9rem;
+    color: var(--text);
+  }
+
+  /* ── CHART PANEL ────────────────────────────────────────────── */
+  .chart-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .panel-title {
+    font-family: 'Space Mono', monospace;
+    font-size: .65rem;
+    letter-spacing: .2em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .chart-wrap { position: relative; height: 240px; }
+
+  /* ── SIDEBAR (news + mini stats) ────────────────────────────── */
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .news-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    overflow-y: auto;
+    max-height: 620px;
+  }
+
+  .news-item {
+    padding: .85rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .news-item:last-child { border-bottom: none; }
+
+  .news-source {
+    font-family: 'Space Mono', monospace;
+    font-size: .6rem;
+    letter-spacing: .12em;
+    color: var(--accent2);
+    text-transform: uppercase;
+    margin-bottom: .25rem;
+  }
+
+  .news-title {
+    font-size: .82rem;
+    line-height: 1.45;
+    color: var(--text);
+    text-decoration: none;
+    display: block;
+    transition: color .15s;
+  }
+
+  .news-title:hover { color: var(--accent); }
+
+  .news-date {
+    font-family: 'Space Mono', monospace;
+    font-size: .6rem;
+    color: var(--muted);
+    margin-top: .3rem;
+  }
+
+  /* ── LOADING / ERROR ────────────────────────────────────────── */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,15,.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    gap: 1rem;
+    backdrop-filter: blur(8px);
+  }
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-overlay p {
+    font-family: 'Space Mono', monospace;
+    font-size: .75rem;
+    color: var(--text-dim);
+    letter-spacing: .15em;
+  }
+
+  .error-box {
+    grid-column: 1 / -1;
+    background: rgba(255,68,102,.08);
+    border: 1px solid rgba(255,68,102,.3);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    display: none;
+  }
+
+  .error-box p { color: var(--danger); font-family: 'Space Mono', monospace; font-size: .85rem; }
+
+  /* skeleton shimmer */
+  .shimmer {
+    background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+  }
+
+  @keyframes shimmer { to { background-position: -200% 0; } }
+</style>
+</head>
+<body>
+
+<!-- ── TOP BAR ── -->
+<div class="topbar">
+  <div class="topbar-left">
+    <a class="back-link" href="/stocks">← BACK</a>
+    <div>
+      <div class="symbol-badge" id="tb-symbol">{{ symbol }}</div>
+      <div class="company-name" id="tb-name">Loading…</div>
+    </div>
+  </div>
+
+  <div class="period-pills">
+    <button class="pill {% if period=='1wk' %}active{% endif %}" data-period="1wk">1W</button>
+    <button class="pill {% if period=='1mo' %}active{% endif %}" data-period="1mo">1M</button>
+    <button class="pill {% if period=='6mo' %}active{% endif %}" data-period="6mo">6M</button>
+  </div>
+
+  <div class="refresh-info">
+    <div class="refresh-dot"></div>
+    <span id="refresh-countdown">auto-refresh in 60s</span>
+  </div>
+</div>
+
+<!-- ── LOADING OVERLAY ── -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <p>FETCHING MARKET DATA…</p>
+</div>
+
+<!-- ── MAIN PAGE GRID ── -->
+<div class="page">
+
+  <!-- price hero -->
+  <div class="price-hero" id="price-hero">
+    <div class="price-main">
+      <div class="price">
+        <span class="currency" id="currency">USD</span>
+        <span id="current-price">—</span>
+      </div>
+      <div class="change-pill up" id="change-pill">— (—%)</div>
+    </div>
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-label">52W HIGH</div>
+        <div class="stat-val" id="stat-high">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">52W LOW</div>
+        <div class="stat-val" id="stat-low">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">MKT CAP</div>
+        <div class="stat-val" id="stat-mktcap">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">P/E</div>
+        <div class="stat-val" id="stat-pe">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- price chart -->
+  <div class="chart-panel">
+    <div class="panel-title">Closing Price</div>
+    <div class="chart-wrap"><canvas id="price-chart"></canvas></div>
+  </div>
+
+  <!-- volume chart -->
+  <div class="chart-panel" style="grid-row: span 1;">
+    <div class="panel-title">Volume</div>
+    <div class="chart-wrap"><canvas id="vol-chart"></canvas></div>
+  </div>
+
+  <!-- sidebar: news -->
+  <div class="sidebar" style="grid-row: 2 / span 2;">
+    <div class="news-panel">
+      <div class="panel-title" style="margin-bottom:.75rem;">Recent News</div>
+      <div id="news-list"><p style="color:var(--muted);font-size:.8rem;">Loading news…</p></div>
+    </div>
+  </div>
+
+  <!-- error box (hidden by default) -->
+  <div class="error-box" id="error-box">
+    <p id="error-msg">Failed to load data.</p>
+  </div>
+</div>
+
+<script>
+  const SYMBOL  = "{{ symbol }}";
+  let   PERIOD  = "{{ period }}";
+  let   priceChart, volChart;
+  let   countdown = 60;
+  let   refreshTimer, countdownTimer;
+
+  // ── Chart initialisation ──────────────────────────────────────
+  const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: {
+      backgroundColor: '#1e1e2e',
+      titleColor: '#8888aa',
+      bodyColor: '#e0e0f0',
+      borderColor: '#2e2e4e',
+      borderWidth: 1,
+      titleFont: { family: "'Space Mono', monospace", size: 10 },
+      bodyFont:  { family: "'Space Mono', monospace", size: 12 },
+    }},
+    scales: {
+      x: {
+        ticks: { color: '#444466', font: { family: "'Space Mono', monospace", size: 9 }, maxTicksLimit: 8 },
+        grid:  { color: '#1e1e2e' },
+      },
+      y: {
+        ticks: { color: '#444466', font: { family: "'Space Mono', monospace", size: 9 } },
+        grid:  { color: '#1e1e2e' },
+        position: 'right',
+      }
+    }
+  };
+
+  function initCharts() {
+    priceChart = new Chart(document.getElementById('price-chart'), {
+      type: 'line',
+      data: { labels: [], datasets: [{ data: [], borderColor: '#00ff88', borderWidth: 2,
+        pointRadius: 0, tension: .35,
+        fill: true, backgroundColor: (ctx) => {
+          const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height);
+          g.addColorStop(0,   'rgba(0,255,136,.15)');
+          g.addColorStop(1,   'rgba(0,255,136,0)');
+          return g;
+        }
+      }]},
+      options: { ...chartDefaults }
+    });
+
+    volChart = new Chart(document.getElementById('vol-chart'), {
+      type: 'bar',
+      data: { labels: [], datasets: [{ data: [], backgroundColor: 'rgba(0,153,255,.45)',
+        borderColor: '#0099ff', borderWidth: 1, borderRadius: 2 }]},
+      options: { ...chartDefaults }
+    });
+  }
+
+  // ── Format helpers ────────────────────────────────────────────
+  function fmtNum(n, decimals = 2) {
+    if (n == null) return '—';
+    return Number(n).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  }
+
+  function fmtCap(n) {
+    if (!n) return '—';
+    if (n >= 1e12) return (n / 1e12).toFixed(2) + 'T';
+    if (n >= 1e9)  return (n / 1e9).toFixed(2)  + 'B';
+    if (n >= 1e6)  return (n / 1e6).toFixed(2)  + 'M';
+    return n.toLocaleString();
+  }
+
+  // ── Render data ───────────────────────────────────────────────
+  function renderData(d) {
+    // topbar
+    document.getElementById('tb-name').textContent = d.name;
+    document.getElementById('currency').textContent = d.currency;
+    document.title = `${d.symbol} ${fmtNum(d.current_price)} — Stock Dashboard`;
+
+    // price hero
+    document.getElementById('current-price').textContent = fmtNum(d.current_price);
+
+    const isUp = d.change >= 0;
+    const pill = document.getElementById('change-pill');
+    const arrow = isUp ? '▲' : '▼';
+    pill.textContent = `${arrow} ${fmtNum(Math.abs(d.change))} (${fmtNum(Math.abs(d.change_pct))}%)`;
+    pill.className   = `change-pill ${isUp ? 'up' : 'down'}`;
+
+    document.getElementById('stat-high').textContent   = fmtNum(d.week_52_high);
+    document.getElementById('stat-low').textContent    = fmtNum(d.week_52_low);
+    document.getElementById('stat-mktcap').textContent = fmtCap(d.market_cap);
+    document.getElementById('stat-pe').textContent     = d.pe_ratio ? fmtNum(d.pe_ratio) : '—';
+
+    // price chart
+    priceChart.data.labels                  = d.dates;
+    priceChart.data.datasets[0].data        = d.closes;
+    priceChart.data.datasets[0].borderColor = isUp ? '#00ff88' : '#ff4466';
+    priceChart.update('none');
+
+    // volume chart
+    volChart.data.labels           = d.dates;
+    volChart.data.datasets[0].data = d.volumes;
+    volChart.update('none');
+
+    // news
+    const newsEl = document.getElementById('news-list');
+    if (d.news && d.news.length) {
+      newsEl.innerHTML = d.news.map(n => `
+        <div class="news-item">
+          <div class="news-source">${n.source}</div>
+          <a class="news-title" href="${n.url}" target="_blank" rel="noopener">${n.title}</a>
+          <div class="news-date">${n.date}</div>
+        </div>`).join('');
+    } else {
+      newsEl.innerHTML = '<p style="color:var(--muted);font-size:.8rem;">No news available.</p>';
+    }
+
+    document.getElementById('loading').style.display = 'none';
+  }
+
+  // ── Fetch & render ────────────────────────────────────────────
+  async function fetchData() {
+    try {
+      const res  = await fetch(`/stocks/api/data?symbol=${SYMBOL}&period=${PERIOD}`);
+      const json = await res.json();
+      if (json.status === 'success') {
+        renderData(json.data);
+        document.getElementById('error-box').style.display = 'none';
+      } else {
+        throw new Error(json.message || 'Unknown error');
+      }
+    } catch (err) {
+      document.getElementById('loading').style.display = 'none';
+      const eb = document.getElementById('error-box');
+      eb.style.display = 'block';
+      document.getElementById('error-msg').textContent = `Error: ${err.message}`;
+    }
+  }
+
+  // ── Auto-refresh ──────────────────────────────────────────────
+  function startAutoRefresh() {
+    clearInterval(refreshTimer);
+    clearInterval(countdownTimer);
+    countdown = 60;
+
+    countdownTimer = setInterval(() => {
+      countdown--;
+      document.getElementById('refresh-countdown').textContent = `auto-refresh in ${countdown}s`;
+      if (countdown <= 0) countdown = 60;
+    }, 1000);
+
+    refreshTimer = setInterval(async () => {
+      await fetchData();
+      countdown = 60;
+    }, 60_000);
+  }
+
+  // ── Period switching ──────────────────────────────────────────
+  document.querySelectorAll('.pill').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      PERIOD = btn.dataset.period;
+      document.getElementById('loading').style.display = 'flex';
+      history.replaceState({}, '', `/stocks/dashboard?symbol=${SYMBOL}&period=${PERIOD}`);
+      await fetchData();
+      startAutoRefresh();
+    });
+  });
+
+  // ── Boot ──────────────────────────────────────────────────────
+  initCharts();
+  fetchData();
+  startAutoRefresh();
+</script>
+</body>
+</html>
