@@ -5,7 +5,7 @@ import time
 from html import escape
 
 BOOKMARKS_FILE = "bookmark_2_html.txt"
-
+ACRONYM_FILE = "acronyms.csv"
 # ── In-memory cache ─────────────────────────────────────────────
 # Stores: {'mtime': float, 'structure': dict}
 # Re-parsed only when file modification time changes → instant loads
@@ -104,3 +104,61 @@ def configure_routes_links(app, socketio):
             return jsonify({"status": "success", "content": content})
         except FileNotFoundError:
             return jsonify({"status": "error", "content": ""})
+
+    # ── ACRONYMS: VIEW PAGE ──────────────────────────────────────
+    @app.route("/acronyms")
+    def acronyms():
+        """
+        Render the acronyms page. The page will fetch acronym.csv via /acronyms/data.
+        """
+        return render_template("acronyms.html")
+        #return "hello"
+    # ── ACRONYMS: APPEND NEW ROW (API) ───────────────────────────
+    @app.route("/acronyms/add", methods=["POST"])
+    def acronyms_add():
+        """
+        Append a new acronym row to acronym.csv.
+        Expects JSON: { "acronym": "...", "meaning": "...", "description": "..." }
+        """
+        data = request.get_json(silent=True) or {}
+        acronym = (data.get("acronym") or "").strip()
+        meaning = (data.get("meaning") or "").strip()
+        description = (data.get("description") or "").strip()
+
+        if not acronym or not meaning:
+            return jsonify({"status": "error", "message": "Acronym and Meaning are required."}), 400
+
+        # Ensure file exists with header
+        file_exists = os.path.exists(ACRONYM_FILE)
+        try:
+            with open(ACRONYM_FILE, "a", encoding="utf-8", newline="") as f:
+                if not file_exists:
+                    f.write("Acronym,Meaning,Description\n")
+                # naive CSV escaping for commas and quotes
+                def csv_escape(val: str) -> str:
+                    if '"' in val or ',' in val or '\n' in val:
+                        return '"' + val.replace('"', '""') + '"'
+                    return val
+                line = ",".join([
+                    csv_escape(acronym),
+                    csv_escape(meaning),
+                    csv_escape(description),
+                ]) + "\n"
+                f.write(line)
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+        return jsonify({"status": "success", "message": "Acronym added."})
+    # ── ACRONYMS: RAW CSV (for client-side fetch) ────────────────
+    @app.route("/acronyms/data")
+    def acronyms_data():
+        """
+        Return the raw acronyms.csv text for the client-side table.
+        """
+        if not os.path.exists(ACRONYM_FILE):
+            # ensure header exists so PapaParse has structure
+            with open(ACRONYM_FILE, "w", encoding="utf-8", newline="") as f:
+                f.write("Acronym,Meaning,Description\n")
+        with open(ACRONYM_FILE, "r", encoding="utf-8") as f:
+            content = f.read()
+        return app.response_class(content, mimetype="text/plain")
