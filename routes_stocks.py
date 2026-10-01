@@ -3,8 +3,9 @@ import json
 import os
 import yfinance as yf
 from datetime import datetime
+import math
 
-POPULAR_STOCKS_FILE = "popular_stocks.json"
+POPULAR_STOCKS_FILE = "data/popular_stocks.json"
 
 
 # ── Watchlist helpers ─────────────────────────────────────────────────────────
@@ -49,8 +50,8 @@ def _fetch_stock_data(symbol: str, period: str = "1mo"):
         raise ValueError(f"No data found for symbol '{symbol}'")
 
     dates   = [d.strftime("%Y-%m-%d") for d in hist.index]
-    closes  = [round(float(v), 2) for v in hist["Close"]]
-    volumes = [int(v) for v in hist["Volume"]]
+    closes  = [round(float(v), 2) if not math.isnan(float(v)) else None for v in hist["Close"]]
+    volumes = [int(v) if not math.isnan(float(v)) else 0 for v in hist["Volume"]]
 
     current_price = info.get("currentPrice") or info.get("regularMarketPrice") or closes[-1]
     prev_close    = info.get("previousClose") or (closes[-2] if len(closes) > 1 else closes[-1])
@@ -104,7 +105,7 @@ def _fetch_spark(symbol: str):
     if hist.empty:
         raise ValueError(f"No data for '{symbol}'")
 
-    closes  = [round(float(v), 2) for v in hist["Close"]]
+    closes  = [round(float(v), 2) if not math.isnan(float(v)) else None for v in hist["Close"]]
     dates   = [d.strftime("%b %d") for d in hist.index]
     current = info.get("currentPrice") or info.get("regularMarketPrice") or closes[-1]
     prev    = info.get("previousClose") or (closes[-2] if len(closes) > 1 else closes[-1])
