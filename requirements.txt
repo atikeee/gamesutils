@@ -2,9 +2,10 @@ lxml
 flask
 flask-socketio
 pandas
-pyyaml
-yfinance
 Pillow
 requests
 python-engineio # Likely a dependency of flask-socketio
 python-socketio # Likely a dependency of flask-socketio
+pyyaml
+gunicorn
+yfinance
