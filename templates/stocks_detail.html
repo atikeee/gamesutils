@@ -1,529 +1,284 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>{{ symbol }} — Market Desk</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<style>
-  :root {
-    --paper:    #f5f0e8;
-    --paper2:   #ede8de;
-    --ink:      #1a1814;
-    --ink-mid:  #4a4540;
-    --ink-soft: #8a8278;
-    --rule:     #d8d0c4;
-    --up:       #1a7a4a;
-    --up-bg:    #e8f5ee;
-    --dn:       #c0392b;
-    --dn-bg:    #fdecea;
-    --amber:    #c87800;
-    --teal:     #0e6b7c;
-  }
+from flask import render_template, request, jsonify
+import json
+import os
+import yfinance as yf
+from datetime import datetime
+import math
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+POPULAR_STOCKS_FILE = "data/popular_stocks.json"
 
-  body {
-    background: var(--paper);
-    color: var(--ink);
-    font-family: 'DM Sans', sans-serif;
-    min-height: 100vh;
-  }
 
-  /* ── HEADER ── */
-  .site-header {
-    background: var(--ink);
-    color: var(--paper);
-    padding: 0 2rem;
-    display: flex;
-    align-items: center;
-    height: 56px;
-    gap: 1.5rem;
-  }
+# ── Watchlist helpers ─────────────────────────────────────────────────────────
 
-  .logo {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.3rem;
-    letter-spacing: .02em;
-  }
-  .logo span { color: #f0c040; }
+def _load_watchlist():
+    if not os.path.exists(POPULAR_STOCKS_FILE):
+        return []
+    try:
+        with open(POPULAR_STOCKS_FILE, "r", encoding="utf-8") as f:
+            return _normalize_watchlist(json.load(f))
+    except Exception as e:
+        print(f"[stocks] Error loading watchlist: {e}")
+        return []
 
-  .back-link {
-    font-family: 'DM Mono', monospace;
-    font-size: .7rem;
-    letter-spacing: .08em;
-    padding: .4rem .9rem;
-    border-radius: 4px;
-    border: 1px solid rgba(255,255,255,.2);
-    color: rgba(255,255,255,.7);
-    text-decoration: none;
-    transition: all .15s;
-    margin-left: auto;
-  }
-  .back-link:hover { background: rgba(255,255,255,.1); color: #fff; }
 
-  .refresh-badge {
-    display: flex;
-    align-items: center;
-    gap: .4rem;
-    font-family: 'DM Mono', monospace;
-    font-size: .65rem;
-    color: rgba(255,255,255,.4);
-    white-space: nowrap;
-  }
+def _number(value, field_name):
+    try:
+        number = float(value or 0)
+    except (TypeError, ValueError):
+        raise ValueError(f"{field_name} must be a number")
+    if not math.isfinite(number) or number < 0:
+        raise ValueError(f"{field_name} must be a non-negative number")
+    return number
 
-  .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: #4cdb8a; animation: pulse 2.5s ease-in-out infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
 
-  /* ── HERO STRIP ── */
-  .hero {
-    background: var(--ink);
-    color: var(--paper);
-    padding: 1.75rem 2rem 1.5rem;
-    border-bottom: 3px solid #f0c040;
-  }
+def _quantity(value):
+    number = _number(value, "quantity")
+    if not number.is_integer():
+        raise ValueError("quantity must be a whole number")
+    return int(number)
 
-  .hero-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 2rem;
-    flex-wrap: wrap;
-  }
 
-  .hero-sym {
-    font-family: 'DM Mono', monospace;
-    font-size: 2rem;
-    font-weight: 500;
-    color: #f0c040;
-    line-height: 1;
-  }
+def _price(value):
+    number = _number(value, "price")
+    return int(number) if number.is_integer() else number
 
-  .hero-name {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.05rem;
-    color: rgba(245,240,232,.65);
-    margin-top: .3rem;
-  }
 
-  .hero-price-block { text-align: right; }
+def _normalize_watchlist(watchlist):
+    normalized = []
+    for item in watchlist if isinstance(watchlist, list) else []:
+        if not isinstance(item, dict) or not item.get("symbol"):
+            continue
+        entry = dict(item)
+        try:
+            entry["quantity"] = _quantity(entry.get("quantity", 0))
+            entry["price"] = _price(entry.get("price", 0))
+        except ValueError:
+            entry["quantity"] = 0
+            entry["price"] = 0
+        normalized.append(entry)
+    return normalized
 
-  .hero-price {
-    font-family: 'DM Mono', monospace;
-    font-size: 2.2rem;
-    font-weight: 500;
-    line-height: 1;
-  }
 
-  .hero-change {
-    font-family: 'DM Mono', monospace;
-    font-size: .85rem;
-    margin-top: .4rem;
-    display: inline-block;
-    padding: .2rem .6rem;
-    border-radius: 3px;
-  }
+def _save_watchlist(lst):
+    try:
+        with open(POPULAR_STOCKS_FILE, "w", encoding="utf-8") as f:
+            json.dump(_normalize_watchlist(lst), f, indent=2)
+        return True
+    except Exception as e:
+        print(f"[stocks] Error saving watchlist: {e}")
+        return False
 
-  .hero-change.up { background: rgba(26,122,74,.2); color: #5ddb8a; }
-  .hero-change.dn { background: rgba(192,57,43,.2); color: #ff8070; }
 
-  /* stats row */
-  .stats-row {
-    display: flex;
-    gap: 2.5rem;
-    margin-top: 1.25rem;
-    flex-wrap: wrap;
-  }
+# ── yfinance data helpers ─────────────────────────────────────────────────────
 
-  .stat-item { }
-
-  .stat-label {
-    font-family: 'DM Mono', monospace;
-    font-size: .6rem;
-    letter-spacing: .15em;
-    text-transform: uppercase;
-    color: rgba(245,240,232,.4);
-    margin-bottom: .2rem;
-  }
-
-  .stat-val {
-    font-family: 'DM Mono', monospace;
-    font-size: .9rem;
-    color: rgba(245,240,232,.85);
-  }
-
-  /* ── PERIOD TABS ── */
-  .period-bar {
-    background: var(--paper2);
-    border-bottom: 1px solid var(--rule);
-    padding: .6rem 2rem;
-    display: flex;
-    align-items: center;
-    gap: .35rem;
-  }
-
-  .period-tab {
-    font-family: 'DM Mono', monospace;
-    font-size: .72rem;
-    letter-spacing: .06em;
-    padding: .3rem .8rem;
-    border-radius: 3px;
-    border: 1px solid transparent;
-    cursor: pointer;
-    background: transparent;
-    color: var(--ink-soft);
-    transition: all .15s;
-  }
-
-  .period-tab:hover { color: var(--teal); border-color: var(--teal); }
-  .period-tab.active { background: var(--teal); color: #fff; border-color: var(--teal); }
-
-  .period-bar-right {
-    margin-left: auto;
-    font-family: 'DM Mono', monospace;
-    font-size: .65rem;
-    color: var(--ink-soft);
-  }
-
-  /* ── BODY LAYOUT ── */
-  .body-grid {
-    display: grid;
-    grid-template-columns: 1fr 320px;
-    gap: 0;
-    border-top: 1px solid var(--rule);
-  }
-
-  @media (max-width: 860px) {
-    .body-grid { grid-template-columns: 1fr; }
-  }
-
-  /* ── CHARTS COLUMN ── */
-  .charts-col {
-    border-right: 1px solid var(--rule);
-    padding: 1.5rem 2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-  }
-
-  .section-head {
-    font-family: 'DM Mono', monospace;
-    font-size: .62rem;
-    letter-spacing: .2em;
-    text-transform: uppercase;
-    color: var(--ink-soft);
-    border-bottom: 1px solid var(--rule);
-    padding-bottom: .5rem;
-    margin-bottom: 1rem;
-  }
-
-  .chart-wrap { position: relative; height: 220px; }
-
-  /* ── NEWS COLUMN ── */
-  .news-col {
-    padding: 1.25rem 1.5rem;
-    overflow-y: auto;
-  }
-
-  .news-item {
-    padding: 1rem 0;
-    border-bottom: 1px solid var(--rule);
-  }
-
-  .news-item:last-child { border-bottom: none; }
-
-  .news-source {
-    font-family: 'DM Mono', monospace;
-    font-size: .6rem;
-    letter-spacing: .12em;
-    text-transform: uppercase;
-    color: var(--teal);
-    margin-bottom: .3rem;
-  }
-
-  .news-title {
-    font-family: 'DM Serif Display', serif;
-    font-size: .95rem;
-    line-height: 1.45;
-    color: var(--ink);
-    text-decoration: none;
-    display: block;
-    font-weight: 400;
-    transition: color .15s;
-  }
-
-  .news-title:hover { color: var(--teal); }
-
-  .news-summary {
-    font-size: .78rem;
-    color: var(--ink-mid);
-    line-height: 1.55;
-    margin-top: .35rem;
-  }
-
-  .news-date {
-    font-family: 'DM Mono', monospace;
-    font-size: .62rem;
-    color: var(--ink-soft);
-    margin-top: .4rem;
-  }
-
-  /* ── LOADING OVERLAY ── */
-  .loading-overlay {
-    position: fixed; inset: 0;
-    background: rgba(245,240,232,.88);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 200;
-    gap: 1rem;
-    backdrop-filter: blur(4px);
-  }
-
-  .spinner {
-    width: 32px; height: 32px;
-    border: 2px solid var(--rule);
-    border-top-color: var(--teal);
-    border-radius: 50%;
-    animation: spin .7s linear infinite;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .loading-overlay p {
-    font-family: 'DM Mono', monospace;
-    font-size: .72rem;
-    letter-spacing: .15em;
-    color: var(--ink-soft);
-  }
-
-  .error-banner {
-    background: var(--dn-bg);
-    border-left: 3px solid var(--dn);
-    padding: 1rem 1.5rem;
-    margin: 1rem 2rem;
-    border-radius: 2px;
-    font-size: .85rem;
-    color: var(--dn);
-    display: none;
-  }
-</style>
-</head>
-<body>
-
-<div class="loading-overlay" id="loading">
-  <div class="spinner"></div>
-  <p>FETCHING MARKET DATA</p>
-</div>
-
-<header class="site-header">
-  <div class="logo">Market<span>·</span>Desk</div>
-  <a class="back-link" href="/stocks">← Watchlist</a>
-  <div class="refresh-badge">
-    <div class="pulse-dot"></div>
-    <span id="refresh-label">auto-refresh in 60s</span>
-  </div>
-</header>
-
-<!-- hero (populated by JS) -->
-<div class="hero" id="hero">
-  <div class="hero-top">
-    <div>
-      <div class="hero-sym">{{ symbol }}</div>
-      <div class="hero-name" id="hero-name">—</div>
-    </div>
-    <div class="hero-price-block">
-      <div class="hero-price" id="hero-price">—</div>
-      <div class="hero-change up" id="hero-change">—</div>
-    </div>
-  </div>
-  <div class="stats-row">
-    <div class="stat-item"><div class="stat-label">52W High</div><div class="stat-val" id="stat-high">—</div></div>
-    <div class="stat-item"><div class="stat-label">52W Low</div><div class="stat-val" id="stat-low">—</div></div>
-    <div class="stat-item"><div class="stat-label">Mkt Cap</div><div class="stat-val" id="stat-cap">—</div></div>
-    <div class="stat-item"><div class="stat-label">P/E</div><div class="stat-val" id="stat-pe">—</div></div>
-    <div class="stat-item"><div class="stat-label">Currency</div><div class="stat-val" id="stat-cur">—</div></div>
-  </div>
-</div>
-
-<div class="period-bar">
-  <button class="period-tab {% if period=='1wk' %}active{% endif %}" data-period="1wk">1 Week</button>
-  <button class="period-tab {% if period=='1mo' %}active{% endif %}" data-period="1mo">1 Month</button>
-  <button class="period-tab {% if period=='6mo' %}active{% endif %}" data-period="6mo">6 Months</button>
-  <span class="period-bar-right" id="fetched-at"></span>
-</div>
-
-<div class="error-banner" id="error-banner"></div>
-
-<div class="body-grid">
-  <div class="charts-col">
-    <div>
-      <div class="section-head">Closing Price</div>
-      <div class="chart-wrap"><canvas id="price-chart"></canvas></div>
-    </div>
-    <div>
-      <div class="section-head">Volume</div>
-      <div class="chart-wrap"><canvas id="vol-chart"></canvas></div>
-    </div>
-  </div>
-
-  <div class="news-col">
-    <div class="section-head">Recent News</div>
-    <div id="news-list"><p style="color:var(--ink-soft);font-size:.82rem;">Loading…</p></div>
-  </div>
-</div>
-
-<script>
-  const SYMBOL = "{{ symbol }}";
-  let PERIOD   = "{{ period }}";
-  let priceChart, volChart;
-  let countdown = 60;
-
-  // ── chart setup ───────────────────────────────────────────────
-  const baseOpts = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#1a1814',
-        titleColor: '#8a8278',
-        bodyColor: '#f5f0e8',
-        borderColor: '#4a4540',
-        borderWidth: 1,
-        titleFont: { family: "'DM Mono', monospace", size: 10 },
-        bodyFont:  { family: "'DM Mono', monospace", size: 12 },
-        padding: 10,
-      }
-    },
-    scales: {
-      x: {
-        ticks: { color: '#8a8278', font: { family: "'DM Mono', monospace", size: 9 }, maxTicksLimit: 7 },
-        grid:  { color: '#d8d0c4' },
-      },
-      y: {
-        ticks: { color: '#8a8278', font: { family: "'DM Mono', monospace", size: 9 } },
-        grid:  { color: '#d8d0c4' },
-        position: 'right',
-      }
+def _fetch_stock_data(symbol: str, period: str = "1mo"):
+    """Full data fetch: price, stats, chart series, news."""
+    period_map = {
+        "1wk": ("7d",  "1d"),
+        "1mo": ("1mo", "1d"),
+        "6mo": ("6mo", "1d"),
     }
-  };
+    yf_period, interval = period_map.get(period, ("1mo", "1d"))
 
-  priceChart = new Chart(document.getElementById('price-chart'), {
-    type: 'line',
-    data: { labels: [], datasets: [{ data: [], borderColor: '#0e6b7c', borderWidth: 2,
-      pointRadius: 2, pointBackgroundColor: '#0e6b7c', tension: .35,
-      fill: true, backgroundColor: 'rgba(14,107,124,.07)' }] },
-    options: { ...baseOpts }
-  });
+    ticker = yf.Ticker(symbol)
+    info   = ticker.info
+    hist   = ticker.history(period=yf_period, interval=interval)
 
-  volChart = new Chart(document.getElementById('vol-chart'), {
-    type: 'bar',
-    data: { labels: [], datasets: [{ data: [], backgroundColor: 'rgba(200,120,0,.35)',
-      borderColor: '#c87800', borderWidth: 1, borderRadius: 2 }] },
-    options: { ...baseOpts }
-  });
+    if hist.empty:
+        raise ValueError(f"No data found for symbol '{symbol}'")
 
-  // ── helpers ───────────────────────────────────────────────────
-  function fmt(n, d=2) { return n==null ? '—' : Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
-  function fmtCap(n) {
-    if (!n) return '—';
-    if (n>=1e12) return (n/1e12).toFixed(2)+'T';
-    if (n>=1e9)  return (n/1e9).toFixed(2)+'B';
-    if (n>=1e6)  return (n/1e6).toFixed(2)+'M';
-    return n.toLocaleString();
-  }
+    dates   = [d.strftime("%Y-%m-%d") for d in hist.index]
+    closes  = [round(float(v), 2) if not math.isnan(float(v)) else None for v in hist["Close"]]
+    volumes = [int(v) if not math.isnan(float(v)) else 0 for v in hist["Volume"]]
 
-  // ── render ────────────────────────────────────────────────────
-  function render(d) {
-    document.title = `${d.symbol} ${fmt(d.current_price)} — Market Desk`;
-    document.getElementById('hero-name').textContent = d.name;
+    current_price = info.get("currentPrice") or info.get("regularMarketPrice") or closes[-1]
+    prev_close    = info.get("previousClose") or (closes[-2] if len(closes) > 1 else closes[-1])
+    change        = round(current_price - prev_close, 2)
+    change_pct    = round((change / prev_close) * 100, 2) if prev_close else 0.0
 
-    const isUp = d.change >= 0;
-    const arrow = isUp ? '▲' : '▼';
+    raw_news = ticker.news or []
+    news = []
+    for n in raw_news[:8]:
+        content     = n.get("content", {})
+        title       = content.get("title") or n.get("title", "")
+        pub_raw     = content.get("pubDate") or ""
+        try:
+            pub_str = datetime.strptime(pub_raw[:19], "%Y-%m-%dT%H:%M:%S").strftime("%b %d, %Y")
+        except Exception:
+            pub_str = pub_raw[:10] if pub_raw else ""
+        canon       = content.get("canonicalUrl", {})
+        url         = (canon.get("url") if isinstance(canon, dict) else "") or n.get("link", "#")
+        source      = content.get("provider", {})
+        source_name = (source.get("displayName") if isinstance(source, dict) else "") or "News"
+        if title:
+            news.append({"title": title, "summary": content.get("summary", ""),
+                         "url": url, "date": pub_str, "source": source_name})
 
-    document.getElementById('hero-price').textContent = fmt(d.current_price);
-
-    const ch = document.getElementById('hero-change');
-    ch.textContent = `${arrow} ${fmt(Math.abs(d.change))} (${fmt(Math.abs(d.change_pct))}%)`;
-    ch.className   = `hero-change ${isUp ? 'up' : 'dn'}`;
-
-    document.getElementById('stat-high').textContent = fmt(d.week_52_high);
-    document.getElementById('stat-low').textContent  = fmt(d.week_52_low);
-    document.getElementById('stat-cap').textContent  = fmtCap(d.market_cap);
-    document.getElementById('stat-pe').textContent   = d.pe_ratio ? fmt(d.pe_ratio) : '—';
-    document.getElementById('stat-cur').textContent  = d.currency || '—';
-    document.getElementById('fetched-at').textContent = `fetched ${d.fetched_at}`;
-
-    // price chart colour follows trend
-    priceChart.data.datasets[0].borderColor     = isUp ? '#1a7a4a' : '#c0392b';
-    priceChart.data.datasets[0].backgroundColor = isUp ? 'rgba(26,122,74,.07)' : 'rgba(192,57,43,.07)';
-    priceChart.data.datasets[0].pointBackgroundColor = isUp ? '#1a7a4a' : '#c0392b';
-    priceChart.data.labels              = d.dates;
-    priceChart.data.datasets[0].data    = d.closes;
-    priceChart.update('none');
-
-    volChart.data.labels           = d.dates;
-    volChart.data.datasets[0].data = d.volumes;
-    volChart.update('none');
-
-    // news
-    const nl = document.getElementById('news-list');
-    if (d.news && d.news.length) {
-      nl.innerHTML = d.news.map(n => `
-        <div class="news-item">
-          <div class="news-source">${n.source}</div>
-          <a class="news-title" href="${n.url}" target="_blank" rel="noopener">${n.title}</a>
-          ${n.summary ? `<div class="news-summary">${n.summary}</div>` : ''}
-          <div class="news-date">${n.date}</div>
-        </div>`).join('');
-    } else {
-      nl.innerHTML = '<p style="color:var(--ink-soft);font-size:.82rem;">No news available.</p>';
+    return {
+        "symbol":        symbol.upper(),
+        "name":          info.get("longName") or info.get("shortName") or symbol,
+        "current_price": round(float(current_price), 2),
+        "change":        change,
+        "change_pct":    change_pct,
+        "currency":      info.get("currency", "USD"),
+        "market_cap":    info.get("marketCap"),
+        "pe_ratio":      info.get("trailingPE"),
+        "week_52_high":  info.get("fiftyTwoWeekHigh"),
+        "week_52_low":   info.get("fiftyTwoWeekLow"),
+        "dates":         dates,
+        "closes":        closes,
+        "volumes":       volumes,
+        "news":          news,
+        "period":        period,
+        "fetched_at":    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
-    document.getElementById('loading').style.display = 'none';
-  }
 
-  // ── fetch ─────────────────────────────────────────────────────
-  async function fetchData() {
-    try {
-      const res  = await fetch(`/stocks/api/data?symbol=${SYMBOL}&period=${PERIOD}`);
-      const json = await res.json();
-      if (json.status === 'success') {
-        render(json.data);
-        document.getElementById('error-banner').style.display = 'none';
-      } else throw new Error(json.message);
-    } catch(e) {
-      document.getElementById('loading').style.display = 'none';
-      const eb = document.getElementById('error-banner');
-      eb.textContent = `Could not load data: ${e.message}`;
-      eb.style.display = 'block';
+def _fetch_spark(symbol: str, period: str = "1wk"):
+    """Lightweight daily price fetch for watchlist cards."""
+    period_map = {
+        "1wk": "7d",
+        "1mo": "1mo",
+        "6mo": "6mo",
     }
-  }
+    yf_period = period_map.get(period, "7d")
+    ticker = yf.Ticker(symbol)
+    info   = ticker.info
+    hist   = ticker.history(period=yf_period, interval="1d")
+    daily_hist = ticker.history(period="5d", interval="1d")
 
-  // ── period tabs ───────────────────────────────────────────────
-  document.querySelectorAll('.period-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      PERIOD = btn.dataset.period;
-      history.replaceState({}, '', `/stocks/detail/${SYMBOL}?period=${PERIOD}`);
-      document.getElementById('loading').style.display = 'flex';
-      fetchData();
-      countdown = 60;
-    });
-  });
+    if hist.empty:
+        raise ValueError(f"No data for '{symbol}'")
 
-  // ── auto-refresh ──────────────────────────────────────────────
-  const label = document.getElementById('refresh-label');
-  setInterval(() => {
-    countdown--;
-    label.textContent = `auto-refresh in ${countdown}s`;
-    if (countdown <= 0) { countdown = 60; fetchData(); }
-  }, 1000);
+    closes  = [round(float(v), 2) if not math.isnan(float(v)) else None for v in hist["Close"]]
+    dates   = [d.strftime("%b %d") for d in hist.index]
+    current = info.get("currentPrice") or info.get("regularMarketPrice") or closes[-1]
+    daily_closes = [round(float(v), 2) for v in daily_hist["Close"] if not math.isnan(float(v))]
+    prev    = info.get("previousClose") or (daily_closes[-2] if len(daily_closes) > 1 else current)
+    change  = round(current - prev, 2)
+    pct     = round((change / prev) * 100, 2) if prev else 0.0
 
-  fetchData();
-</script>
-</body>
-</html>
+    return {
+        "symbol":   symbol.upper(),
+        "name":     info.get("longName") or info.get("shortName") or symbol,
+        "price":    round(float(current), 2),
+        "change":   change,
+        "pct":      pct,
+        "currency": info.get("currency", "USD"),
+        "dates":    dates,
+        "closes":   closes,
+    }
+
+
+# ── Route registration ────────────────────────────────────────────────────────
+
+def configure_routes_stocks(app, socketio=None):
+
+    @app.route("/stocks")
+    def stocks_dashboard():
+        watchlist = _load_watchlist()
+        return render_template("stocks_dashboard.html", watchlist=watchlist)
+
+    @app.route("/stocks/detail/<symbol>")
+    def stocks_detail(symbol):
+        period = request.args.get("period", "1mo")
+        return render_template("stocks_detail.html",
+                               symbol=symbol.upper(), period=period)
+
+    @app.route("/stocks/select", methods=["GET"])
+    def stocks_select():
+        watchlist = _load_watchlist()
+        return render_template("stocks_select.html", watchlist=watchlist)
+
+    @app.route("/stocks/select/add", methods=["POST"])
+    def stocks_select_add():
+        data   = request.json or {}
+        symbol = data.get("symbol", "").upper().strip()
+        name   = data.get("name", symbol).strip()
+        if not symbol:
+            return jsonify({"status": "error", "message": "Symbol required"}), 400
+        wl = _load_watchlist()
+        if any(s["symbol"] == symbol for s in wl):
+            return jsonify({"status": "exists", "message": f"{symbol} already in watchlist"})
+        wl.append({"symbol": symbol, "name": name, "quantity": 0, "price": 0})
+        _save_watchlist(wl)
+        return jsonify({"status": "success", "message": f"{symbol} added"})
+
+    @app.route("/stocks/select/save", methods=["POST"])
+    def stocks_select_save():
+        data = request.json or {}
+        updates = data.get("holdings")
+        if not isinstance(updates, list):
+            return jsonify({"status": "error", "message": "holdings list required"}), 400
+        watchlist = _load_watchlist()
+        by_symbol = {item["symbol"]: item for item in watchlist}
+        try:
+            for update in updates:
+                symbol = (update.get("symbol") or "").upper().strip()
+                if symbol not in by_symbol:
+                    continue
+                by_symbol[symbol]["quantity"] = _quantity(update.get("quantity"))
+                by_symbol[symbol]["price"] = _price(update.get("price"))
+        except (AttributeError, ValueError) as error:
+            return jsonify({"status": "error", "message": str(error)}), 400
+        if not _save_watchlist(watchlist):
+            return jsonify({"status": "error", "message": "Could not save holdings"}), 500
+        return jsonify({"status": "success", "watchlist": watchlist})
+
+    @app.route("/stocks/select/remove", methods=["POST"])
+    def stocks_select_remove():
+        data   = request.json or {}
+        symbol = data.get("symbol", "").upper().strip()
+        wl     = _load_watchlist()
+        _save_watchlist([s for s in wl if s["symbol"] != symbol])
+        return jsonify({"status": "success", "message": f"{symbol} removed"})
+
+    @app.route("/stocks/select/reorder", methods=["POST"])
+    def stocks_select_reorder():
+        data    = request.json or {}
+        symbols = data.get("symbols", [])
+        wl      = _load_watchlist()
+        lookup  = {s["symbol"]: s for s in wl}
+        _save_watchlist([lookup[sym] for sym in symbols if sym in lookup])
+        return jsonify({"status": "success"})
+
+    @app.route("/stocks/api/data")
+    def stocks_api_data():
+        symbol = request.args.get("symbol", "").upper().strip()
+        period = request.args.get("period", "1mo")
+        if not symbol:
+            return jsonify({"status": "error", "message": "symbol param required"}), 400
+        try:
+            return jsonify({"status": "success", "data": _fetch_stock_data(symbol, period)})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+
+    @app.route("/stocks/api/spark")
+    def stocks_api_spark():
+        symbol = request.args.get("symbol", "").upper().strip()
+        period = request.args.get("period", "1wk")
+        if not symbol:
+            return jsonify({"status": "error", "message": "symbol param required"}), 400
+        try:
+            return jsonify({"status": "success", "data": _fetch_spark(symbol, period)})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+
+    @app.route("/stocks/api/search")
+    def stocks_api_search():
+        q = request.args.get("q", "").strip()
+        if not q:
+            return jsonify({"results": []})
+        try:
+            results = yf.Search(q, max_results=8)
+            quotes  = results.quotes or []
+            out = [{"symbol": r.get("symbol", ""),
+                    "name":   r.get("longname") or r.get("shortname") or ""}
+                   for r in quotes if r.get("symbol")]
+            return jsonify({"results": out})
+        except Exception as e:
+            return jsonify({"results": [], "error": str(e)})
+
+    @app.route("/stocks/api/watchlist")
+    def stocks_api_watchlist():
+        return jsonify({"status": "success", "watchlist": _load_watchlist()})
