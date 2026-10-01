@@ -5,23 +5,73 @@ import os
 
 # Assuming the data file is in the same directory as the app
 DATA_FILE = "triage_email_data.json"
+DATA_PREFIX = "triage_email_data"
+BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+
+
+def _list_data_files():
+    files = []
+    for name in os.listdir(BASE_DIR):
+        if name.startswith(DATA_PREFIX) and name.endswith('.json'):
+            full_path = os.path.join(BASE_DIR, name)
+            if os.path.isfile(full_path):
+                files.append(name)
+    return sorted(files)
+
+
+def _resolve_data_file(candidate):
+    data_files = _list_data_files()
+    if not data_files:
+        return None, []
+
+    if not candidate:
+        selected = DATA_FILE if DATA_FILE in data_files else data_files[0]
+        return selected, data_files
+
+    # Prevent path traversal; only allow plain filenames in root.
+    safe_name = os.path.basename(candidate)
+    if (
+        safe_name != candidate
+        or not safe_name.startswith(DATA_PREFIX)
+        or not safe_name.endswith('.json')
+        or safe_name not in data_files
+    ):
+        selected = DATA_FILE if DATA_FILE in data_files else data_files[0]
+        return selected, data_files
+
+    return safe_name, data_files
 
 def configure_routes_triage_email(app):
     
     @app.route('/triage_email_dashboard')
     def triage_email_dashboard():
-        if not os.path.exists(DATA_FILE):
+        requested_file = request.args.get('data_file')
+        selected_file, data_files = _resolve_data_file(requested_file)
+        if not selected_file:
+            return "No triage_email_data*.json files found", 404
+
+        data_file_path = os.path.join(BASE_DIR, selected_file)
+        if not os.path.exists(data_file_path):
             return "Data file not found", 404
-        with open(DATA_FILE, 'r') as f:
+        with open(data_file_path, 'r') as f:
             data = json.load(f)
-        return render_template('triage_email_dashboard.html', data=data)
+        return render_template(
+            'triage_email_dashboard.html',
+            data=data,
+            data_files=data_files,
+            selected_data_file=selected_file,
+        )
 
     @app.route('/triage_email_api/update', methods=['POST'])
     def triage_email_api_update():
         update_info = request.json
         # update_info structure: {section, item_id, status, comment}
+        selected_file, _ = _resolve_data_file(update_info.get('data_file'))
+        if not selected_file:
+            return jsonify({"status": "error", "message": "No data files found"}), 404
+        data_file_path = os.path.join(BASE_DIR, selected_file)
         
-        with open(DATA_FILE, 'r+') as f:
+        with open(data_file_path, 'r+') as f:
             data = json.load(f)
             
             # Perform update logic
@@ -43,8 +93,12 @@ def configure_routes_triage_email(app):
         payload = request.json
         items = payload.get('items', [])
         common_notes = payload.get('common_notes', {})
+        selected_file, _ = _resolve_data_file(payload.get('data_file'))
+        if not selected_file:
+            return jsonify({"status": "error", "message": "No data files found"}), 404
+        data_file_path = os.path.join(BASE_DIR, selected_file)
 
-        with open(DATA_FILE, 'r+') as f:
+        with open(data_file_path, 'r+') as f:
             data = json.load(f)
             
             # Update Table Items
