@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page.title }}</title>
+  <style>
+    body {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px;
+      color: #202833;
+      font-family: sans-serif;
+      line-height: 1.6;
+    }
+    main { padding-top: 12px; }
+    section { margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>{{ page.title }}</h1>
+    {% if page.description %}
+    <p>{{ page.description }}</p>
+    {% endif %}
+
+    {% for section in page.sections %}
+    <section>
+      <h2>{{ section.title }}</h2>
+      {% if section.content %}
+      <p>{{ section.content }}</p>
+      {% endif %}
+      {% if section.items %}
+      <ul>
+        {% for item in section.items %}
+        <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </section>
+    {% endfor %}
+  </main>
+</body>
+</html>
