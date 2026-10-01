@@ -569,7 +569,9 @@ def configure_routes(app,socketio):
     @app.route('/leetcode/<path:filename>')
     def send_leetcode_static(filename):
         return send_from_directory('templates/leetcode', filename)        
-
+    @app.route('/triagemails/<path:filename>')
+    def send_triageemails_static(filename):
+        return send_from_directory('templates/triagemails', filename)
     #@app.route('/links')
     #def send_links():
     #    return send_from_directory('templates', 'links.html')        
