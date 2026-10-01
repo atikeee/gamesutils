@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{{ page.title }} · Math Learning</title><link rel="stylesheet" href="{{ url_for('static', filename='math.css') }}">
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body class="math-shell"><main class="math-container lesson-container">
+  <a class="math-back" href="{{ url_for('mathlearning') }}">← All lessons</a><p class="math-kicker">Lesson</p><h1>{{ page.title }}</h1><p class="math-intro">{{ page.summary }}</p>
+  <article class="lesson-body">
+    {% for block in page.blocks %}
+      {% if block.type == 'text' %}<p>{{ block.body }}</p>
+      {% elif block.type == 'equation' %}<div class="equation">\({{ block.latex }}\)</div>
+      {% elif block.type == 'callout' %}<aside class="callout"><strong>{{ block.title }}</strong><p>{{ block.body }}</p></aside>
+      {% elif block.type == 'coordinate-plane' %}<div class="graph-widget" data-points='{{ block.points | tojson }}' data-label="{{ block.label }}"><canvas width="640" height="360" aria-label="Coordinate plane"></canvas><p>{{ block.label }}</p></div>
+      {% elif block.type == 'geometry-example' %}<div class="geometry-example" data-config='{{ block | tojson }}'><canvas class="geometry-example-canvas" width="800" height="480" aria-label="{{ block.label }}"></canvas><p>{{ block.label }}</p></div>
+      {% elif block.type == 'geometry-drawing' %}<div class="geometry-widget" data-config='{{ block | tojson }}'><div class="geometry-toolbar" role="toolbar" aria-label="Geometry drawing tools">{% for shape in block.shapes %}<button type="button" class="shape-tool {{ 'selected' if loop.first else '' }}" data-shape="{{ shape }}">{{ shape | replace('-', ' ') | title }}</button>{% endfor %}<button type="button" class="small-button geometry-finish">Finish shape</button><button type="button" class="small-button geometry-undo">Undo</button><button type="button" class="small-button geometry-clear">Clear</button></div><canvas class="geometry-canvas" width="800" height="480" aria-label="Interactive coordinate plane"></canvas><p class="geometry-status">Choose a tool, then tap or click the coordinate plane.</p></div>
+      {% endif %}
+    {% endfor %}
+  </article>
+  <a class="next-link" href="{{ url_for('mathpractice') }}">Go to practice →</a>
+</main><script src="{{ url_for('static', filename='math.js') }}"></script></body></html>
