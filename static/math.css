@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root { --ink: #172329; --muted: #65747a; --paper: #f6f3ec; --card: #fffdf8; --line: #d8d5ca; --teal: #087f78; --orange: #e46b3d; }
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: 'DM Sans', sans-serif; line-height: 1.6; }
+.math-shell { min-height: 100vh; background: radial-gradient(circle at 80% 0%, #d8ece3 0, transparent 28rem), var(--paper); padding: 0 16px 72px; }
+.math-container { max-width: 920px; margin: auto; padding: 28px 0; }
+.math-header { padding: 18px 0 44px; }
+.math-back { display: inline-block; color: var(--teal); font-weight: 700; text-decoration: none; margin-bottom: 46px; }
+.math-kicker, .card-type { color: var(--orange); font-size: .76rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+h1, h2, strong { font-family: 'Space Grotesk', sans-serif; }
+h1 { max-width: 720px; margin: 4px 0 10px; font-size: clamp(2.2rem, 7vw, 4.8rem); line-height: 1.02; letter-spacing: 0; }
+h2 { margin: 0; font-size: 1.55rem; }
+.math-intro { max-width: 620px; margin: 0; color: var(--muted); font-size: 1.05rem; }
+.math-switcher { display: flex; gap: 8px; margin-top: 30px; }
+.math-switcher a { padding: 10px 18px; border: 1px solid var(--line); color: var(--ink); text-decoration: none; border-radius: 99px; }
+.math-switcher a.selected { background: var(--ink); color: white; border-color: var(--ink); }
+.chapter-block { border-top: 1px solid var(--line); padding: 28px 0 42px; }
+.chapter-heading { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 18px; }
+.chapter-number { color: var(--orange); font: 700 1.2rem 'Space Grotesk'; }
+.chapter-heading p { margin: 4px 0 0; color: var(--muted); }
+.math-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.math-card { min-height: 150px; display: flex; flex-direction: column; gap: 8px; padding: 20px; border: 1px solid var(--line); background: var(--card); color: var(--ink); text-decoration: none; border-radius: 8px; box-shadow: 0 5px 0 #e6e0d3; transition: transform .18s ease, box-shadow .18s ease; }
+.math-card:hover { transform: translateY(-3px); box-shadow: 0 8px 0 #e6e0d3; }
+.math-card strong { font-size: 1.15rem; }
+.math-card span:last-child { color: var(--muted); font-size: .92rem; }
+.math-card.completed-card { border-color: var(--teal); background: #e8f3ed; box-shadow: 0 5px 0 #b9d7c8; }
+.completed-card .card-type, .completion-mark { color: var(--teal) !important; }
+.completion-mark { font-weight: 700; font-size: .86rem !important; }
+.lesson-container, .test-container { max-width: 800px; }
+.lesson-body { margin-top: 38px; padding: clamp(20px, 5vw, 48px); background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+.lesson-body p { font-size: 1.08rem; }
+.equation { overflow-x: auto; padding: 25px 0; color: var(--teal); font-size: 1.5rem; text-align: center; }
+.callout, .score-banner { padding: 18px 20px; border-left: 4px solid var(--orange); background: #fff0e7; }
+.callout p { margin-bottom: 0; }
+.next-link { display: inline-block; margin-top: 26px; color: var(--teal); font-weight: 700; }
+.graph-widget { margin: 28px 0; text-align: center; }
+.graph-widget canvas { width: 100%; height: auto; border: 1px solid var(--line); background: #fbfaf5; }
+.geometry-widget { margin: 28px 0; }
+.geometry-example { margin: 28px 0; text-align: center; }
+.geometry-example-canvas { display: block; width: 100%; height: auto; border: 1px solid var(--line); background: #fbfaf5; }
+.geometry-toolbar { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+.shape-tool { min-height: 40px; padding: 7px 12px; color: var(--ink); background: var(--card); border: 1px solid var(--line); font-size: .88rem; }
+.shape-tool.selected { color: white; background: var(--teal); border-color: var(--teal); }
+.geometry-canvas { display: block; width: 100%; height: auto; border: 1px solid var(--line); background: #fbfaf5; touch-action: none; }
+.geometry-status { margin: 8px 0 0; color: var(--muted); font-size: .9rem; }
+.question { margin: 20px 0; padding: 22px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+.question legend { width: 100%; padding: 0; font: 600 1.14rem 'Space Grotesk'; }
+.question legend span { display: inline-grid; place-items: center; width: 32px; height: 32px; margin-right: 10px; color: white; background: var(--teal); border-radius: 50%; }
+.answer-option { display: block; margin: 14px 0; padding: 13px 14px; border: 1px solid var(--line); border-radius: 7px; cursor: pointer; }
+.answer-option:has(input:checked) { border-color: var(--teal); background: #e7f3ee; }
+.answer-option.correct-option { border-color: #16835c; background: #e2f3e9; }
+.answer-option.wrong-option { border-color: #c84d43; background: #fbe9e5; }
+.question.incorrect { border-color: #e7b4aa; }
+.question.correct { border-color: #a8d6bb; }
+.answer-feedback { margin: 12px 0 0; font-weight: 700; }
+.correct-feedback { color: #16835c; }
+.wrong-feedback { color: #b13b32; }
+.manual-feedback { color: #8a6711; }
+input[type=radio], input[type=checkbox] { width: 20px; height: 20px; vertical-align: middle; accent-color: var(--teal); }
+.answer-input { width: 100%; min-height: 52px; margin-top: 18px; padding: 12px; border: 1px solid var(--line); border-radius: 7px; font: 1rem 'DM Sans'; }
+.draw-canvas { display: block; width: 100%; height: auto; margin-top: 18px; border: 2px dashed var(--line); background: white; touch-action: none; }
+button { min-height: 48px; padding: 10px 18px; border: 0; border-radius: 7px; font: 700 1rem 'DM Sans'; cursor: pointer; }
+.test-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.primary-button { color: white; background: var(--teal); }.secondary-button, .small-button { color: var(--ink); background: #e5e1d6; }.small-button { margin-top: 10px; font-size: .9rem; }
+.reset-form { margin-top: 12px; text-align: right; }.reset-button { color: #8f342c; background: transparent; border: 1px solid #d7aaa4; font-size: .9rem; }
+.score-banner { margin: 24px 0; border-color: var(--teal); background: #e2f1eb; font-weight: 700; }
+.empty-state { color: var(--muted); }
+@media (max-width: 600px) { .math-shell { padding-left: 14px; padding-right: 14px; } .math-header { padding-bottom: 30px; } .math-back { margin-bottom: 30px; } .lesson-body { padding: 20px; } .test-actions button { flex: 1 1 180px; } }
