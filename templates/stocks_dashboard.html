@@ -1,421 +1,284 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Market Watchlist</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<style>
-  :root {
-    --paper:    #f5f0e8;
-    --paper2:   #ede8de;
-    --ink:      #1a1814;
-    --ink-mid:  #4a4540;
-    --ink-soft: #8a8278;
-    --rule:     #d8d0c4;
-    --up:       #1a7a4a;
-    --up-bg:    #e8f5ee;
-    --dn:       #c0392b;
-    --dn-bg:    #fdecea;
-    --amber:    #c87800;
-    --amber-bg: #fff4e0;
-    --teal:     #0e6b7c;
-  }
+from flask import render_template, request, jsonify
+import json
+import os
+import yfinance as yf
+from datetime import datetime
+import math
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+POPULAR_STOCKS_FILE = "data/popular_stocks.json"
 
-  body {
-    background: var(--paper);
-    color: var(--ink);
-    font-family: 'DM Sans', sans-serif;
-    min-height: 100vh;
-  }
 
-  /* ── HEADER ── */
-  .site-header {
-    background: var(--ink);
-    color: var(--paper);
-    padding: 0 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 56px;
-    gap: 1.5rem;
-  }
+# ── Watchlist helpers ─────────────────────────────────────────────────────────
 
-  .logo {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.3rem;
-    letter-spacing: .02em;
-    white-space: nowrap;
-  }
+def _load_watchlist():
+    if not os.path.exists(POPULAR_STOCKS_FILE):
+        return []
+    try:
+        with open(POPULAR_STOCKS_FILE, "r", encoding="utf-8") as f:
+            return _normalize_watchlist(json.load(f))
+    except Exception as e:
+        print(f"[stocks] Error loading watchlist: {e}")
+        return []
 
-  .logo span { color: #f0c040; }
 
-  .header-nav { display: flex; gap: .5rem; }
+def _number(value, field_name):
+    try:
+        number = float(value or 0)
+    except (TypeError, ValueError):
+        raise ValueError(f"{field_name} must be a number")
+    if not math.isfinite(number) or number < 0:
+        raise ValueError(f"{field_name} must be a non-negative number")
+    return number
 
-  .nav-btn {
-    font-family: 'DM Mono', monospace;
-    font-size: .7rem;
-    letter-spacing: .08em;
-    padding: .4rem .9rem;
-    border-radius: 4px;
-    border: 1px solid rgba(255,255,255,.2);
-    color: rgba(255,255,255,.75);
-    background: transparent;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all .15s;
-  }
 
-  .nav-btn:hover,
-  .nav-btn.active { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.4); }
+def _quantity(value):
+    number = _number(value, "quantity")
+    if not number.is_integer():
+        raise ValueError("quantity must be a whole number")
+    return int(number)
 
-  .refresh-badge {
-    display: flex;
-    align-items: center;
-    gap: .4rem;
-    font-family: 'DM Mono', monospace;
-    font-size: .65rem;
-    color: rgba(255,255,255,.45);
-    white-space: nowrap;
-  }
 
-  .pulse-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: #4cdb8a;
-    animation: pulse 2.5s ease-in-out infinite;
-  }
+def _price(value):
+    number = _number(value, "price")
+    return int(number) if number.is_integer() else number
 
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
 
-  /* ── SUBHEADER ── */
-  .sub-header {
-    background: var(--paper2);
-    border-bottom: 1px solid var(--rule);
-    padding: .65rem 2rem;
-    display: flex;
-    align-items: baseline;
-    gap: 1rem;
-  }
+def _normalize_watchlist(watchlist):
+    normalized = []
+    for item in watchlist if isinstance(watchlist, list) else []:
+        if not isinstance(item, dict) or not item.get("symbol"):
+            continue
+        entry = dict(item)
+        try:
+            entry["quantity"] = _quantity(entry.get("quantity", 0))
+            entry["price"] = _price(entry.get("price", 0))
+        except ValueError:
+            entry["quantity"] = 0
+            entry["price"] = 0
+        normalized.append(entry)
+    return normalized
 
-  .sub-header h1 {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.05rem;
-    font-weight: 400;
-    color: var(--ink);
-  }
 
-  .count-badge {
-    font-family: 'DM Mono', monospace;
-    font-size: .65rem;
-    background: var(--amber-bg);
-    color: var(--amber);
-    border: 1px solid #f0d080;
-    border-radius: 100px;
-    padding: .15rem .5rem;
-  }
+def _save_watchlist(lst):
+    try:
+        with open(POPULAR_STOCKS_FILE, "w", encoding="utf-8") as f:
+            json.dump(_normalize_watchlist(lst), f, indent=2)
+        return True
+    except Exception as e:
+        print(f"[stocks] Error saving watchlist: {e}")
+        return False
 
-  .sub-header-right { margin-left: auto; font-size: .8rem; color: var(--ink-soft); }
 
-  /* ── GRID ── */
-  .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 1px;
-    background: var(--rule);
-    border-top: 1px solid var(--rule);
-  }
+# ── yfinance data helpers ─────────────────────────────────────────────────────
 
-  /* ── STOCK CARD ── */
-  .stock-card {
-    background: var(--paper);
-    padding: 1.4rem 1.6rem 1.2rem;
-    cursor: pointer;
-    text-decoration: none;
-    color: inherit;
-    display: flex;
-    flex-direction: column;
-    gap: .75rem;
-    transition: background .15s;
-    position: relative;
-  }
-
-  .stock-card:hover { background: #faf6ef; }
-
-  .card-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .card-sym {
-    font-family: 'DM Mono', monospace;
-    font-size: 1.1rem;
-    font-weight: 500;
-    color: var(--teal);
-    line-height: 1;
-  }
-
-  .card-name {
-    font-size: .78rem;
-    color: var(--ink-soft);
-    margin-top: .2rem;
-    line-height: 1.3;
-  }
-
-  .card-price-block { text-align: right; }
-
-  .card-price {
-    font-family: 'DM Mono', monospace;
-    font-size: 1.25rem;
-    font-weight: 500;
-    line-height: 1;
-    color: var(--ink);
-  }
-
-  .card-change {
-    font-family: 'DM Mono', monospace;
-    font-size: .75rem;
-    margin-top: .25rem;
-    display: inline-block;
-    padding: .15rem .45rem;
-    border-radius: 3px;
-  }
-
-  .card-change.up { background: var(--up-bg); color: var(--up); }
-  .card-change.dn { background: var(--dn-bg); color: var(--dn); }
-
-  /* sparkline */
-  .spark-wrap {
-    height: 64px;
-    position: relative;
-  }
-
-  .spark-wrap canvas { width: 100% !important; height: 100% !important; }
-
-  /* card loading / error */
-  .card-loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 130px;
-    color: var(--ink-soft);
-    font-size: .78rem;
-    font-family: 'DM Mono', monospace;
-    letter-spacing: .05em;
-  }
-
-  .card-error {
-    font-family: 'DM Mono', monospace;
-    font-size: .7rem;
-    color: var(--dn);
-    padding: .5rem 0;
-  }
-
-  /* shimmer placeholder */
-  .shimmer-block {
-    background: linear-gradient(90deg, var(--paper2) 25%, var(--rule) 50%, var(--paper2) 75%);
-    background-size: 300% 100%;
-    animation: shimmer 1.6s infinite;
-    border-radius: 3px;
-  }
-
-  @keyframes shimmer { to { background-position: -300% 0; } }
-
-  /* empty state */
-  .empty-state {
-    grid-column: 1 / -1;
-    padding: 5rem 2rem;
-    text-align: center;
-  }
-
-  .empty-state h2 {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.5rem;
-    font-weight: 400;
-    color: var(--ink-mid);
-    margin-bottom: .75rem;
-  }
-
-  .empty-state p { color: var(--ink-soft); font-size: .9rem; margin-bottom: 1.5rem; }
-
-  .empty-state a {
-    display: inline-block;
-    background: var(--ink);
-    color: var(--paper);
-    padding: .65rem 1.5rem;
-    border-radius: 4px;
-    font-size: .85rem;
-    text-decoration: none;
-    font-weight: 500;
-    transition: opacity .15s;
-  }
-
-  .empty-state a:hover { opacity: .8; }
-
-  /* timestamp strip */
-  .timestamp-strip {
-    border-top: 1px solid var(--rule);
-    padding: .6rem 2rem;
-    font-family: 'DM Mono', monospace;
-    font-size: .65rem;
-    color: var(--ink-soft);
-  }
-</style>
-</head>
-<body>
-
-<header class="site-header">
-  <div class="logo">Market<span>·</span>Desk</div>
-  <nav class="header-nav">
-    <a class="nav-btn active" href="/stocks">Watchlist</a>
-    <a class="nav-btn" href="/stocks/select">Manage</a>
-  </nav>
-  <div class="refresh-badge">
-    <div class="pulse-dot"></div>
-    <span id="refresh-label">refreshing in 60s</span>
-  </div>
-</header>
-
-<div class="sub-header">
-  <h1>My Watchlist</h1>
-  <span class="count-badge" id="count-badge">{{ watchlist|length }} stocks</span>
-  <span class="sub-header-right" id="updated-at"></span>
-</div>
-
-<div class="cards-grid" id="cards-grid">
-  {% if watchlist %}
-    {% for s in watchlist %}
-    <a class="stock-card" href="/stocks/detail/{{ s.symbol }}" id="card-{{ s.symbol }}" data-symbol="{{ s.symbol }}">
-      <div class="card-loading shimmer-block" style="height:120px;border-radius:4px;"></div>
-    </a>
-    {% endfor %}
-  {% else %}
-  <div class="empty-state">
-    <h2>Your watchlist is empty</h2>
-    <p>Add stocks to track them here.</p>
-    <a href="/stocks/select">Add Stocks →</a>
-  </div>
-  {% endif %}
-</div>
-
-<div class="timestamp-strip" id="ts-strip"></div>
-
-<script>
-const watchlist = {{ watchlist | tojson }};
-const charts    = {};
-
-function fmtPrice(n, dec=2) {
-  return n == null ? '—' : Number(n).toLocaleString(undefined, {minimumFractionDigits: dec, maximumFractionDigits: dec});
-}
-
-function renderCard(sym, d) {
-  const card = document.getElementById(`card-${sym}`);
-  if (!card) return;
-
-  const isUp = d.change >= 0;
-  const arrow = isUp ? '▲' : '▼';
-  const chgText = `${arrow} ${fmtPrice(Math.abs(d.change))} (${fmtPrice(Math.abs(d.pct))}%)`;
-
-  card.innerHTML = `
-    <div class="card-top">
-      <div>
-        <div class="card-sym">${d.symbol}</div>
-        <div class="card-name">${d.name}</div>
-      </div>
-      <div class="card-price-block">
-        <div class="card-price">${fmtPrice(d.price)}</div>
-        <div class="card-change ${isUp ? 'up' : 'dn'}">${chgText}</div>
-      </div>
-    </div>
-    <div class="spark-wrap"><canvas id="spark-${sym}"></canvas></div>
-  `;
-
-  // draw sparkline
-  const ctx = document.getElementById(`spark-${sym}`);
-  const color = isUp ? '#1a7a4a' : '#c0392b';
-  const fillColor = isUp ? 'rgba(26,122,74,.08)' : 'rgba(192,57,43,.08)';
-
-  if (charts[sym]) charts[sym].destroy();
-  charts[sym] = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: d.dates,
-      datasets: [{
-        data: d.closes,
-        borderColor: color,
-        borderWidth: 1.5,
-        pointRadius: 0,
-        tension: .4,
-        fill: true,
-        backgroundColor: fillColor,
-      }]
-    },
-    options: {
-      responsive: false,
-      animation: false,
-      plugins: { legend: { display: false }, tooltip: { enabled: false } },
-      scales: {
-        x: { display: false },
-        y: { display: false }
-      },
-      layout: { padding: 0 }
+def _fetch_stock_data(symbol: str, period: str = "1mo"):
+    """Full data fetch: price, stats, chart series, news."""
+    period_map = {
+        "1wk": ("7d",  "1d"),
+        "1mo": ("1mo", "1d"),
+        "6mo": ("6mo", "1d"),
     }
-  });
-}
+    yf_period, interval = period_map.get(period, ("1mo", "1d"))
 
-function renderCardError(sym, msg) {
-  const card = document.getElementById(`card-${sym}`);
-  if (!card) return;
-  card.innerHTML = `
-    <div class="card-top">
-      <div>
-        <div class="card-sym">${sym}</div>
-        <div class="card-name">—</div>
-      </div>
-    </div>
-    <div class="card-error">⚠ ${msg}</div>
-  `;
-}
+    ticker = yf.Ticker(symbol)
+    info   = ticker.info
+    hist   = ticker.history(period=yf_period, interval=interval)
 
-async function fetchSpark(sym) {
-  try {
-    const res  = await fetch(`/stocks/api/spark?symbol=${sym}`);
-    const json = await res.json();
-    if (json.status === 'success') renderCard(sym, json.data);
-    else renderCardError(sym, json.message || 'Failed to load');
-  } catch(e) {
-    renderCardError(sym, 'Network error');
-  }
-}
+    if hist.empty:
+        raise ValueError(f"No data found for symbol '{symbol}'")
 
-async function refreshAll() {
-  const now = new Date();
-  document.getElementById('updated-at').textContent =
-    `Last updated ${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
-  document.getElementById('ts-strip').textContent =
-    `Data fetched at ${now.toLocaleString()}`;
-  await Promise.all(watchlist.map(s => fetchSpark(s.symbol)));
-}
+    dates   = [d.strftime("%Y-%m-%d") for d in hist.index]
+    closes  = [round(float(v), 2) if not math.isnan(float(v)) else None for v in hist["Close"]]
+    volumes = [int(v) if not math.isnan(float(v)) else 0 for v in hist["Volume"]]
 
-// countdown
-let secs = 60;
-const label = document.getElementById('refresh-label');
-setInterval(() => {
-  secs--;
-  label.textContent = `refreshing in ${secs}s`;
-  if (secs <= 0) {
-    secs = 60;
-    refreshAll();
-  }
-}, 1000);
+    current_price = info.get("currentPrice") or info.get("regularMarketPrice") or closes[-1]
+    prev_close    = info.get("previousClose") or (closes[-2] if len(closes) > 1 else closes[-1])
+    change        = round(current_price - prev_close, 2)
+    change_pct    = round((change / prev_close) * 100, 2) if prev_close else 0.0
 
-// initial load
-if (watchlist.length) refreshAll();
-</script>
-</body>
-</html>
+    raw_news = ticker.news or []
+    news = []
+    for n in raw_news[:8]:
+        content     = n.get("content", {})
+        title       = content.get("title") or n.get("title", "")
+        pub_raw     = content.get("pubDate") or ""
+        try:
+            pub_str = datetime.strptime(pub_raw[:19], "%Y-%m-%dT%H:%M:%S").strftime("%b %d, %Y")
+        except Exception:
+            pub_str = pub_raw[:10] if pub_raw else ""
+        canon       = content.get("canonicalUrl", {})
+        url         = (canon.get("url") if isinstance(canon, dict) else "") or n.get("link", "#")
+        source      = content.get("provider", {})
+        source_name = (source.get("displayName") if isinstance(source, dict) else "") or "News"
+        if title:
+            news.append({"title": title, "summary": content.get("summary", ""),
+                         "url": url, "date": pub_str, "source": source_name})
+
+    return {
+        "symbol":        symbol.upper(),
+        "name":          info.get("longName") or info.get("shortName") or symbol,
+        "current_price": round(float(current_price), 2),
+        "change":        change,
+        "change_pct":    change_pct,
+        "currency":      info.get("currency", "USD"),
+        "market_cap":    info.get("marketCap"),
+        "pe_ratio":      info.get("trailingPE"),
+        "week_52_high":  info.get("fiftyTwoWeekHigh"),
+        "week_52_low":   info.get("fiftyTwoWeekLow"),
+        "dates":         dates,
+        "closes":        closes,
+        "volumes":       volumes,
+        "news":          news,
+        "period":        period,
+        "fetched_at":    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+
+def _fetch_spark(symbol: str, period: str = "1wk"):
+    """Lightweight daily price fetch for watchlist cards."""
+    period_map = {
+        "1wk": "7d",
+        "1mo": "1mo",
+        "6mo": "6mo",
+    }
+    yf_period = period_map.get(period, "7d")
+    ticker = yf.Ticker(symbol)
+    info   = ticker.info
+    hist   = ticker.history(period=yf_period, interval="1d")
+    daily_hist = ticker.history(period="5d", interval="1d")
+
+    if hist.empty:
+        raise ValueError(f"No data for '{symbol}'")
+
+    closes  = [round(float(v), 2) if not math.isnan(float(v)) else None for v in hist["Close"]]
+    dates   = [d.strftime("%b %d") for d in hist.index]
+    current = info.get("currentPrice") or info.get("regularMarketPrice") or closes[-1]
+    daily_closes = [round(float(v), 2) for v in daily_hist["Close"] if not math.isnan(float(v))]
+    prev    = info.get("previousClose") or (daily_closes[-2] if len(daily_closes) > 1 else current)
+    change  = round(current - prev, 2)
+    pct     = round((change / prev) * 100, 2) if prev else 0.0
+
+    return {
+        "symbol":   symbol.upper(),
+        "name":     info.get("longName") or info.get("shortName") or symbol,
+        "price":    round(float(current), 2),
+        "change":   change,
+        "pct":      pct,
+        "currency": info.get("currency", "USD"),
+        "dates":    dates,
+        "closes":   closes,
+    }
+
+
+# ── Route registration ────────────────────────────────────────────────────────
+
+def configure_routes_stocks(app, socketio=None):
+
+    @app.route("/stocks")
+    def stocks_dashboard():
+        watchlist = _load_watchlist()
+        return render_template("stocks_dashboard.html", watchlist=watchlist)
+
+    @app.route("/stocks/detail/<symbol>")
+    def stocks_detail(symbol):
+        period = request.args.get("period", "1mo")
+        return render_template("stocks_detail.html",
+                               symbol=symbol.upper(), period=period)
+
+    @app.route("/stocks/select", methods=["GET"])
+    def stocks_select():
+        watchlist = _load_watchlist()
+        return render_template("stocks_select.html", watchlist=watchlist)
+
+    @app.route("/stocks/select/add", methods=["POST"])
+    def stocks_select_add():
+        data   = request.json or {}
+        symbol = data.get("symbol", "").upper().strip()
+        name   = data.get("name", symbol).strip()
+        if not symbol:
+            return jsonify({"status": "error", "message": "Symbol required"}), 400
+        wl = _load_watchlist()
+        if any(s["symbol"] == symbol for s in wl):
+            return jsonify({"status": "exists", "message": f"{symbol} already in watchlist"})
+        wl.append({"symbol": symbol, "name": name, "quantity": 0, "price": 0})
+        _save_watchlist(wl)
+        return jsonify({"status": "success", "message": f"{symbol} added"})
+
+    @app.route("/stocks/select/save", methods=["POST"])
+    def stocks_select_save():
+        data = request.json or {}
+        updates = data.get("holdings")
+        if not isinstance(updates, list):
+            return jsonify({"status": "error", "message": "holdings list required"}), 400
+        watchlist = _load_watchlist()
+        by_symbol = {item["symbol"]: item for item in watchlist}
+        try:
+            for update in updates:
+                symbol = (update.get("symbol") or "").upper().strip()
+                if symbol not in by_symbol:
+                    continue
+                by_symbol[symbol]["quantity"] = _quantity(update.get("quantity"))
+                by_symbol[symbol]["price"] = _price(update.get("price"))
+        except (AttributeError, ValueError) as error:
+            return jsonify({"status": "error", "message": str(error)}), 400
+        if not _save_watchlist(watchlist):
+            return jsonify({"status": "error", "message": "Could not save holdings"}), 500
+        return jsonify({"status": "success", "watchlist": watchlist})
+
+    @app.route("/stocks/select/remove", methods=["POST"])
+    def stocks_select_remove():
+        data   = request.json or {}
+        symbol = data.get("symbol", "").upper().strip()
+        wl     = _load_watchlist()
+        _save_watchlist([s for s in wl if s["symbol"] != symbol])
+        return jsonify({"status": "success", "message": f"{symbol} removed"})
+
+    @app.route("/stocks/select/reorder", methods=["POST"])
+    def stocks_select_reorder():
+        data    = request.json or {}
+        symbols = data.get("symbols", [])
+        wl      = _load_watchlist()
+        lookup  = {s["symbol"]: s for s in wl}
+        _save_watchlist([lookup[sym] for sym in symbols if sym in lookup])
+        return jsonify({"status": "success"})
+
+    @app.route("/stocks/api/data")
+    def stocks_api_data():
+        symbol = request.args.get("symbol", "").upper().strip()
+        period = request.args.get("period", "1mo")
+        if not symbol:
+            return jsonify({"status": "error", "message": "symbol param required"}), 400
+        try:
+            return jsonify({"status": "success", "data": _fetch_stock_data(symbol, period)})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+
+    @app.route("/stocks/api/spark")
+    def stocks_api_spark():
+        symbol = request.args.get("symbol", "").upper().strip()
+        period = request.args.get("period", "1wk")
+        if not symbol:
+            return jsonify({"status": "error", "message": "symbol param required"}), 400
+        try:
+            return jsonify({"status": "success", "data": _fetch_spark(symbol, period)})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+
+    @app.route("/stocks/api/search")
+    def stocks_api_search():
+        q = request.args.get("q", "").strip()
+        if not q:
+            return jsonify({"results": []})
+        try:
+            results = yf.Search(q, max_results=8)
+            quotes  = results.quotes or []
+            out = [{"symbol": r.get("symbol", ""),
+                    "name":   r.get("longname") or r.get("shortname") or ""}
+                   for r in quotes if r.get("symbol")]
+            return jsonify({"results": out})
+        except Exception as e:
+            return jsonify({"results": [], "error": str(e)})
+
+    @app.route("/stocks/api/watchlist")
+    def stocks_api_watchlist():
+        return jsonify({"status": "success", "watchlist": _load_watchlist()})
