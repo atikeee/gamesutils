@@ -9,28 +9,35 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css') }}">
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 catan-game-page">
     <div class="main-container">
         <div class="left-column">
             <h1 class="text-2xl font-bold text-gray-800 mb-4">Catan GamePlay</h1>
-            <canvas id="catanBoard"></canvas>
+            <div class="map-zoom-controls">
+                <button type="button" class="map-zoom-toggle" id="mapZoomToggle" aria-pressed="false" title="Zoom map to 2x">2×</button>
+            </div>
+            <div class="canvas-wrapper map-zoom-viewport">
+                <canvas id="catanBoard"></canvas>
+            </div>
             <div id="messageBox" class="message-box"></div>
         </div>
         <div class="middle-column">
-            <div class="middle-section">
-                <div class="played-dev-cards-section mt-6">
-                    <div id="devCards" class="card-list">
-                    <!-- Played development cards will be displayed here -->
+            <div class="middle-top-row">
+                <div class="middle-section">
+                    <div class="played-dev-cards-section">
+                        <div id="devCards" class="card-list">
+                        <!-- Played development cards will be displayed here -->
+                        </div>
                     </div>
                 </div>
-            </div>
             <div class="middle-section">
-                <div class="played-dev-cards-section mt-6">
+                <div class="played-dev-cards-section">
                     <h2 class="text-1xl text-gray-800 mb-3">Dice Roll</h2>
                     <div id="diceroll">
                     <!-- Played development cards will be displayed here -->
                     </div>
                 </div>
+            </div>
             </div>
             <div class="middle-section">
                 <div class="assign-point-section mt-6">
@@ -40,10 +47,11 @@
                     <thead>
                         <tr class="bg-gray-200 text-gray-700 uppercase text-sm leading-normal">
                             <!-- Table Headers -->
-                            <th class="py-3 px-8 text-left border-b-2 border-gray-300 rounded-tl-lg">Name</th>
-                            <th class="py-3 px-6 text-left border-b-2 border-gray-300">Scores</th>
-                            <th class="py-3 px-6 text-left border-b-2 border-gray-300">Cards</th>
-                            <th class="py-3 px-6 text-left border-b-2 border-gray-300">Dev</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300 rounded-tl-lg">Name</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300">Score</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300">Cards</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Knights played">Knights</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300">Dev</th>
                         </tr>
                     </thead>
                     <tbody class="text-gray-600 text-sm font-light">
@@ -52,28 +60,32 @@
                             <td class="result" id="cell-0-0">Player 1</td>
                             <td class="result" id="cell-0-1">0</td>
                             <td class="result" id="cell-0-2"></td>
-                            <td class="result" id="cell-0-3"></td>
+                            <td class="result" id="cell-0-3">0</td>
+                            <td class="result" id="cell-0-4"></td>
                         </tr>
                         <!-- Row 2 -->
                         <tr class="border-b border-gray-200 hover:bg-gray-100">
                             <td class="result" id="cell-1-0">Player 2</td>
                             <td class="result" id="cell-1-1">0</td>
                             <td class="result" id="cell-1-2"></td>
-                            <td class="result" id="cell-1-3"></td>
+                            <td class="result" id="cell-1-3">0</td>
+                            <td class="result" id="cell-1-4"></td>
                         </tr>
                         <!-- Row 3 -->
                         <tr class="border-b border-gray-200 hover:bg-gray-100">
                             <td class="result" id="cell-2-0">Player 3</td>
                             <td class="result" id="cell-2-1">0</td>
                             <td class="result" id="cell-2-2"></td>
-                            <td class="result" id="cell-2-3"></td>
+                            <td class="result" id="cell-2-3">0</td>
+                            <td class="result" id="cell-2-4"></td>
                         </tr>
                         <!-- Row 4 -->
                         <tr class="hover:bg-gray-100">
                             <td class="result" id="cell-3-0">Player 4</td>
                             <td class="result" id="cell-3-1">0</td>
                             <td class="result" id="cell-3-2"></td>
-                            <td class="result" id="cell-3-3"></td>
+                            <td class="result" id="cell-3-3">0</td>
+                            <td class="result" id="cell-3-4"></td>
                         </tr>
                     </tbody>
                 </table>
@@ -81,12 +93,13 @@
                     </div>
                     <div>
                     <table class="w-full text-center border-collapse">
+            </div>
                         <tbody>
                             <!-- First Row -->
                             <tr class="border-b border-gray-200 hover:bg-gray-100">
                                 <td class="result">Longest Road</td>
                                 <td class="result" id="cell_lr">
-                                    <select  id="pl-dropdown" onchange="handleDropdownChange()">
+                                    <select id="pl-dropdown" class="award-select" aria-label="Longest Road owner" onchange="handleDropdownChange()">
                                         <option value="" disabled selected>None</option>
                                         <!-- Each option has a displayed name and a stored value -->
                                         <option id="player1" value="player1">Player 1</option>
@@ -99,7 +112,15 @@
                             <!-- Second Row -->
                             <tr class="hover:bg-gray-100">
                                 <td class="result">Largest Army</td>
-                                <td class="result" id="cell_la"></td>
+                                <td class="result" id="cell_la">
+                                    <select id="la-dropdown" class="award-select" aria-label="Largest Army owner" onchange="handleLargestArmyChange()">
+                                        <option value="" disabled selected>None</option>
+                                        <option value="player1">Player 1</option>
+                                        <option value="player2">Player 2</option>
+                                        <option value="player3">Player 3</option>
+                                        <option value="player4">Player 4</option>
+                                    </select>
+                                </td>
                             </tr> 
                         </tbody>
                     </table>
@@ -131,6 +152,7 @@
         
         
     </div>
+    <script>window.CATAN_PLAYER_COLORS = {{ player_colors|tojson }};</script>
     <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/catan_game_logic.js') }}"></script>
 

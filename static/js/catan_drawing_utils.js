@@ -6,7 +6,7 @@ const HOUSE_SIZE = 20;
 const CITY_SIZE = 30;
 const PORT_SIZE = HEX_SIZE * 0.3;
 
-const PLAYER_COLORS = {
+const PLAYER_COLORS = window.CATAN_PLAYER_COLORS || {
     'player1': '#F80000',
     'player2': '#0000CC',
     'player3': '#663300',

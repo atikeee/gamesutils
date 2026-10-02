@@ -45,6 +45,10 @@ canvas {
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
+.map-zoom-controls {
+    display: none;
+}
+
 
 
 
@@ -65,6 +69,21 @@ canvas {
     box-sizing: border-box;
     margin: 20px;
 }
+
+.catan-board-page .board-edit-status {
+    margin: 0 0 10px;
+    color: #526660;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.catan-board-page .button-group .btn-tool:disabled {
+    cursor: not-allowed;
+    opacity: 0.42;
+    box-shadow: none;
+    transform: none;
+}
+
 .main-container {
     display: flex;
     height: 100vh;
@@ -72,6 +91,38 @@ canvas {
     gap: 10px;
     padding: 10px;
     box-sizing: border-box;
+}
+
+body.catan-game-page {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100svh;
+    margin: 0 !important;
+    padding: 12px !important;
+}
+
+.catan-game-page .main-container {
+    width: 100%;
+    height: calc(100vh - 24px);
+    height: calc(100svh - 24px);
+}
+
+.catan-game-page #catanBoard {
+    width: 100%;
+    max-width: min(100%, calc((100svh - 96px) * 1.2));
+    height: auto;
+}
+
+.catan-game-page .middle-section:has(#devCards):not(:has(#devCards > *)),
+.catan-game-page .middle-section:has(#diceroll):not(:has(#diceroll > *)),
+.catan-game-page .right-section:not(:has([id$="log"] *)) {
+    display: none;
+}
+
+.catan-game-page .right-column:not(:has([id$="log"] *)) {
+    display: none;
 }
 
 .left-column {
@@ -112,6 +163,81 @@ canvas {
     /* Optional: You might want a minimum width for the main content area */
     /* min-width: 400px; */
 }
+
+.catan-game-page .middle-top-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 10px;
+    min-width: 0;
+    flex: 0 0 auto;
+}
+
+.catan-game-page .middle-top-row .middle-section {
+    min-width: 0;
+    margin: 0;
+    padding: 10px;
+}
+
+.catan-game-page .middle-top-row .played-dev-cards-section {
+    margin-top: 0;
+}
+
+.catan-game-page .middle-top-row h2 {
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.catan-game-page .message-box {
+    position: fixed;
+    z-index: 1200;
+    top: 14px;
+    bottom: auto;
+    left: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    max-width: calc(100vw - 24px);
+    max-height: min(60vh, 420px);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transform: translateX(-50%);
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+.catan-game-page .message-box:empty {
+    display: none;
+}
+
+.catan-game-page .game-toast {
+    flex: 0 0 auto;
+    width: fit-content;
+    max-width: 100%;
+    padding: 11px 14px;
+    border: 1px solid #eadcae;
+    border-radius: 8px;
+    background: rgba(255, 251, 235, 0.98);
+    color: #664e12;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16);
+    font-size: 0.9rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    text-align: center;
+    pointer-events: none;
+}
+
+.catan-game-page .game-toast-error {
+    border-color: #f2b8b5;
+    background: rgba(254, 242, 242, 0.98);
+    color: #842d2b;
+}
+
 /* NEW: Styling for sections within the Middle Column (similar to right-section) */
 .middle-section {
     flex: 1; /* Each section takes equal vertical space within the middle column */
@@ -305,6 +431,369 @@ canvas {
     padding-bottom: 30px;
 }
 
+.player-color-picker {
+    margin: 0 0 20px;
+    padding: 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.player-color-picker h2 {
+    margin: 0 0 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.player-color-options {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.player-color-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 40px;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.player-color-option.unavailable {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.player-color-swatch {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #334155;
+    border-radius: 50%;
+    background: var(--player-color);
+}
+
+.player-color-options button {
+    min-height: 40px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 6px;
+    background: #1f2937;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.player-color-error {
+    margin: 0 0 10px;
+    color: #b91c1c;
+}
+
+@media (min-width: 769px) {
+    .catan-player-page .canvas-wrapper {
+        width: min(950px, calc((100svh - 48px) * 1.2));
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .catan-player-page .canvas-wrapper canvas {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        aspect-ratio: 1.2 / 1;
+        box-sizing: border-box;
+    }
+}
+
+body.catan-player-page.has-player-color {
+    background-color: color-mix(in srgb, var(--player-color) 30%, white);
+}
+
+.catan-player-page .transfer-btn[data-target-player="player1"] {
+    border-color: #f2c7c2;
+    background-color: #fff1ef;
+    color: #672d28;
+}
+
+.catan-player-page .transfer-btn[data-target-player="player2"] {
+    border-color: #c5d7e7;
+    background-color: #eef5fb;
+    color: #25445e;
+}
+
+.catan-player-page .transfer-btn[data-target-player="player3"] {
+    border-color: #d8c9ba;
+    background-color: #f6f1ec;
+    color: #4a382a;
+}
+
+.catan-player-page .transfer-btn[data-target-player="player4"] {
+    border-color: #eadf9d;
+    background-color: #fffbea;
+    color: #5a4b14;
+}
+
+@media (max-width: 768px) {
+    .map-zoom-controls {
+        display: flex;
+        justify-content: flex-end;
+        width: 100%;
+        margin: 6px 0;
+    }
+
+    .map-zoom-toggle {
+        min-width: 44px;
+        min-height: 40px;
+        padding: 6px 10px;
+        border: 1px solid #c9d7d3;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #29453e;
+        font: 700 0.9rem Inter, sans-serif;
+    }
+
+    .map-zoom-toggle[aria-pressed="true"] {
+        border-color: #176b5b;
+        background: #e4f0ec;
+        color: #145347;
+    }
+
+    .map-zoom-viewport {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x pan-y;
+    }
+
+    .map-zoom-viewport.map-zoomed #catanBoard {
+        width: 200% !important;
+        max-width: none !important;
+    }
+}
+
+.catan-game-page .award-select {
+    max-width: 100%;
+    padding: 5px 7px;
+    border: 1px solid #cbd5d1;
+    border-radius: 5px;
+    background: #ffffff;
+    color: #263d38;
+    font: inherit;
+}
+
+body.catan-setup-page {
+    min-height: 100vh;
+    margin: 0;
+    padding: 28px 20px;
+    background: #f2f6f4;
+    color: #263d38;
+    font-family: Inter, sans-serif;
+    box-sizing: border-box;
+}
+
+.catan-setup-shell {
+    width: min(100%, 760px);
+    margin: 0 auto;
+}
+
+.catan-setup-header {
+    margin-bottom: 28px;
+}
+
+.catan-setup-header h1 {
+    margin: 0 0 8px;
+    color: #203b34;
+    font-size: 1.8rem;
+    line-height: 1.2;
+}
+
+.catan-setup-header p,
+.catan-seat-full {
+    margin: 0;
+    color: #566b65;
+    line-height: 1.5;
+}
+
+.catan-setup-section {
+    margin: 0 0 28px;
+}
+
+.catan-setup-section h2 {
+    margin: 0 0 12px;
+    color: #29463e;
+    font-size: 1.05rem;
+}
+
+.catan-seat-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid #d6e0dc;
+}
+
+.catan-seat-list li {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 52px;
+    padding: 8px 4px;
+    border-bottom: 1px solid #d6e0dc;
+}
+
+.catan-seat-number {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border-radius: 50%;
+    background: #e1ebe7;
+    color: #345a4f;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.catan-seat-name {
+    color: #263d38;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.catan-seat-state {
+    color: #647770;
+    font-size: 0.82rem;
+}
+
+.catan-join-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+    align-items: end;
+    gap: 12px;
+}
+
+.catan-join-form label {
+    display: grid;
+    gap: 6px;
+    color: #334c45;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.catan-join-form input {
+    width: 100%;
+    min-height: 42px;
+    padding: 8px 10px;
+    border: 1px solid #c9d7d3;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #263d38;
+    font: inherit;
+    box-sizing: border-box;
+}
+
+.catan-join-form button {
+    min-height: 42px;
+    padding: 8px 14px;
+    border: 1px solid #176b5b;
+    border-radius: 6px;
+    background: #176b5b;
+    color: #ffffff;
+    font: 600 0.9rem Inter, sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.catan-setup-error {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border: 1px solid #e7b7b3;
+    border-radius: 6px;
+    background: #fff1ef;
+    color: #842d2b;
+}
+
+.catan-access-shell {
+    max-width: 480px;
+    padding-top: 10vh;
+}
+
+.catan-access-seat {
+    margin: 0 0 6px;
+    color: #647770;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+@media (max-width: 600px) {
+    body.catan-setup-page {
+        padding: 20px 16px;
+    }
+
+    .catan-join-form {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .catan-join-form button {
+        width: 100%;
+    }
+}
+
+.catan-player-page .player-action-toolbar {
+    display: grid;
+    grid-template-columns: repeat(6, 44px);
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    margin: 8px 0;
+}
+
+.catan-player-page .player-action-toolbar .btn-tool {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    flex: none;
+    padding: 0;
+    border: 1px solid #c9d7d3;
+    border-radius: 7px;
+    background-color: #f3f7f6;
+    color: #29453e;
+    box-shadow: none;
+    font-size: 1.05rem;
+}
+
+.catan-player-page .player-action-toolbar .btn-tool:hover {
+    background-color: #e6efec;
+    border-color: #a9c1ba;
+    box-shadow: none;
+    transform: none;
+}
+
+.catan-player-page .player-action-toolbar .btn-tool.selected {
+    background-color: #176b5b;
+    border-color: #176b5b;
+    color: #ffffff;
+}
+
+.catan-player-page .player-action-toolbar .btn-tool:disabled {
+    cursor: not-allowed;
+    opacity: 0.42;
+}
+
+.catan-player-page .player-action-toolbar .map-zoom-toggle {
+    display: none;
+}
+
 .player-info-section {
     width: 100%;
     max-width: 600px;
@@ -395,6 +884,169 @@ canvas {
     display: flex;
     align-items: center;
     gap: 5px;
+}
+
+.catan-player-page #handCards {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.catan-player-page #handCards .card-item {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    aspect-ratio: 0.73;
+    padding: 0;
+}
+
+.catan-player-page .hand-card-count {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: grid;
+    place-items: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 5px;
+    border: 1px solid rgba(15, 23, 42, 0.2);
+    border-radius: 999px;
+    background: transparent;
+    color: #ffffff;
+    font-family: Inter, sans-serif;
+    font-size: 1.6rem;
+    font-weight: 400;
+    line-height: 1;
+    -webkit-text-stroke: 0.6px #172329;
+    text-shadow: 0 1px 2px rgba(15, 23, 42, 0.85);
+    box-shadow: none;
+    pointer-events: none;
+}
+
+.catan-player-page .hand-resource-empty {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.catan-player-page .resource-card.pending-pick {
+    outline: 3px solid #176b5b;
+    outline-offset: 2px;
+}
+
+.catan-player-page .resource-pick-count {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid #176b5b;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #145347;
+    font-size: 0.85rem;
+    font-weight: 700;
+    line-height: 1;
+    text-shadow: none;
+}
+
+.catan-player-page .resource-pick-count[hidden] {
+    display: none;
+}
+
+.catan-player-page .resource-selection-tray {
+    position: fixed;
+    z-index: 1100;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: min(520px, calc(100% - 24px));
+    margin: 0 auto;
+    padding: 10px 12px;
+    border: 1px solid #c9d7d3;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+    box-sizing: border-box;
+}
+
+.catan-player-page .resource-selection-tray[hidden] {
+    display: none !important;
+}
+
+.catan-player-page .resource-selection-summary {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 2px;
+    color: #263d38;
+    font-size: 0.85rem;
+}
+
+.catan-player-page #resourceSelectionDetails {
+    overflow: hidden;
+    color: #526660;
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.catan-player-page .resource-selection-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 6px;
+}
+
+.catan-player-page .resource-selection-actions button {
+    min-height: 40px;
+    padding: 6px 10px;
+    border: 1px solid #c9d7d3;
+    border-radius: 6px;
+    background: #f3f7f6;
+    color: #29453e;
+    font: 600 0.8rem Inter, sans-serif;
+}
+
+.catan-player-page .resource-selection-actions .resource-tray-confirm {
+    border-color: #176b5b;
+    background: #176b5b;
+    color: #ffffff;
+}
+
+.catan-player-page .resource-selection-actions .resource-tray-confirm.resource-tray-drop {
+    border-color: #b64b3a;
+    background: #b64b3a;
+    color: #ffffff;
+}
+
+.catan-player-page .resource-selection-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+@media (max-width: 360px) {
+    .catan-player-page .resource-selection-tray {
+        right: 8px;
+        left: 8px;
+        width: calc(100% - 16px);
+        gap: 6px;
+        padding: 8px;
+    }
+
+    .catan-player-page .resource-selection-actions {
+        gap: 4px;
+    }
+
+    .catan-player-page .resource-selection-actions button {
+        padding: 5px 7px;
+        font-size: 0.72rem;
+    }
 }
 
 /* NEW: Card Acquisition Section Styles */
@@ -663,6 +1315,174 @@ canvas {
     animation: none; /* Stop animation after final roll */
 }
 
+.catan-game-page #diceroll {
+    display: flex;
+    min-height: 78px;
+    align-items: center;
+    justify-content: center;
+}
+
+.catan-game-page .dice-result {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    min-height: 64px;
+}
+
+.dice-roll-overlay {
+    position: fixed;
+    z-index: 1500;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 28, 25, 0.48);
+    backdrop-filter: blur(3px);
+    box-sizing: border-box;
+}
+
+.dice-roll-overlay.is-visible {
+    display: flex;
+}
+
+.dice-roll-overlay.is-result {
+    cursor: pointer;
+}
+
+.dice-roll-overlay[hidden] {
+    display: none !important;
+}
+
+.dice-roll-panel {
+    display: flex;
+    min-width: 230px;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 24px 30px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 18px 50px rgba(5, 20, 16, 0.28);
+}
+
+.dice-roll-caption {
+    color: #2f4942;
+    font: 600 1rem Inter, sans-serif;
+}
+
+.dice-overlay-pair {
+    display: flex;
+    min-height: 84px;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+}
+
+.dice-roll-overlay .dice-face {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    width: 72px;
+    height: 72px;
+    padding: 11px;
+    border: 1px solid #d4dedb;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
+    box-sizing: border-box;
+}
+
+.dice-roll-overlay .die-pip {
+    width: 11px;
+    height: 11px;
+}
+
+.dice-roll-overlay.is-rolling .dice-face {
+    animation: dice-overlay-tumble 330ms ease-in-out infinite alternate;
+}
+
+.dice-roll-overlay.is-rolling .dice-face:nth-child(2) {
+    animation-delay: 70ms;
+}
+
+.dice-roll-overlay.is-result .dice-face {
+    animation: dice-result-land 260ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+
+@keyframes dice-overlay-tumble {
+    from { transform: translateY(-9px) rotate(-10deg); }
+    to { transform: translateY(8px) rotate(10deg); }
+}
+
+@keyframes dice-result-land {
+    from { opacity: 0.75; transform: translateY(-8px) scale(0.94); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dice-roll-overlay.is-rolling .dice-face,
+    .dice-roll-overlay.is-result .dice-face {
+        animation: none;
+    }
+}
+
+@media (max-width: 420px) {
+    .dice-roll-panel {
+        min-width: 0;
+        padding: 20px 24px;
+    }
+}
+
+.catan-game-page #diceroll .dice-face {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    width: 46px;
+    height: 46px;
+    margin: 0;
+    padding: 7px;
+    border: 1px solid #d4dedb;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 2px 5px rgba(15, 23, 42, 0.12);
+    animation: none;
+    box-sizing: border-box;
+}
+
+.catan-player-page .die-pip,
+.catan-game-page .die-pip {
+    width: 7px;
+    height: 7px;
+    align-self: center;
+    justify-self: center;
+    border-radius: 50%;
+    background: #31564e;
+}
+
+.catan-game-page #diceroll.rolling .dice-face {
+    animation: dice-tumble 620ms cubic-bezier(0.18, 0.75, 0.25, 1) both;
+}
+
+.catan-game-page #diceroll.rolling .dice-face:nth-of-type(2) {
+    animation-delay: 70ms;
+}
+
+@keyframes dice-tumble {
+    0% { opacity: 0; transform: translateY(-16px) rotate(-22deg) scale(0.86); }
+    45% { opacity: 1; transform: translateY(3px) rotate(9deg) scale(1.05); }
+    72% { transform: translateY(-2px) rotate(-4deg) scale(0.99); }
+    100% { opacity: 1; transform: translateY(0) rotate(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .catan-game-page #diceroll.rolling .dice-face {
+        animation: none;
+    }
+}
+
 /* Responsive adjustments */
 @media (max-width: 640px) {
     .dice-container {
@@ -745,4 +1565,320 @@ canvas {
     .resource-card-buttons {
         gap: 5px;
     }
+}
+
+@media (max-width: 768px) {
+    body.catan-player-page {
+        display: block;
+        width: auto !important;
+        height: auto;
+        min-height: 100vh;
+        margin: 0 !important;
+        padding: 12px !important;
+        overflow-x: hidden;
+    }
+
+    .catan-player-page .container.player-page-container {
+        width: 100% !important;
+        min-height: 0;
+        margin: 0;
+        padding: 12px;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .catan-player-page .player-page-container > h1 {
+        margin: 0;
+        font-size: 1.35rem;
+        line-height: 1.3;
+        text-align: center;
+        overflow-wrap: anywhere;
+    }
+
+    .catan-player-page .player-info-section {
+        max-width: none;
+        margin: 0;
+    }
+
+    .catan-player-page .player-name-input-group {
+        display: grid;
+        grid-template-columns: 1fr;
+        width: 100%;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .catan-player-page .player-name-input-group .input-field {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    .catan-player-page .player-name-input-group .btn-tool {
+        width: auto;
+        min-height: 40px;
+        justify-self: start;
+        padding: 7px 14px;
+    }
+
+    .catan-player-page .btn-tool {
+        border: 1px solid #c9d7d3;
+        border-radius: 6px;
+        background-color: #f3f7f6;
+        color: #29453e;
+        box-shadow: none;
+        font-weight: 600;
+        transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    .catan-player-page .btn-tool:hover {
+        background-color: #e6efec;
+        border-color: #a9c1ba;
+        box-shadow: none;
+        transform: none;
+    }
+
+    .catan-player-page .btn-tool.selected {
+        background-color: #176b5b;
+        border-color: #176b5b;
+        color: #ffffff;
+        box-shadow: none;
+        transform: none;
+    }
+
+    .catan-player-page .player-controls {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
+        order: 2;
+    }
+
+    .catan-player-page .player-action-toolbar {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        width: 100%;
+        gap: 4px;
+        margin: 0;
+        order: 4;
+    }
+
+    .catan-player-page .player-action-toolbar .btn-tool {
+        width: min(100%, 44px);
+        min-width: 0;
+        min-height: 44px;
+        justify-self: center;
+    }
+
+    .catan-player-page .player-action-toolbar .map-zoom-toggle {
+        display: grid;
+        width: min(100%, 44px);
+        min-width: 0;
+        min-height: 44px;
+        justify-self: center;
+        padding: 0 2px;
+    }
+
+    .catan-player-page .card-buttons {
+        width: 100%;
+        margin-top: 0;
+    }
+
+    .catan-player-page .resource-card-group {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        justify-items: center;
+        width: 100%;
+        gap: 4px;
+        overflow: visible;
+    }
+
+    .catan-player-page .resource-card-group .resource-card,
+    .catan-player-page .resource-card-group .dev-card {
+        width: min(100%, 80px);
+        height: auto;
+        aspect-ratio: 0.73;
+        min-width: 0;
+    }
+
+    .catan-player-page .canvas-wrapper {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        margin: 0;
+        flex-shrink: 1;
+        overflow: hidden;
+        order: 5;
+    }
+
+    .catan-player-page .canvas-wrapper.map-zoom-viewport.map-zoomed {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .catan-player-page .canvas-wrapper canvas {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 1.2 / 1;
+    }
+
+    .catan-player-page .message-box {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        box-sizing: border-box;
+        order: 6;
+    }
+
+    .catan-player-page .player-decks-section {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 12px;
+        order: 3;
+    }
+
+    .catan-player-page .deck-display {
+        width: 100%;
+        min-width: 0;
+        flex: none;
+        box-sizing: border-box;
+        padding: 12px;
+    }
+
+    .catan-player-page .transfer-buttons {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4px;
+    }
+
+    .catan-player-page .transfer-buttons .btn,
+    .catan-player-page .transfer-buttons .btn-tool {
+        min-width: 0;
+        min-height: 40px;
+        flex: none;
+        width: 100% !important;
+        padding: 6px 2px;
+        font-size: 0.66rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+}
+
+@media (max-width: 768px) {
+    body.catan-game-page {
+        display: block;
+        width: auto !important;
+        height: auto;
+        min-height: 100vh;
+        min-height: 100svh;
+        margin: 0 !important;
+        padding: 12px !important;
+        overflow-x: hidden;
+    }
+
+    .catan-game-page .main-container {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: auto;
+        min-height: 100vh;
+        min-height: 100svh;
+        gap: 12px;
+        padding: 0;
+    }
+
+    .catan-game-page .left-column,
+    .catan-game-page .middle-column,
+    .catan-game-page .right-column {
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        height: auto;
+        flex: none;
+    }
+
+    .catan-game-page .left-column h1 {
+        margin: 0 0 10px;
+        font-size: 1.35rem;
+    }
+
+    .catan-game-page .canvas-wrapper.map-zoom-viewport {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto;
+        margin: 0;
+        box-sizing: border-box;
+        overflow-x: hidden;
+        overflow-y: hidden;
+    }
+
+    .catan-game-page .canvas-wrapper.map-zoom-viewport.map-zoomed {
+        overflow-x: auto;
+    }
+
+    .catan-game-page canvas {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        aspect-ratio: 1.2 / 1;
+    }
+
+    .catan-game-page .middle-column,
+    .catan-game-page .right-column {
+        gap: 10px;
+    }
+
+    .catan-game-page .middle-section,
+    .catan-game-page .right-section {
+        flex: none;
+        margin: 0;
+        padding: 12px;
+        overflow: visible;
+    }
+
+    .catan-game-page .right-section {
+        max-height: 240px;
+        overflow-y: auto;
+    }
+
+    .catan-game-page .dice-container {
+        min-height: 76px;
+        gap: 16px;
+        font-size: 3rem;
+    }
+
+    .catan-game-page .dice-face {
+        width: 58px;
+        height: 58px;
+        margin: 3px;
+        border-radius: 10px;
+        font-size: 2.75rem;
+    }
+
+    .catan-game-page #assignpoint {
+        overflow-x: auto;
+    }
+
+    .catan-game-page #assignpoint table {
+        width: 100%;
+        table-layout: fixed;
+    }
+
+    .catan-game-page #assignpoint th,
+    .catan-game-page #assignpoint td {
+        padding: 8px 4px;
+        font-size: 0.75rem;
+        overflow-wrap: anywhere;
+    }
+
+    .catan-game-page #pl-dropdown {
+        max-width: 100%;
+    }
+
 }

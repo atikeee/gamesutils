@@ -3,34 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catan Player {{ player_id }}</title>
+    <title>Catan Player {{ player_name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css') }}">
 </head>
-<body>
+<body class="catan-player-page{% if player_color %} has-player-color{% endif %}" data-player-id="{{ player_id }}"{% if player_color %} style="--player-color: {{ player_color }}"{% endif %}>
     
     <div class="container player-page-container">
-        <h1 class="text-3xl font-bold text-gray-800 mb-4">Catan Player: <span id="playerNameDisplay">Player {{ player_id }}</span></h1>
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">Catan Player: <span id="playerNameDisplay">{{ player_name }}</span></h1>
 
-        <div class="player-info-section">
-            <div class="player-name-input-group">
-                <label for="playerNameInput" class="text-gray-700 font-semibold">Your Name:</label>
-                <input type="text" id="playerNameInput" placeholder="Enter your name" class="input-field">
-                <button id="savePlayerNameBtn" class="btn btn-tool">Save Name</button>
-            </div>
-        </div>
+        {% if not player_color %}
+        <section class="player-color-picker" aria-labelledby="player-color-title">
+            <h2 id="player-color-title">Choose your placement color</h2>
+            {% if error %}<p class="player-color-error" role="alert">{{ error }}</p>{% endif %}
+            <form method="post" class="player-color-options">
+                {% for option in color_options %}
+                <label class="player-color-option{% if not option.available %} unavailable{% endif %}">
+                    <input type="radio" name="color" value="{{ option.value }}" {% if not option.available %}disabled{% endif %} required>
+                    <span class="player-color-swatch" style="--player-color: {{ option.value }}"></span>
+                    <span>{{ option.name }}{% if not option.available %} (taken){% endif %}</span>
+                </label>
+                {% endfor %}
+                <button type="submit">Save color</button>
+            </form>
+        </section>
+        {% endif %}
 
         <div class="controls player-controls">
-            <div class="button-group" id="player-tool-select">
-                <button class="btn btn-tool" data-tool="house">House</button>
-                <button class="btn btn-tool" data-tool="city">City</button>
-                <button class="btn btn-tool" data-tool="road">Road</button>
-                <button class="btn btn-tool" data-tool="robber">Robber</button>
-                <button class="btn btn-tool" data-tool="undo-player">Undo</button>
-                <button class="btn btn-tool" value="roll-dice" id='rolldice' onclick="rolldice()">Roll</button>
-            </div>
             <div class="card-buttons mt-4">
                 <h3 class="text-xl font-semibold text-gray-700 mb-2">Take Resources:</h3>
                 <div class="resource-card-group">
@@ -59,7 +60,16 @@
                 <!-- The original dev card button is removed as it's now a div within the group -->
             </div>
         </div>
-        <div class="canvas-wrapper">
+        <div class="player-action-toolbar" id="player-tool-select" role="toolbar" aria-label="Game actions">
+            <button type="button" class="btn-tool" data-tool="house" title="House" aria-label="House"><i class="fas fa-home" aria-hidden="true"></i></button>
+            <button type="button" class="btn-tool" data-tool="city" title="City" aria-label="City"><i class="fas fa-city" aria-hidden="true"></i></button>
+            <button type="button" class="btn-tool" data-tool="road" title="Road" aria-label="Road"><i class="fas fa-road" aria-hidden="true"></i></button>
+            <button type="button" class="btn-tool" data-tool="robber" title="Robber" aria-label="Robber"><i class="fas fa-user-secret" aria-hidden="true"></i></button>
+            <button type="button" class="btn-tool" data-tool="undo-player" title="Undo unavailable" aria-label="Undo" aria-disabled="true" disabled><i class="fas fa-undo" aria-hidden="true"></i></button>
+            <button type="button" class="btn-tool" value="roll-dice" id="rolldice" title="Roll dice" aria-label="Roll dice" onclick="rolldice()"><i class="fas fa-dice" aria-hidden="true"></i></button>
+            <button type="button" class="map-zoom-toggle" id="mapZoomToggle" aria-pressed="false" title="Zoom map to 2x">2×</button>
+        </div>
+        <div class="canvas-wrapper map-zoom-viewport">
             <canvas id="catanBoard"></canvas>
         </div>
 
@@ -87,6 +97,17 @@
         </div>
     </div>
 
+    <div class="resource-selection-tray" id="resourceSelectionTray" hidden aria-live="polite">
+        <div class="resource-selection-summary">
+            <strong id="resourceSelectionTotal">0 cards selected</strong>
+            <span id="resourceSelectionDetails"></span>
+        </div>
+        <div class="resource-selection-actions">
+            <button type="button" class="resource-tray-clear" id="clearResourceSelection">Clear</button>
+            <button type="button" class="resource-tray-confirm" id="confirmResourceSelection" disabled>Take cards</button>
+        </div>
+    </div>
+
     <!-- Custom Confirmation Modal -->
     <div id="confirmationModal" class="modal-overlay hidden">
         <div class="modal-content">
@@ -103,6 +124,8 @@
     <script>
         // Pass player_id from Flask to JavaScript
         window.PLAYER_ID = {{ player_id }};
+        window.PLAYER_NAME = {{ player_name|tojson }};
+        window.CATAN_PLAYER_COLORS = {{ player_colors|tojson }};
 
     </script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>

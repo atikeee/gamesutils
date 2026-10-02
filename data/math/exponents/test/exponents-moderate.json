@@ -1,0 +1,17 @@
+{
+  "title": "Exponent rules: moderate practice",
+  "description": "Practice multiplying and dividing powers with the same base, including powers of zero and one.",
+  "grading": "auto",
+  "questions": [
+    {"id": "q1", "type": "write", "prompt": "Evaluate 2^3 × 2^4. Type a whole number.", "answer": "128"},
+    {"id": "q2", "type": "single", "prompt": "Simplify 5^7 ÷ 5^4.", "options": [{"id": "a", "text": "5^3"}, {"id": "b", "text": "5^11"}, {"id": "c", "text": "5^28"}], "answer": "a"},
+    {"id": "q3", "type": "write", "prompt": "Evaluate 9^0.", "answer": "1"},
+    {"id": "q4", "type": "write", "prompt": "Evaluate 7^1.", "answer": "7"},
+    {"id": "q5", "type": "write", "prompt": "Simplify x^2 × x^6. Type the variable expression without spaces.", "answer": "x^8"},
+    {"id": "q6", "type": "single", "prompt": "Simplify m^9 ÷ m^5, where m is nonzero.", "options": [{"id": "a", "text": "m^14"}, {"id": "b", "text": "m^4"}, {"id": "c", "text": "m^(9/5)"}], "answer": "b"},
+    {"id": "q7", "type": "write", "prompt": "Evaluate 4^5 ÷ 4^3.", "answer": "16"},
+    {"id": "q8", "type": "single", "prompt": "Simplify 2^3 × 2^2.", "options": [{"id": "a", "text": "2^5"}, {"id": "b", "text": "4^5"}, {"id": "c", "text": "2^6"}], "answer": "a"},
+    {"id": "q9", "type": "write", "prompt": "Simplify a^0 × a^3, where a is nonzero. Type the variable expression without spaces.", "answer": "a^3"},
+    {"id": "q10", "type": "single", "prompt": "What is 0^1?", "options": [{"id": "a", "text": "0"}, {"id": "b", "text": "1"}, {"id": "c", "text": "Undefined"}], "answer": "a"}
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "title": "Fraction of a fraction applications",
+  "description": "Use the rule in everyday and mathematical situations.",
+  "grading": "auto",
+  "questions": [
+    {
+      "id": "q1",
+      "type": "write",
+      "prompt": "A recipe uses 3/4 of a cup of oats. You make 2/3 of the recipe. How many cups of oats do you need? Type a simplified fraction.",
+      "answer": "1/2"
+    },
+    {
+      "id": "q2",
+      "type": "single",
+      "prompt": "A garden is 5/6 planted with vegetables. 1/4 of the vegetables are carrots. What fraction of the whole garden is carrots?",
+      "options": [
+        {"id": "a", "text": "5/24"},
+        {"id": "b", "text": "6/20"},
+        {"id": "c", "text": "9/10"}
+      ],
+      "answer": "a"
+    },
+    {
+      "id": "q3",
+      "type": "multi",
+      "prompt": "Which products are equal to 1/2?",
+      "options": [
+        {"id": "a", "text": "2/3 × 3/4"},
+        {"id": "b", "text": "5/6 × 3/5"},
+        {"id": "c", "text": "3/4 × 3/4"}
+      ],
+      "answer": ["a", "b"]
+    },
+    {
+      "id": "q4",
+      "type": "write",
+      "prompt": "Find 4/9 of 3/8. Type a simplified fraction.",
+      "answer": "1/6"
+    }
+  ]
+}

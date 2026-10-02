@@ -1,0 +1,40 @@
+{
+  "title": "Triangle angle check-in",
+  "description": "Practice finding missing angles using the triangle angle sum.",
+  "grading": "auto",
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single",
+      "prompt": "What is the sum of the interior angles in every triangle?",
+      "options": [
+        {"id": "a", "text": "90 degrees"},
+        {"id": "b", "text": "180 degrees"},
+        {"id": "c", "text": "360 degrees"}
+      ],
+      "answer": "b"
+    },
+    {
+      "id": "q2",
+      "type": "write",
+      "prompt": "A triangle has angles of 35 degrees and 85 degrees. Type the missing angle in degrees.",
+      "answer": "60"
+    },
+    {
+      "id": "q3",
+      "type": "multi",
+      "prompt": "Which angle sets can form a triangle?",
+      "options": [
+        {"id": "a", "text": "60, 60, 60 degrees"},
+        {"id": "b", "text": "90, 45, 45 degrees"},
+        {"id": "c", "text": "100, 50, 50 degrees"}
+      ],
+      "answer": ["a", "b", "c"]
+    },
+    {
+      "id": "q4",
+      "type": "draw",
+      "prompt": "Draw a triangle on the canvas. Your drawing will be saved with your test attempt for review."
+    }
+  ]
+}

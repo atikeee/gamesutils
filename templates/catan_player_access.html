@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enter passphrase | Catan</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css') }}">
+</head>
+<body class="catan-setup-page">
+    <main class="catan-setup-shell catan-access-shell">
+        <header class="catan-setup-header">
+            <p class="catan-access-seat">Catan player seat</p>
+            <h1>{{ player_name }}</h1>
+        </header>
+
+        <section class="catan-setup-section" aria-labelledby="passphrase-title">
+            <h2 id="passphrase-title">Enter your passphrase</h2>
+            {% if error %}<p class="catan-setup-error" role="alert">{{ error }}</p>{% endif %}
+            <form class="catan-join-form" method="post">
+                <label>
+                    <span>Passphrase</span>
+                    <input type="password" name="passphrase" autocomplete="current-password" required autofocus>
+                </label>
+                <button type="submit">Open player page</button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

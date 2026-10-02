@@ -1,0 +1,57 @@
+{
+  "title": "Fraction of a fraction check-in",
+  "description": "Check the multiplication rule, simplification, and estimation ideas from the lesson.",
+  "grading": "auto",
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single",
+      "prompt": "What operation represents 2/3 of 5/7?",
+      "options": [
+        {"id": "a", "text": "2/3 + 5/7"},
+        {"id": "b", "text": "2/3 × 5/7"},
+        {"id": "c", "text": "2/3 ÷ 5/7"}
+      ],
+      "answer": "b"
+    },
+    {
+      "id": "q2",
+      "type": "single",
+      "prompt": "What is 2/3 × 5/7?",
+      "options": [
+        {"id": "a", "text": "10/21"},
+        {"id": "b", "text": "7/15"},
+        {"id": "c", "text": "10/14"}
+      ],
+      "answer": "a"
+    },
+    {
+      "id": "q3",
+      "type": "multi",
+      "prompt": "Which steps are valid when multiplying two fractions?",
+      "options": [
+        {"id": "a", "text": "Multiply the numerators."},
+        {"id": "b", "text": "Multiply the denominators."},
+        {"id": "c", "text": "Add the denominators."}
+      ],
+      "answer": ["a", "b"]
+    },
+    {
+      "id": "q4",
+      "type": "write",
+      "prompt": "Simplify 3/4 × 2/9. Type the numerator and denominator as a fraction, for example 1/6.",
+      "answer": "1/6"
+    },
+    {
+      "id": "q5",
+      "type": "single",
+      "prompt": "Which estimate is reasonable for 3/8 × 2/5?",
+      "options": [
+        {"id": "a", "text": "About 0.03"},
+        {"id": "b", "text": "About 0.19"},
+        {"id": "c", "text": "About 1.5"}
+      ],
+      "answer": "b"
+    }
+  ]
+}
