@@ -1,1 +1,0 @@
-the images on this folder is used for scramble. all the photos will be used. 
