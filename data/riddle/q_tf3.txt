@@ -1,0 +1,9 @@
+Find what is true or false. answer all at once. example answer: TF--F
+A) A dog pants its tongue because its sweating. 
+B) cheetah is the fastest living body on the plannets. 
+C) Butterfly taste things with their wings. 
+D) Bats are blind.
+E) Dinosaurs are the biggest animals to ever live.
+***
+FFFTF
+***

@@ -1,0 +1,9 @@
+An octopus has 
+a) 1 heart
+b) 2 hearts
+c) 3 hearts
+d) 4 hearts
+***
+C
+***
+

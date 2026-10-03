@@ -1,0 +1,63 @@
+{
+  "title": "Types and properties of rectangles",
+  "summary": "Recognize rectangle variations, see how they are related, and calculate their measurements.",
+  "blocks": [
+    {
+      "type": "text",
+      "body": "A rectangle is a four-sided polygon (a quadrilateral) with four right angles. Its opposite sides are parallel and equal in length. A rectangle can be wide, tall, tilted, or have all four sides equal; its orientation and proportions do not change its defining right angles."
+    },
+    {
+      "type": "geometry-example",
+      "label": "A square, wide rectangle, tall rectangle, and tilted rectangle",
+      "xRange": [-10, 10],
+      "yRange": [-6, 6],
+      "shapes": [
+        {"type": "rectangle", "points": [[-9, -2], [-7, -2], [-7, 0], [-9, 0]], "color": "#d45d39"},
+        {"type": "rectangle", "points": [[-5, -2], [-1, -2], [-1, 0], [-5, 0]], "color": "#087f78"},
+        {"type": "rectangle", "points": [[1, -3], [3, -3], [3, 1], [1, 1]], "color": "#3e6f9e"},
+        {"type": "rectangle", "points": [[7, -2.5], [9, -1.5], [7, 2.5], [5, 1.5]], "color": "#b07a20"}
+      ]
+    },
+    {
+      "type": "text",
+      "body": "By side lengths, a square is the equal-sided kind of rectangle: all four sides match. A non-square rectangle has two different side lengths; it may be wider than it is tall or taller than it is wide. The word oblong is sometimes used for a non-square rectangle, but its exact meaning can vary, so check how a source defines it."
+    },
+    {
+      "type": "text",
+      "body": "A tilted rectangle is still a rectangle when it is turned: its sides no longer look horizontal and vertical, but adjacent sides still meet at 90 degrees. Changing its size, position, or direction does not create a new geometric type. A shape with slanted sides that do not meet at right angles is not a rectangle."
+    },
+    {
+      "type": "text",
+      "body": "Rectangles also fit into the quadrilateral family. Every rectangle is a parallelogram because both pairs of opposite sides are parallel. A square is both a rectangle and a rhombus (a quadrilateral with four equal sides). Not every parallelogram is a rectangle, and not every rhombus is a rectangle; a square is where those two special groups overlap."
+    },
+    {
+      "type": "equation",
+      "latex": "\\text{quadrilateral} \\supset \\text{parallelogram} \\supset \\text{rectangle}, \\qquad \\text{square} = \\text{rectangle} \\cap \\text{rhombus}"
+    },
+    {
+      "type": "text",
+      "body": "Every rectangle has four 90-degree interior angles, opposite sides that are equal and parallel, and diagonals of equal length that bisect each other. In a square, the diagonals also meet at 90 degrees. In a non-square rectangle, they generally do not."
+    },
+    {
+      "type": "text",
+      "body": "If the side lengths are length l and width w, the area counts the square units inside and the perimeter measures the distance around the boundary. The diagonal d follows from a right triangle formed by the two side lengths."
+    },
+    {
+      "type": "equation",
+      "latex": "A = lw, \\qquad P = 2l + 2w = 2(l+w), \\qquad d = \\sqrt{l^2+w^2}"
+    },
+    {
+      "type": "text",
+      "body": "For a 6-by-4 rectangle, the area is 24 square units, the perimeter is 20 units, and the diagonal is \\sqrt{52} = 2\\sqrt{13} units. For a 5-by-5 square, those same formulas give area 25 square units, perimeter 20 units, and diagonal 5\\sqrt{2} units. A square follows every rectangle formula; set l = w."
+    },
+    {
+      "type": "callout",
+      "title": "Check your understanding",
+      "body": "A 3-by-8 rectangle is rotated until one side looks diagonal on the page. Is it still a rectangle? Is it a square? Find its area, perimeter, and diagonal length."
+    },
+    {
+      "type": "text",
+      "body": "Do not confuse a rectangle with a rectangular prism: a rectangular prism is a three-dimensional solid whose faces are rectangles. A rectangle itself is flat and two-dimensional."
+    }
+  ]
+}

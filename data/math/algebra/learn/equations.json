@@ -1,0 +1,23 @@
+{
+  "title": "solve an equation?",
+  "summary": "Use equivalent operations, inverse operations, and careful rearranging to solve equations.",
+  "blocks": [
+    {"type": "text", "body": "An equation says that two expressions have the same value. To keep it true, perform the same operation on both sides. The phrase 'move a term across the equal sign' is a shortcut for adding, subtracting, multiplying, or dividing both sides by the same suitable value."},
+    {"type": "equation", "latex": "2x + 3 = 11"},
+    {"type": "text", "body": "When a term is added on one side, subtract it from both sides to undo the addition. When a term is subtracted, add it to both sides. This is why the sign appears to change when the term is moved across."},
+    {"type": "equation", "latex": "x + 5 = 12 \\quad \\Longrightarrow \\quad x = 12 - 5 = 7 \\qquad x - 5 = 12 \\quad \\Longrightarrow \\quad x = 12 + 5 = 17"},
+    {"type": "text", "body": "You may swap the entire left and right sides without changing any signs, because equality works in either direction. Swapping sides is different from moving one term across."},
+    {"type": "equation", "latex": "2x + 3 = 11 \\quad \\Longleftrightarrow \\quad 11 = 2x + 3"},
+    {"type": "text", "body": "You can multiply both sides of an equation by -1. This changes every term's sign on both sides, but keeps the same solutions. Distribute -1 to every term; do not change only one term."},
+    {"type": "equation", "latex": "-2x + 5 = 9 \\quad \\Longrightarrow[\\times(-1)]{\\text{multiply both sides}} \\quad 2x - 5 = -9"},
+    {"type": "text", "body": "If the unknown is multiplied by a nonzero number, divide both sides by that number to undo the multiplication. In the shortcut language, the factor moves across as a divisor."},
+    {"type": "equation", "latex": "4x = 20 \\quad \\Longrightarrow \\quad x = \\frac{20}{4} = 5"},
+    {"type": "text", "body": "A useful goal for a linear equation is to collect all terms containing x on the left and all number-only terms on the right. Use addition or subtraction to collect terms, then divide by the coefficient of x."},
+    {"type": "equation", "latex": "5x + 4 = 2x + 19 \\quad \\Longrightarrow \\quad 3x + 4 = 19 \\quad \\Longrightarrow \\quad 3x = 15 \\quad \\Longrightarrow \\quad x = 5"},
+    {"type": "text", "body": "If x is in a denominator, multiply both sides by the denominator to clear it. The denominator cannot be zero, so keep that restriction in mind. Then solve the resulting equation as usual."},
+    {"type": "equation", "latex": "\\frac{2}{x} = 3, \\quad x \\ne 0 \\quad \\Longrightarrow \\quad 2 = 3x \\quad \\Longrightarrow \\quad 3x = 2 \\quad \\Longrightarrow \\quad x = \\frac{2}{3}"},
+    {"type": "text", "body": "You can also take the reciprocal of both sides when both sides are nonzero. For a fraction equation, this can move a denominator containing x to the numerator. Check the result in the original equation."},
+    {"type": "equation", "latex": "\\frac{2}{x} = \\frac{1}{3} \\quad \\Longrightarrow \\quad \\frac{x}{2} = 3 \\quad \\Longrightarrow \\quad x = 6"},
+    {"type": "callout", "title": "Try it", "body": "Solve 5x - 7 = 18. Then solve 3/x = 1/4 by taking the reciprocal of both sides, and check your answer in the original equation."}
+  ]
+}

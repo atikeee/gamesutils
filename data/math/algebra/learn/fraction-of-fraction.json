@@ -1,0 +1,68 @@
+{
+  "title": "A fraction of a fraction",
+  "summary": "Understand what 'a fraction of a fraction' means and learn the multiplication rule.",
+  "blocks": [
+    {
+      "type": "text",
+      "body": "A fraction of a quantity means multiplication. Therefore, a fraction of another fraction is also multiplication: multiply the numerators together and multiply the denominators together."
+    },
+    {
+      "type": "equation",
+      "latex": "\\frac{2}{3} \\text{ of } \\frac{5}{7} = \\frac{2}{3} \\times \\frac{5}{7}"
+    },
+    {
+      "type": "text",
+      "body": "Multiply across: 2 x 5 = 10 and 3 x 7 = 21. The result is 10/21."
+    },
+    {
+      "type": "equation",
+      "latex": "\\frac{2}{3} \\times \\frac{5}{7} = \\frac{2 \\times 5}{3 \\times 7} = \\frac{10}{21}"
+    },
+    {
+      "type": "callout",
+      "title": "A useful picture",
+      "body": "If a rectangle is divided into sevenths and you take two-thirds of those sevenths, you keep 2 of 3 equal groups of 5 sevenths. That is 10 of 21 equal parts."
+    },
+    {
+      "type": "text",
+      "body": "Always simplify the final fraction when possible. For example, 3/4 of 2/9 becomes 6/36, which simplifies to 1/6."
+    },
+    {
+      "type": "equation",
+      "latex": "\\frac{3}{4} \\times \\frac{2}{9} = \\frac{6}{36} = \\frac{1}{6}"
+    },
+    {
+      "type": "text",
+      "body": "Sometimes a fraction has a whole number on one side of the fraction bar and a fraction on the other. Read the large fraction bar as division."
+    },
+    {
+      "type": "equation",
+      "latex": "\\frac{4}{\\frac{2}{3}} = 4 \\div \\frac{2}{3} = 4 \\times \\frac{3}{2} = 6"
+    },
+    {
+      "type": "text",
+      "body": "When the fraction is on top and the whole number is on the bottom, divide the fraction by the whole number."
+    },
+    {
+      "type": "equation",
+      "latex": "\\frac{\\frac{2}{3}}{4} = \\frac{2}{3} \\div 4 = \\frac{2}{3} \\times \\frac{1}{4} = \\frac{1}{6}"
+    },
+    {
+      "type": "text",
+      "body": "If both the top and bottom are fractions, use the same rule: keep the top fraction, change division to multiplication, and flip the bottom fraction."
+    },
+    {
+      "type": "equation",
+      "latex": "\\frac{\\frac{3}{5}}{\\frac{2}{7}} = \\frac{3}{5} \\div \\frac{2}{7} = \\frac{3}{5} \\times \\frac{7}{2} = \\frac{21}{10}"
+    },
+    {
+      "type": "equation",
+      "latex": "\\frac{\\frac{1}{2}}{\\frac{3}{4}} = \\frac{1}{2} \\times \\frac{4}{3} = \\frac{2}{3}"
+    },
+    {
+      "type": "callout",
+      "title": "Before you calculate",
+      "body": "Estimate the result. Multiplying two proper fractions should give a positive number smaller than either fraction."
+    }
+  ]
+}

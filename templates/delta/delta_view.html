@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>View Records</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Arrival Schedule</h1>
+    <div  class="filter-container" style="margin-bottom: 20px;">
+    <label for="tableFilter">Filter by Destination (e.g., PDX):</label>
+    <input type="text" id="tableFilter" onkeyup="filterTables()" placeholder="Type airport code...">
+</div>
+    {% for dest, records in data.items() %}
+        <div class="destination-group" id="group-{{ dest }}">    
+        <h2>Destination: {{ dest }}</h2>
+        <table border="1" id="table-{{ dest }}">
+            <tr>
+                <th>Flight No</th>
+                <th>Departure</th>
+                <th>Arrival</th>
+                <th>Delete</th>
+            </tr>
+            {% for record in records %}
+                <tr>
+                    <td>{{ record.flightno }}</td>
+                    <td>{{ record.departure }}</td>
+                    <td>{{ record.arrival }}</td>
+                    <td>
+                    <button class="delete-btn" onclick="showDeleteConfirm({{ record.id }}, this)">🗑
+                    </button>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+        <br>
+        </div>
+    {% endfor %}
+    <div id="confirmModal" >
+        <div>
+            <p>Are you sure you want to delete this record?</p>
+            <button id="confirmYes" >Yes, Delete</button>
+            <button id="confirmNo" >Cancel</button>
+        </div>
+    </div>
+    <a href="{{ url_for('index') }}">Go to ADD Page</a>
+<script>
+    function filterTables() {
+        const filterValue = document.getElementById('tableFilter').value.toUpperCase();
+        const destinationGroups = document.querySelectorAll('.destination-group');
+
+        destinationGroups.forEach(group => {
+            const groupId = group.id; // e.g., "group-MSP=>YYZ"
+            // Extract the destination part from the ID
+            // This assumes the ID format is always "group-SOURCE=>DESTINATION"
+            const destinationCode = groupId.split('-')[1]; // Gets "MSP=>YYZ"
+
+            // Check if the filterValue is present in the destinationCode
+            // Use .includes() for partial matching (e.g., "PDX" will match "MSP=>PDX")
+            if (destinationCode.includes(filterValue)) {
+                group.style.display = ''; // Show the group (h2 and table)
+            } else {
+                group.style.display = 'none'; // Hide the group
+            }
+        });
+    }
+     // Function to show the custom confirmation modal
+    let currentRecordIdToDelete = null;
+    let currentRowElementToDelete = null;
+
+    function showDeleteConfirm(recordId, buttonElement) {
+        console.log("show"+recordId);
+        currentRecordIdToDelete = recordId;
+        // Find the parent <tr> element to remove it later
+        currentRowElementToDelete = buttonElement.closest('tr');
+        document.getElementById('confirmModal').style.display = 'flex'; // Show the modal
+    }
+
+    // Function to hide the custom confirmation modal
+    function hideDeleteConfirm() {
+        console.log("hide");
+        document.getElementById('confirmModal').style.display = 'none';
+        currentRecordIdToDelete = null;
+        currentRowElementToDelete = null;
+    }
+
+    // Function to handle the actual deletion
+    async function deleteRecord() {
+        const idToDelete = currentRecordIdToDelete;
+        if (idToDelete === null) return; // Should not happen if modal is shown correctly
+
+        hideDeleteConfirm(); // Hide the modal immediately
+        console.log("delete the entry with id: "+idToDelete);
+        
+        try {
+            // Make a fetch request to your Flask backend delete endpoint
+            // You'll need to create a Flask route like /delete_flight/<int:id>
+            const response = await fetch(`/delta/delete_flight/${idToDelete}`, {
+                method: 'POST', // Using POST for simplicity, DELETE is also an option
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    // Remove the row from the table if deletion was successful
+                    if (currentRowElementToDelete) {
+                        currentRowElementToDelete.remove();
+                        console.log(`Record with ID ${currentRecordIdToDelete} deleted successfully from DOM.`);
+                        // Optionally, re-run filterTables if needed, but row removal is usually enough
+                        //filterTables();
+                    }
+                } else {
+                    console.error('Failed to delete record:', result.message);
+                    // Display an error message to the user (e.g., a temporary div)
+                }
+            } else {
+                console.error('Server responded with an error:', response.status, response.statusText);
+                // Display a generic error message
+            }
+        } catch (error) {
+            console.error('Error during fetch operation:', error);
+            // Display a network error message
+        }
+    }
+
+    // Attach event listeners to the modal buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('confirmYes').addEventListener('click', deleteRecord);
+        document.getElementById('confirmNo').addEventListener('click', hideDeleteConfirm);
+    });
+</script>
+</body>
+</html>

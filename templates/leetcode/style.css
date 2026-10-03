@@ -1,0 +1,47 @@
+/* Import Bootstrap */
+@import url('https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css');
+
+/* Custom container style */
+.container {
+    max-width: 900px;
+    margin: auto;
+    padding: 2rem;
+    background: #ffffff;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    margin-top: 2rem;
+}
+p ,li{
+font-size: 2rem; /* or try 18px, 20px, etc. */
+line-height: 1.6;   /* improve readability */
+}
+pre {
+font-size: 1.5rem; /* or try 18px, 20px, etc. */
+line-height: 1.6;   /* improve readability */
+}
+
+body a {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+/* Difficulty labels */
+.easy {
+    color: green;
+    font-weight: bold;
+}
+.medium {
+    color: orange;
+    font-weight: bold;
+}
+.hard {
+    color: red;
+    font-weight: bold;
+}
+
+/* Back to index button */
+.btn {
+    display: inline-block;
+    margin-bottom: 1rem;
+	font-size: 3rem;
+  font-weight: bold;
+} 

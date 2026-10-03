@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Launcher</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:      #0d1117;
+      --surface: #161b22;
+      --surface2:#1c2330;
+      --border:  #30363d;
+      --text:    #e6edf3;
+      --muted:   #8b949e;
+      --soft:    #3d444d;
+    }
+
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* ── ROOT LAYOUT: topbar + middle + nav stacked via flex ── */
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      background-image:
+        radial-gradient(ellipse 80% 40% at 50% -10%, rgba(88,166,255,0.06) 0%, transparent 70%),
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 48px 48px, 48px 48px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      flex-shrink: 0;
+      height: 52px;
+      background: rgba(13,17,23,0.97);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      z-index: 10;
+    }
+    .back-btn {
+      color: var(--muted); text-decoration: none;
+      font-size: 14px; font-weight: 600; transition: color 0.15s;
+    }
+    .back-btn:hover { color: var(--text); }
+    .topbar-title {
+      font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800;
+      background: linear-gradient(130deg, var(--text) 40%, #58a6ff 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .topbar-count {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 2px 9px;
+    }
+
+    /* ── MIDDLE (grows to fill space) ── */
+    .middle {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── MAIN IDLE ── */
+    .main {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px; text-align: center; padding: 24px;
+      z-index: 1;
+    }
+    .main-icon {
+      font-size: 3rem;
+      filter: drop-shadow(0 0 20px rgba(88,166,255,0.45));
+      animation: iconFloat 3s ease-in-out infinite;
+    }
+    @keyframes iconFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    .main-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.8rem, 6vw, 2.4rem); font-weight: 800; line-height: 1.05;
+      background: linear-gradient(130deg, var(--text) 40%, #58a6ff 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .main-sub { font-size: 13px; color: var(--muted); font-weight: 500; }
+    .main-tally {
+      display: inline-flex; align-items: center; gap: 7px; padding: 5px 14px;
+      border: 1px solid var(--border); border-radius: 20px;
+      font-size: 12px; font-weight: 600; color: var(--muted);
+    }
+    .tally-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #58a6ff; box-shadow: 0 0 7px #58a6ff;
+      animation: dotPulse 2s ease-in-out infinite;
+    }
+    @keyframes dotPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ── OVERLAY ── */
+    .overlay {
+      position: absolute; inset: 0; z-index: 5;
+      background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+      opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+    }
+    .overlay.show { opacity: 1; pointer-events: all; }
+
+    /* ── BOTTOM SHEET ── */
+    .sheet {
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 10;
+      background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      border: 1px solid var(--border); border-bottom: none;
+      transform: translateY(110%);
+      transition: transform 0.42s cubic-bezier(0.32, 1.3, 0.64, 1);
+      max-height: 75%;
+      display: flex; flex-direction: column;
+      box-shadow: 0 -6px 40px rgba(0,0,0,0.5);
+    }
+    .sheet.open { transform: translateY(0); }
+
+    /* coloured glow line at top of sheet */
+    .sheet::before {
+      content: ''; position: absolute; top: -1px; left: 12%; right: 12%; height: 2px;
+      background: var(--sc, #58a6ff);
+      box-shadow: 0 0 14px var(--sc, #58a6ff), 0 0 28px var(--sc, #58a6ff);
+      border-radius: 1px; opacity: 0.8;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+
+    .sheet-handle-wrap { padding: 12px 20px 0; flex-shrink: 0; }
+    .sheet-handle {
+      width: 32px; height: 4px; background: var(--soft);
+      border-radius: 2px; margin: 0 auto 14px;
+    }
+    .sheet-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 18px 14px; flex-shrink: 0;
+    }
+    .sheet-icon {
+      width: 42px; height: 42px; border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem; flex-shrink: 0;
+      border: 1px solid var(--border); background: var(--surface2);
+      transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+    }
+    .sheet-name {
+      font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 800;
+      flex: 1; color: var(--text);
+    }
+    .sheet-badge {
+      font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 10px;
+      background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+      transition: all 0.3s;
+    }
+    .sheet-divider { height: 1px; background: var(--border); margin: 0 18px 8px; flex-shrink: 0; }
+    .sheet-links {
+      overflow-y: auto; flex: 1; padding: 0 12px 16px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── LINK ROWS ── */
+    .link-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; margin-bottom: 6px;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 11px;
+      text-decoration: none; color: var(--text);
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transform: translateY(12px); opacity: 0;
+      transition: border-color 0.2s, background 0.2s, transform 0.2s, box-shadow 0.2s;
+      position: relative; overflow: hidden;
+    }
+    .link-row::after {
+      content: ''; position: absolute; top: 0; left: -100%; bottom: 0; width: 60%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+      transition: left 0.5s ease;
+    }
+    .link-row:hover::after { left: 150%; }
+    .sheet.open .link-row { animation: rowUp 0.38s cubic-bezier(0.34,1.3,0.64,1) forwards; }
+    @keyframes rowUp { to { transform: translateY(0); opacity: 1; } }
+    .link-row:nth-child(1)  { animation-delay: 0.03s !important; }
+    .link-row:nth-child(2)  { animation-delay: 0.06s !important; }
+    .link-row:nth-child(3)  { animation-delay: 0.09s !important; }
+    .link-row:nth-child(4)  { animation-delay: 0.12s !important; }
+    .link-row:nth-child(5)  { animation-delay: 0.15s !important; }
+    .link-row:nth-child(6)  { animation-delay: 0.18s !important; }
+    .link-row:nth-child(7)  { animation-delay: 0.21s !important; }
+    .link-row:nth-child(8)  { animation-delay: 0.24s !important; }
+    .link-row:nth-child(9)  { animation-delay: 0.27s !important; }
+    .link-row:nth-child(10) { animation-delay: 0.30s !important; }
+    .link-row:nth-child(11) { animation-delay: 0.33s !important; }
+    .link-row:nth-child(12) { animation-delay: 0.36s !important; }
+    .link-row:nth-child(13) { animation-delay: 0.39s !important; }
+    .link-row:nth-child(14) { animation-delay: 0.42s !important; }
+    .link-row:nth-child(15) { animation-delay: 0.45s !important; }
+    .link-row:active { transform: scale(0.97) !important; opacity: 0.85; }
+    .link-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; opacity: 0.45; transition: opacity 0.2s; }
+    .link-row:hover .link-dot { opacity: 1; }
+    .link-name { flex: 1; }
+    .link-arrow { font-size: 16px; color: var(--soft); transition: color 0.2s, transform 0.2s; flex-shrink: 0; }
+    .link-row:hover .link-arrow { transform: translateX(3px); }
+    .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; }
+
+    /* ── BOTTOM NAV — always visible, flex-shrink:0 ── */
+    .bottom-nav {
+      flex-shrink: 0;
+      height: 90px;
+      background: #161b22;
+      border-top: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+      padding: 8px 6px 10px;
+      gap: 4px;
+      -webkit-overflow-scrolling: touch;
+      z-index: 10;
+    }
+    .bottom-nav::-webkit-scrollbar { display: none; }
+
+    .nav-btn {
+      flex-shrink: 0;
+      min-width: 68px;
+      height: 70px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 5px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      cursor: pointer; border-radius: 12px;
+      position: relative; overflow: hidden;
+      transition: all 0.25s cubic-bezier(0.34, 1.4, 0.64, 1);
+    }
+    .nav-btn::before {
+      content: ''; position: absolute; inset: 0; border-radius: 12px;
+      background: var(--nc, #58a6ff); opacity: 0; transition: opacity 0.25s;
+    }
+    .nav-btn.active::before { opacity: 0.18; }
+    .nav-btn.active {
+      border-color: var(--nc, #58a6ff);
+      box-shadow: 0 0 14px color-mix(in srgb, var(--nc, #58a6ff) 30%, transparent);
+      transform: translateY(-3px);
+    }
+    .nav-btn:hover:not(.active) { background: var(--surface); border-color: #8b949e; }
+    .nav-btn:active { transform: scale(0.88) !important; }
+
+    .nav-dot {
+      position: absolute; top: 5px; right: 6px;
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--nc, #58a6ff);
+      box-shadow: 0 0 6px var(--nc, #58a6ff);
+      opacity: 0; transition: opacity 0.25s; z-index: 1;
+    }
+    .nav-btn.active .nav-dot { opacity: 1; }
+
+    .nav-icon {
+      font-size: 2.1rem; line-height: 1;
+      position: relative; z-index: 1;
+      transition: transform 0.3s cubic-bezier(0.34,1.6,0.64,1);
+    }
+    .nav-btn.active .nav-icon { transform: scale(1.2); }
+
+    .nav-label {
+      font-size: 10px; font-weight: 700; color: var(--muted);
+      position: relative; z-index: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 64px;
+      transition: color 0.2s;
+    }
+    .nav-btn.active .nav-label { color: var(--nc, #58a6ff); }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <a href="/" class="back-btn">← Home</a>
+    <span class="topbar-title">Launcher</span>
+    <span class="topbar-count" id="topbarCount">—</span>
+  </div>
+
+  <!-- MIDDLE AREA (sheet + overlay live in here) -->
+  <div class="middle">
+
+    <!-- Main idle screen -->
+    <main class="main">
+      <div class="main-icon">🚀</div>
+      <div class="main-title">Quick<br>Launch</div>
+      <div class="main-sub">Tap a category below</div>
+      <div class="main-tally">
+        <div class="tally-dot"></div>
+        <span id="tallyText">—</span>
+      </div>
+    </main>
+
+    <!-- Overlay -->
+    <div class="overlay" id="overlay" onclick="closeSheet()"></div>
+
+    <!-- Bottom Sheet -->
+    <div class="sheet" id="sheet">
+      <div class="sheet-handle-wrap"><div class="sheet-handle"></div></div>
+      <div class="sheet-header">
+        <div class="sheet-icon"  id="sheetIcon"></div>
+        <div class="sheet-name"  id="sheetName">Links</div>
+        <div class="sheet-badge" id="sheetBadge">0 links</div>
+      </div>
+      <div class="sheet-divider"></div>
+      <div class="sheet-links" id="sheetLinks"></div>
+    </div>
+
+  </div><!-- /middle -->
+
+  <!-- BOTTOM NAV — always visible, never hidden -->
+  <nav class="bottom-nav" id="bottomNav"></nav>
+
+<script>
+  var GROUPS = {{ groups | tojson }};
+
+  // tally
+  var totalLinks = GROUPS.reduce(function(s,g){ return s + g.links.length; }, 0);
+  document.getElementById('tallyText').textContent =
+    totalLinks + ' links \u00b7 ' + GROUPS.length + ' groups';
+  document.getElementById('topbarCount').textContent = totalLinks + ' links';
+
+  // build nav
+  var navEl = document.getElementById('bottomNav');
+  GROUPS.forEach(function(g, i) {
+    var btn = document.createElement('button');
+    btn.className = 'nav-btn';
+    btn.style.setProperty('--nc', g.color);
+    btn.innerHTML =
+      '<div class="nav-dot"></div>' +
+      '<span class="nav-icon">'  + g.icon + '</span>' +
+      '<span class="nav-label">' + g.name + '</span>';
+    btn.addEventListener('click', function(){ openSheet(i); });
+    navEl.appendChild(btn);
+  });
+
+  // sheet
+  var sheet      = document.getElementById('sheet');
+  var overlay    = document.getElementById('overlay');
+  var sheetIcon  = document.getElementById('sheetIcon');
+  var sheetName  = document.getElementById('sheetName');
+  var sheetBadge = document.getElementById('sheetBadge');
+  var sheetLinks = document.getElementById('sheetLinks');
+  var activeIdx  = -1;
+
+  function hexA(hex, a) {
+    var r = parseInt(hex.slice(1,3),16);
+    var g = parseInt(hex.slice(3,5),16);
+    var b = parseInt(hex.slice(5,7),16);
+    return 'rgba('+r+','+g+','+b+','+a+')';
+  }
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function openSheet(idx) {
+    if (activeIdx === idx && sheet.classList.contains('open')) { closeSheet(); return; }
+    activeIdx = idx;
+    var g = GROUPS[idx];
+
+    sheet.style.setProperty('--sc', g.color);
+    sheetIcon.textContent        = g.icon;
+    sheetIcon.style.background   = hexA(g.color, 0.12);
+    sheetIcon.style.borderColor  = hexA(g.color, 0.30);
+    sheetIcon.style.boxShadow    = '0 0 12px ' + hexA(g.color, 0.20);
+    sheetName.textContent        = g.name;
+    sheetBadge.textContent       = g.links.length + ' links';
+    sheetBadge.style.color       = g.color;
+    sheetBadge.style.borderColor = hexA(g.color, 0.30);
+    sheetBadge.style.background  = hexA(g.color, 0.10);
+
+    if (!g.links.length) {
+      sheetLinks.innerHTML = '<div class="empty">No links in this group yet.</div>';
+    } else {
+      sheetLinks.innerHTML = g.links.map(function(l) {
+        var c = g.color;
+        return '<a class="link-row"' +
+          ' href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer"' +
+          ' onmouseover="this.style.borderColor=\'' + hexA(c,0.5) + '\';' +
+                         'this.style.background=\'' + hexA(c,0.08) + '\';' +
+                         'this.querySelector(\'.link-arrow\').style.color=\'' + c + '\'"' +
+          ' onmouseout="this.style.borderColor=\'\';' +
+                        'this.style.background=\'\';' +
+                        'this.querySelector(\'.link-arrow\').style.color=\'\'">' +
+          '<span class="link-dot" style="background:' + c + '"></span>' +
+          '<span class="link-name">' + esc(l.name) + '</span>' +
+          '<span class="link-arrow">&#x203A;</span>' +
+          '</a>';
+      }).join('');
+    }
+
+    document.querySelectorAll('.nav-btn').forEach(function(b,i){
+      b.classList.toggle('active', i === idx);
+    });
+
+    overlay.classList.add('show');
+    sheet.classList.add('open');
+
+    sheetLinks.querySelectorAll('.link-row').forEach(function(r){
+      r.style.animation = 'none'; r.offsetHeight; r.style.animation = '';
+    });
+  }
+
+  function closeSheet() {
+    sheet.classList.remove('open');
+    overlay.classList.remove('show');
+    document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+    activeIdx = -1;
+  }
+
+  // swipe down on sheet to close
+  var _ty = 0;
+  sheet.addEventListener('touchstart', function(e){ _ty = e.touches[0].clientY; }, {passive:true});
+  sheet.addEventListener('touchend', function(e){
+    if (e.changedTouches[0].clientY - _ty > 60) closeSheet();
+  }, {passive:true});
+</script>
+</body>
+</html>

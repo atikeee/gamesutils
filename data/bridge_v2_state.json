@@ -1,0 +1,478 @@
+{
+    "1": {
+        "players": {
+            "N": {
+                "name": "n",
+                "passcode": "V7I"
+            },
+            "E": {
+                "name": "N",
+                "passcode": "OE0"
+            },
+            "S": {
+                "name": "atik",
+                "passcode": "9EI"
+            },
+            "W": null
+        },
+        "game": {
+            "round": 1,
+            "dealer": "N",
+            "phase": "waiting",
+            "hands": {
+                "N": [],
+                "E": [],
+                "S": [],
+                "W": []
+            },
+            "tricks_won": {
+                "NS": 0,
+                "EW": 0
+            },
+            "highest_bid": null,
+            "bid_history": [],
+            "pass_count": 0,
+            "current_bidder": null,
+            "current_trick": [],
+            "current_player": null,
+            "claim_data": null
+        }
+    },
+    "2": {
+        "players": {
+            "N": null,
+            "E": null,
+            "S": null,
+            "W": null
+        },
+        "game": {
+            "round": 1,
+            "dealer": "N",
+            "phase": "waiting",
+            "hands": {
+                "N": [],
+                "E": [],
+                "S": [],
+                "W": []
+            },
+            "tricks_won": {
+                "NS": 0,
+                "EW": 0
+            },
+            "current_bid": "None",
+            "bid_history": [],
+            "pass_count": 0,
+            "current_bidder": null,
+            "dummy": null,
+            "current_trick": []
+        }
+    },
+    "3": {
+        "players": {
+            "N": null,
+            "E": null,
+            "S": null,
+            "W": null
+        },
+        "game": {
+            "round": 1,
+            "dealer": "N",
+            "phase": "waiting",
+            "hands": {
+                "N": [],
+                "E": [],
+                "S": [],
+                "W": []
+            },
+            "tricks_won": {
+                "NS": 0,
+                "EW": 0
+            },
+            "current_bid": "None",
+            "bid_history": [],
+            "pass_count": 0,
+            "current_bidder": null,
+            "dummy": null,
+            "current_trick": []
+        }
+    },
+    "4": {
+        "players": {
+            "N": {
+                "name": "n",
+                "passcode": "Heart83"
+            },
+            "E": {
+                "name": "e",
+                "passcode": "Diamond42"
+            },
+            "S": {
+                "name": "s",
+                "passcode": "Mountain99"
+            },
+            "W": {
+                "name": "w",
+                "passcode": "Mountain95"
+            }
+        },
+        "game": {
+            "round": 1,
+            "phase": "waiting",
+            "hands": {},
+            "current_trick": [],
+            "scores": []
+        },
+        "config": {
+            "max_rounds": 12
+        }
+    },
+    "5": {
+        "players": {
+            "N": {
+                "name": "n",
+                "passcode": "Mountain38"
+            },
+            "E": {
+                "name": "e",
+                "passcode": "River26"
+            },
+            "S": {
+                "name": "s",
+                "passcode": "Diamond51"
+            },
+            "W": {
+                "name": "w",
+                "passcode": "Spade69"
+            }
+        },
+        "game": {
+            "round": 1,
+            "phase": "waiting",
+            "hands": {},
+            "current_trick": [],
+            "scores": []
+        },
+        "config": {
+            "max_rounds": 12
+        }
+    },
+    "6": {
+        "players": {
+            "N": {
+                "name": "n",
+                "passcode": "Heart49"
+            },
+            "E": {
+                "name": "e",
+                "passcode": "Heart15"
+            },
+            "S": {
+                "name": "s",
+                "passcode": "Spade88"
+            },
+            "W": {
+                "name": "w",
+                "passcode": "Ocean86"
+            }
+        },
+        "game": {
+            "round": 1,
+            "phase": "bidding",
+            "hands": {
+                "N": [
+                    {
+                        "suit": "C",
+                        "val": "4"
+                    },
+                    {
+                        "suit": "C",
+                        "val": "2"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "Q"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "10"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "Q"
+                    },
+                    {
+                        "suit": "S",
+                        "val": "Q"
+                    },
+                    {
+                        "suit": "S",
+                        "val": "3"
+                    },
+                    {
+                        "suit": "S",
+                        "val": "J"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "7"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "5"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "8"
+                    },
+                    {
+                        "suit": "S",
+                        "val": "10"
+                    },
+                    {
+                        "suit": "C",
+                        "val": "K"
+                    }
+                ],
+                "E": [
+                    {
+                        "suit": "C",
+                        "val": "10"
+                    },
+                    {
+                        "suit": "S",
+                        "val": "9"
+                    },
+                    {
+                        "suit": "S",
+                        "val": "4"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "7"
+                    },
+                    {
+                        "suit": "C",
+                        "val": "8"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "4"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "2"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "3"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "6"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "8"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "K"
+                    },
+                    {
+                        "suit": "S",
+                        "val": "7"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "J"
+                    }
+                ],
+                "S": [
+                    {
+                        "suit": "C",
+                        "val": "A"
+                    },
+                    {
+                        "suit": "S",
+                        "val": "K"
+                    },
+                    {
+                        "suit": "C",
+                        "val": "6"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "J"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "A"
+                    },
+                    {
+                        "suit": "C",
+                        "val": "7"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "A"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "10"
+                    },
+                    {
+                        "suit": "C",
+                        "val": "Q"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "6"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "4"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "K"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "2"
+                    }
+                ],
+                "W": [
+                    {
+                        "suit": "C",
+                        "val": "3"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "5"
+                    },
+                    {
+                        "suit": "S",
+                        "val": "8"
+                    },
+                    {
+                        "suit": "S",
+                        "val": "5"
+                    },
+                    {
+                        "suit": "S",
+                        "val": "6"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "3"
+                    },
+                    {
+                        "suit": "H",
+                        "val": "9"
+                    },
+                    {
+                        "suit": "D",
+                        "val": "9"
+                    },
+                    {
+                        "suit": "C",
+                        "val": "J"
+                    },
+                    {
+                        "suit": "S",
+                        "val": "A"
+                    },
+                    {
+                        "suit": "C",
+                        "val": "9"
+                    },
+                    {
+                        "suit": "S",
+                        "val": "2"
+                    },
+                    {
+                        "suit": "C",
+                        "val": "5"
+                    }
+                ]
+            },
+            "current_trick": [],
+            "scores": []
+        },
+        "config": {
+            "max_rounds": 12
+        }
+    },
+    "7": {
+        "players": {
+            "N": null,
+            "E": null,
+            "S": null,
+            "W": null
+        },
+        "game": {
+            "round": 1,
+            "phase": "waiting",
+            "hands": {},
+            "current_trick": [],
+            "scores": []
+        },
+        "config": {
+            "max_rounds": 12
+        }
+    },
+    "8": {
+        "players": {
+            "N": null,
+            "E": null,
+            "S": null,
+            "W": null
+        },
+        "game": {
+            "round": 1,
+            "phase": "waiting",
+            "hands": {},
+            "current_trick": [],
+            "scores": []
+        },
+        "config": {
+            "max_rounds": 12
+        }
+    },
+    "9": {
+        "players": {
+            "N": null,
+            "E": null,
+            "S": null,
+            "W": null
+        },
+        "game": {
+            "round": 1,
+            "phase": "waiting",
+            "hands": {},
+            "current_trick": [],
+            "scores": []
+        },
+        "config": {
+            "max_rounds": 12
+        }
+    },
+    "10": {
+        "players": {
+            "N": null,
+            "E": null,
+            "S": null,
+            "W": null
+        },
+        "game": {
+            "round": 1,
+            "phase": "waiting",
+            "hands": {},
+            "current_trick": [],
+            "scores": []
+        },
+        "config": {
+            "max_rounds": 12
+        }
+    }
+}

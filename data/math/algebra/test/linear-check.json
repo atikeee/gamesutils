@@ -1,0 +1,11 @@
+{
+  "title": "Linear relationships check-in",
+  "description": "A short check of the ideas from this chapter. Your work is saved on this device.",
+  "grading": "auto",
+  "questions": [
+    {"id": "q1", "type": "single", "prompt": "Solve 2x + 3 = 11.", "options": [{"id": "a", "text": "x = 3"}, {"id": "b", "text": "x = 4"}, {"id": "c", "text": "x = 7"}], "answer": "b"},
+    {"id": "q2", "type": "multi", "prompt": "Which points lie on y = x + 1?", "options": [{"id": "a", "text": "(0, 1)"}, {"id": "b", "text": "(1, 1)"}, {"id": "c", "text": "(2, 3)"}], "answer": ["a", "c"]},
+    {"id": "q3", "type": "write", "prompt": "Type the value of x in 5x = 20.", "answer": "4"},
+    {"id": "q4", "type": "draw", "prompt": "Draw a line with a positive slope. This question will be reviewed manually."}
+  ]
+}

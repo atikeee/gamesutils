@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Status</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 30px;
+            background-color: #f4f6f9;
+        }
+
+        h2, h3 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        table {
+            width: 90%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tbody tr:hover {
+            background-color: #eef2f7;
+        }
+
+        td:first-child {
+            font-weight: bold;
+            color: #34495e;
+        }
+
+        td:last-child {
+            font-weight: bold;
+            background-color: #ecf0f1;
+        }
+
+        #progressTable th {
+            background-color: #2ecc71;
+        }
+    </style>
+</head>
+<body>
+    <h2>📊 Panchforon Game Status</h2>
+
+    <h3>Player Progress</h3>
+    <table id="progressTable">
+        <thead>
+            <tr>
+                {% for player in players %}
+                    <th>{{ player }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody id="progressBody">
+            {% for row in progress_rows %}
+            <tr>
+                {% for cell in row %}
+                    <td>{{ cell }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>Score Summary</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Player</th>
+                <th>Level 1</th>
+                <th>Level 2</th>
+                <th>Level 3</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody id="resultTable">
+            {% for player in players %}
+                <tr>
+                    <td>{{ player }}</td>
+                    {% for score in result_data[player] %}
+                        <td>{{ score }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        const socket = io();
+        socket.on("update_progress", () => location.reload());
+        socket.on("update_result", () => location.reload());
+    </script>
+</body>
+</html>

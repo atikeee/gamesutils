@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bridge Lobby</title>
+    <style>
+        :root { --bg: #0d1117; --surface: #161b22; --text: #e6edf3; --accent: #58a6ff; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; display: flex; justify-content: center; padding: 40px 20px; }
+        .card { background: var(--surface); padding: 2rem; border-radius: 12px; width: 100%; max-width: 420px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        h2 { margin: 0 0 1.5rem 0; color: var(--accent); text-align: center; }
+        label { font-size: 0.85rem; color: #8b949e; display: block; margin: 14px 0 4px; }
+        select, input { width: 100%; padding: 12px; background: #0d1117; border: 1px solid #30363d; color: white; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        input:focus, select:focus { outline: none; border-color: var(--accent); }
+
+        .seat-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0; }
+        .seat-btn { 
+            padding: 14px; border: 1px solid #30363d; background: #0d1117; 
+            color: #8b949e; border-radius: 6px; cursor: pointer; font-size: 0.95rem;
+            transition: all 0.15s;
+        }
+        .seat-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
+        .seat-btn.selected { border-color: var(--accent); background: #1c2d42; color: white; font-weight: bold; }
+        .seat-btn.occupied { border-color: #f85149; color: #f85149; cursor: not-allowed; opacity: 0.5; }
+
+        #passcode-row { display: none; margin-top: 4px; }
+
+        .join-btn { 
+            width: 100%; padding: 14px; background: #238636; border: none; 
+            color: white; font-weight: bold; border-radius: 6px; cursor: pointer; 
+            margin-top: 20px; font-size: 1rem; transition: background 0.15s;
+        }
+        .join-btn:hover { background: #2ea043; }
+        .join-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .error-msg { color: #f85149; font-size: 0.85rem; margin-top: 10px; text-align: center; min-height: 20px; }
+        .info-msg { color: #8b949e; font-size: 0.8rem; margin-top: 8px; text-align: center; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2>Bridge</h2>
+
+    <label>Room</label>
+    <select id="room-select" onchange="refreshSeats()">
+        {% for i in range(1, 11) %}
+        <option value="{{ i }}">Room {{ i }}</option>
+        {% endfor %}
+    </select>
+
+    <label>Your Name</label>
+    <input type="text" id="player-name" placeholder="Enter your name" oninput="onNameOrSeatChange()">
+
+    <label>Seat</label>
+    <div class="seat-picker">
+        <button class="seat-btn" id="btn-N" onclick="selectSeat('N')">North</button>
+        <button class="seat-btn" id="btn-E" onclick="selectSeat('E')">East</button>
+        <button class="seat-btn" id="btn-S" onclick="selectSeat('S')">South</button>
+        <button class="seat-btn" id="btn-W" onclick="selectSeat('W')">West</button>
+    </div>
+
+    <div id="passcode-row">
+        <label>Passcode <span style="color:#8b949e; font-size:0.75rem;">(this seat is taken — enter your passcode)</span></label>
+        <input type="text" id="passcode-input" placeholder="e.g. AB3X9K" 
+               style="text-transform:uppercase; letter-spacing: 0.15em;"
+               oninput="this.value=this.value.toUpperCase()">
+    </div>
+
+    <button class="join-btn" id="join-btn" onclick="requestJoin()" disabled>Join Game</button>
+    <div class="error-msg" id="error-msg"></div>
+    <div class="info-msg" id="info-msg"></div>
+</div>
+
+<script>
+    let selectedSeat = null;
+    let seatStatus = {};  // "empty" or "occupied" per seat
+
+    async function refreshSeats() {
+        const roomId = document.getElementById('room-select').value;
+        const res = await fetch(`/bridge_v2/check_seats/${roomId}`);
+        seatStatus = await res.json();
+
+        ['N','E','S','W'].forEach(dir => {
+            const btn = document.getElementById(`btn-${dir}`);
+            const status = seatStatus[dir];
+            btn.className = 'seat-btn';
+            if (dir === selectedSeat) btn.classList.add('selected');
+            if (status === 'occupied') {
+                btn.classList.add('occupied');
+                btn.innerText = { N:'North', E:'East', S:'South', W:'West' }[dir] + ' ✓';
+            } else {
+                btn.innerText = { N:'North', E:'East', S:'South', W:'West' }[dir];
+            }
+        });
+
+        onNameOrSeatChange();
+    }
+
+    function selectSeat(dir) {
+        // Occupied seats can still be selected (for rejoin)
+        selectedSeat = dir;
+        document.querySelectorAll('.seat-btn').forEach(b => {
+            b.classList.remove('selected');
+        });
+        document.getElementById(`btn-${dir}`).classList.add('selected');
+        onNameOrSeatChange();
+    }
+
+    function onNameOrSeatChange() {
+        const name = document.getElementById('player-name').value.trim();
+        const passcodeRow = document.getElementById('passcode-row');
+        const joinBtn = document.getElementById('join-btn');
+
+        // Show passcode field only if seat is occupied
+        const isOccupied = selectedSeat && seatStatus[selectedSeat] === 'occupied';
+        passcodeRow.style.display = isOccupied ? 'block' : 'none';
+
+        // Enable join if name + seat selected (+ passcode if occupied)
+        const passcode = document.getElementById('passcode-input').value.trim();
+        const ready = name && selectedSeat && (!isOccupied || passcode);
+        joinBtn.disabled = !ready;
+
+        document.getElementById('error-msg').innerText = '';
+    }
+
+    async function requestJoin() {
+        const name = document.getElementById('player-name').value.trim();
+        const roomId = document.getElementById('room-select').value;
+        const passcode = document.getElementById('passcode-input').value.trim().toUpperCase();
+
+        document.getElementById('join-btn').disabled = true;
+        document.getElementById('error-msg').innerText = '';
+
+        const res = await fetch('/bridge_v2/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                room_id: roomId, 
+                direction: selectedSeat, 
+                name: name,
+                passcode: passcode || null
+            })
+        });
+
+        const data = await res.json();
+
+        if (data.status === 'ok') {
+            if (data.is_new) {
+                // First time — show passcode before navigating
+                document.getElementById('info-msg').innerText = 
+                    `Your seat passcode: ${data.passcode} — remember this to rejoin!`;
+                setTimeout(() => {
+                    window.location.href = '/bridge_v2/play';
+                }, 2500);
+            } else {
+                window.location.href = '/bridge_v2/play';
+            }
+        } else {
+            document.getElementById('error-msg').innerText = data.message || 'Join failed';
+            document.getElementById('join-btn').disabled = false;
+        }
+    }
+
+    // Init
+    refreshSeats();
+    setInterval(refreshSeats, 5000);
+</script>
+</body>
+</html>

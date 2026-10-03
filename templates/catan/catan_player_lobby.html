@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catan Players</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css') }}">
+</head>
+<body class="catan-setup-page">
+    <main class="catan-setup-shell">
+        <header class="catan-setup-header">
+            <h1>Catan Players</h1>
+            <p>Four seats total. Player names are visible to everyone; passphrases stay private.</p>
+        </header>
+
+        <section class="catan-setup-section" aria-labelledby="seat-list-title">
+            <h2 id="seat-list-title">Player seats</h2>
+            <ol class="catan-seat-list">
+                {% for seat in seats %}
+                <li>
+                    <span class="catan-seat-number">{{ seat.seat }}</span>
+                    <span class="catan-seat-name">{{ seat.name or 'Open seat' }}</span>
+                    <span class="catan-seat-state">{{ 'Joined' if seat.name else 'Available' }}</span>
+                </li>
+                {% endfor %}
+            </ol>
+        </section>
+
+        <section class="catan-setup-section" aria-labelledby="join-title">
+            <h2 id="join-title">Create or open your player link</h2>
+            {% if error %}<p class="catan-setup-error" role="alert">{{ error }}</p>{% endif %}
+            <form class="catan-join-form" method="post">
+                <label>
+                    <span>Player name</span>
+                    <input type="text" name="name" maxlength="40" autocomplete="name" required>
+                </label>
+                <label>
+                    <span>Passphrase</span>
+                    <input type="password" name="passphrase" autocomplete="new-password" required>
+                </label>
+                <button type="submit">Continue</button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

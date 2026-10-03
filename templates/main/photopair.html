@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Photo Pair</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f0f0f0;
+        }
+        h2 {
+            margin-top: 1rem;
+        }
+        form {
+            margin: 1rem;
+        }
+        .grid {
+            flex-grow: 1;
+            display: grid;
+            gap: 8px;
+            width: 90vw;
+            height: 70vh;
+            margin-bottom: 1rem;
+        }
+        .cell {
+            position: relative;
+            background: #ccc;
+            font-size: 1.5vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .cell img {
+            position: absolute;
+            max-width: 100%;
+            max-height: 100%;
+            margin: auto;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            object-fit: contain;
+            display: none;
+            z-index: 1;
+        }
+
+        .cell span {    
+        position: absolute;
+        top: 5px;
+        left: 8px;
+        z-index: 2;
+        font-weight: bold;
+        font-size: 2rem;
+        color: rgb(242, 2, 2);
+        text-shadow: 1px 1px 2px rgb(239, 237, 237);
+        }
+
+        button {
+            margin: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+        }
+    </style>
+    
+</head>
+<body>
+    <h2>🧠 Photo Pair Game</h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: center; margin: 1rem;">
+        <form method="get" style="display: inline-flex; gap: 0.5rem; align-items: center;">
+            Rows (m): <input type="number" name="m" value="{{ m }}" min="1" max="10">
+            Columns (n): <input type="number" name="n" value="{{ n }}" min="1" max="10">
+            Delay (ms): <input type="number" name="delay" value="{{ delay }}" min="500">
+            <button type="submit">Update</button>
+        </form>
+        <div>
+            <button onclick="startShowing()">Start</button>
+            <button onclick="revealAll()">Reveal All</button>
+        </div>
+    </div>
+    <div class="grid" style="grid-template-columns: repeat({{ n }}, 1fr);">
+    
+
+        {% for i in range(m * n) %}
+            <div class="cell" data-index="{{ i }}">
+                <span>{{ i + 1 }}</span>
+                {% if i < images|length %}
+                    <img src="{{ url_for('photopair_image', filename=images[i]) }}" />
+
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+    <div id="matched-pairs" style="margin: 1rem; font-family: monospace;"></div>
+
+    <script>
+        const delay = {{ delay }};
+        const cells = Array.from(document.querySelectorAll('.cell'));
+        const unseenIndexes = cells.map((_, i) => i);
+    
+        function hideAll() {
+            cells.forEach(cell => {
+                const img = cell.querySelector('img');
+                if (img) img.style.display = 'none';
+            });
+        }
+    
+        function showNextRandom() {
+            if (unseenIndexes.length === 0) return;
+            const randIdx = Math.floor(Math.random() * unseenIndexes.length);
+            const cellIndex = unseenIndexes.splice(randIdx, 1)[0];
+            const img = cells[cellIndex].querySelector('img');
+            if (img) {
+                img.style.display = 'block';
+                setTimeout(() => { img.style.display = 'none'; }, delay);
+            }
+        }
+    
+        let showingInterval;
+    
+        function startShowing() {
+            hideAll();
+            clearInterval(showingInterval);
+            showingInterval = setInterval(() => {
+                if (unseenIndexes.length === 0) {
+                    clearInterval(showingInterval);
+                } else {
+                    showNextRandom();
+                }
+            }, delay + 500);
+        }
+    
+            
+        function revealAll() {
+            clearInterval(showingInterval);
+            cells.forEach(cell => {
+                const img = cell.querySelector('img');
+                if (img) img.style.display = 'block';
+            });
+
+            // Show matched pairs
+            const matches = {};
+            cells.forEach((cell, idx) => {
+                const img = cell.querySelector('img');
+                if (img) {
+                    const src = img.src.split('/').pop();
+                    const base = src.slice(0, -5); // remove 1.jpg or 2.jpg
+                    if (!matches[base]) matches[base] = [];
+                    matches[base].push(idx + 1); // use 1-based index for display
+                }
+            });
+
+            const display = Object.entries(matches)
+                .filter(([_, ids]) => ids.length === 2)
+                .map(([_, ids]) => `🔗  ${ids[0]} & ${ids[1]}`)
+                .join(' &nbsp;&nbsp; ');
+
+            document.getElementById('matched-pairs').innerHTML = display || "<em>No complete pairs found.</em>";
+        }
+
+    </script>
+    </body>
+</html>

@@ -1,0 +1,83 @@
+{
+  "title": "Multiplying and dividing powers",
+  "summary": "Learn how exponents record repeated multiplication and how powers behave when multiplied, divided, or raised to zero, one, or a negative exponent.",
+  "blocks": [
+    {
+      "type": "text",
+      "body": "An exponent tells how many times to use the base as a factor. In 4^3, the base is 4 and the exponent is 3: 4^3 = 4 × 4 × 4 = 64. The exponent is not a multiplication sign; 4^3 does not mean 4 × 3."
+    },
+    {
+      "type": "equation",
+      "latex": "a^m = \\underbrace{a \\times a \\times \\cdots \\times a}_{m\\text{ factors}}"
+    },
+    {
+      "type": "text",
+      "body": "When multiplying powers with the same base, keep the base and add the exponents. This works because the factors from both powers join together. The bases must match; do not add exponents when the bases are different."
+    },
+    {
+      "type": "equation",
+      "latex": "a^m \\times a^n = a^{m+n} \\qquad 2^3 \\times 2^4 = 2^7 = 128"
+    },
+    {
+      "type": "text",
+      "body": "When dividing powers with the same nonzero base, keep the base and subtract the denominator's exponent from the numerator's exponent. Matching factors cancel. The base cannot be zero because division by zero is undefined."
+    },
+    {
+      "type": "equation",
+      "latex": "\\frac{a^m}{a^n} = a^{m-n} \\quad (a \\ne 0) \\qquad \\frac{5^6}{5^2} = 5^4 = 625"
+    },
+    {
+      "type": "text",
+      "body": "A nonzero number to the zero power equals 1. One way to see why is to divide a^m by itself: the quotient is 1, and the division rule gives a^(m-m) = a^0. The expression 0^0 is not defined in ordinary school algebra, so the zero-power rule requires a nonzero base."
+    },
+    {
+      "type": "equation",
+      "latex": "a^0 = 1 \\quad (a \\ne 0) \\qquad 8^0 = 1"
+    },
+    {
+      "type": "text",
+      "body": "A number to the first power is the number itself because there is exactly one factor. This includes zero: 0^1 = 0, while 1^0 = 1. The exponent zero and the base zero are different ideas."
+    },
+    {
+      "type": "equation",
+      "latex": "a^1 = a \\qquad 7^1 = 7 \\qquad 0^1 = 0"
+    },
+    {
+      "type": "text",
+      "body": "A negative exponent means take the reciprocal; it does not make the value negative. For a nonzero base a and positive whole number n, a^(-n) = 1/a^n. For example, 2^(-3) = 1/2^3 = 1/8. Zero cannot have a negative exponent because that would require division by zero."
+    },
+    {
+      "type": "equation",
+      "latex": "a^{-n} = \\frac{1}{a^n} \\quad (a \\ne 0) \\qquad 10^{-2} = \\frac{1}{10^2} = \\frac{1}{100}"
+    },
+    {
+      "type": "text",
+      "body": "When the base is a negative number, put the whole base in parentheses. An even positive exponent gives a positive result because the negative factors pair up; an odd positive exponent leaves one negative factor. Without parentheses, the exponent applies before a leading minus sign: -3^2 means -(3^2), not (-3)^2."
+    },
+    {
+      "type": "equation",
+      "latex": "(-2)^4 = 16 \\qquad (-2)^3 = -8 \\qquad -3^2 = -9 \\ne (-3)^2 = 9"
+    },
+    {
+      "type": "text",
+      "body": "The reciprocal rule also works when the base is negative. Keep the negative base grouped, evaluate its positive power, and then take the reciprocal."
+    },
+    {
+      "type": "equation",
+      "latex": "(-2)^{-3} = \\frac{1}{(-2)^3} = -\\frac{1}{8} \\qquad (-2)^{-2} = \\frac{1}{(-2)^2} = \\frac{1}{4}"
+    },
+    {
+      "type": "text",
+      "body": "A reliable approach is to check the bases first, then apply one rule at a time. In a longer expression, multiply same-base powers by adding exponents and divide them by subtracting exponents. Keep parentheses around a negative base so the sign is part of the base, as in (-2)^4."
+    },
+    {
+      "type": "equation",
+      "latex": "\\frac{x^7 \\times x^2}{x^4} = x^{7+2-4} = x^5 \\quad (x \\ne 0)"
+    },
+    {
+      "type": "callout",
+      "title": "Try it",
+      "body": "Simplify (3^5 × 3^0) ÷ 3^2. Then explain why the answer would not change if 3^0 were replaced by 1."
+    }
+  ]
+}

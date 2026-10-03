@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Parse Delta Flights</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+        <style>
+            
+            .container { max-width: 600px; margin: 50px auto; padding: 30px; background-color: #fff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+            
+            input[type="text"] { padding: 10px; border: 1px solid #ced4da; border-radius: 5px; font-size: 1em; }
+            
+            
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Parse Delta Flight Data</h1>
+            <p>Enter Source (e.g., MSP) and Destination (e.g., PDX) IATA codes to fetch and save flight data.</p>
+            <form method="POST">
+                <label for="src_iata">Source IATA Code:</label>
+                <input type="text" id="src_iata" name="src_iata" required maxlength="3" pattern="[A-Z]{3}" title="Enter a 3-letter IATA code (e.g., MSP)">
+
+                <label for="dst_iata">Destination IATA Code:</label>
+                <input type="text" id="dst_iata" name="dst_iata" required maxlength="3" pattern="[A-Z]{3}" title="Enter a 3-letter IATA code (e.g., PDX)">
+
+                <button type="submit">Fetch & Save Flights</button>
+            </form>
+
+            {% if message %}
+                <div class="status-message {% if '✅' in message %}status-success{% elif '❌' in message %}status-error{% else %}status-warning{% endif %}">
+                    {{ message }}
+                </div>
+            {% endif %}
+
+            <a href="{{ url_for('view_page2') }}">View All Flights</a>
+        </div>
+    </body>
+    </html>

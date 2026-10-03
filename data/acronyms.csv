@@ -1,0 +1,666 @@
+Acronym,Meaning,Description
+ACE,Advanced CMOS Enhancement,"Term the fab team uses for what we call ""implant"" layers. Intended to be more descriptive, as some ""implant"" layers (e.g. NES/ESD) do epitaxial growth rather than implanting dopants."
+AD,Advanced Design,"A group in PTD that helps interface between the rest of PTD and other design teams. They help negotiate design rules, design building blocks that are used by other design teams for products, and design test chips and other E-test structures, among other things."
+ADC,Add/Drop Checker,"A Calibre module that occurs in nearly every SEQ. It typically checks the output of PreOPC against the output of MEC to ensure that no target features were unintentionally added or dropped during the intervening flows (OPC, Fixup, and MEC)."
+ADH,Adhesion Module (Track),Baking step for adhesion promoter pre-resist coat.  Found in Lot checklist from lithography owner. 
+ADM,Add/Drop/MRC Check,"A module recipe found in every modern recipe set. This checks whether mask data was added or dropped (i.e., spurious mask features were created, or actual mask features were destroyed) between PreOPC and MEC."
+ADM,Adamantine,Transistors that are up the stack rather than only on the front end. See ADAMAMANTINE_INTRO_032020.pptx
+AIMS,Aerial Image Measurement System,A mask qualification tool. http://www.zeiss.com/semiconductor-manufacturing-technology/en_de/products-solutions/photomask-systems/mask-qualification.html
+AIR,Aerial Image Recovery,A correction strategy that moves edges of features (typically in a transition region from tight to loose pitch) to improve the aerial image contrast
+ALT,ALTernative ,Refers to ASML's Tachyon litho simulation platform
+ambit,ambit,Range of influence of the convolution kernel around an evaluation point.
+AMHS,Automated Material Handling System,"Within the fabrication facilities, it is a wafer movement system."
+AMP,Automated Measurement Parameters,"The parameters used by the SEM to measure sites. Note that when RET takes data to build a model, they use very different AMP than Litho uses when making, for example, SPC charts. Litho's parameters use a higher SEM beam intensity so that scans can be as fast as possible, but this reduces the sensitivity to small differences in CD, which are important in model-building. "
+AOT,Auto Override Entry,"In TES/METIS, overriding TICLIB default, usually to support shuttles with multiple dot products that may require different TIC."
+APE,Algorithmic Process Enhancement,First corrections are done for on-target process and then corrections are modified through APE for variation in exposure and focus; looks across a bit of focus to help features with minimal DOF.
+APSM,Alternating Phase Shift Mask,"A chrome binary mask with phase assist features created through etching the quartz. The eched quartz is usually at 180 degree phase difference relative to the un-etched quartz. The numerical aperture of an APSM mask fits more diffraction orders while the zeroth diffraction order vanishes. This results results in better contrast, better depth of focus and lower MEEF."
+ARC,Anti-Reflective Coating,"A layer spun on to improve exposure by limiting reflectivity.  Generally it is a BARC, bottom ARC, spun on wafer prior to resist coating."
+ATP,Automated Tagging Program,Utility used by IMO to tag DIC features for reticle disposition during mask fabrication.  Used for 76A and newer technologies.
+ATT,Average To Target,See also MTT.
+Attacker,attacker geometry,"Two nearby features that both have high aspect ratio. The short side of one feature (the ""attacker"") faces the long side of the other feature (the ""victim"")."
+AXLE,Automated XOR LayerDependency Extractor,Tapeout utility that stores XOR reports and analytics for taped-in TOPREP databases. Used to help narrow down layers for LDI waivers. See LDI.
+BCCD,,CD when resists patterns are transferred to underlying hard mask through etch (trenches in hard mask).
+BCLA,Best Condition Look Ahead,A BCLA wafer is a wafer shot at best conditions for initial fab process testing.
+BDW,Broadwell,Name of Intel product like Haswell
+BE,Back End,"Refers to later layers in the process, usually after CON"
+BECL,Back End Community Loop,See FECL. BECL is backside power.
+BEEP,Blocked Etch Enduring? Particle,A type of fin defect. A region that should have been etched but remains post etch and that blocks a subsequent etching step. (A blocked etch at the previous etch step could have caused the BEEP itself)
+BiC,Best in Class,
+BLM,Barrier Layer Metal,
+BMET,Berkeley Micro Exposure Tool,0.5NA EUV tool using Berkeley synchrotron light source
+Bossung Plot,Bossung Plot,"A plot of CD variation of a printed feature versus exposure latitude and focus latitude (after J.W. Bossung, 1977). This plot serves as a tool to optimize focus and exposure dose."
+BOX,BARC oxide,A type of photoresist
+BPX,Business Practices Excellence,"BPX is the highest standards of business ethics, excellence and integrity. Our values state that Intel will, ""conduct business with uncompromising integrity and professionalism."""
+BSL,Baseline,
+BTS,Bias Temperature Stress,"The BTS margin DVB to Poly/TCN is ~ 5nm on 1278. In practice, BTS (Biased Temperature Stress or Bias-Temperature Stress) is the minimum space required between two features A and B, as shown here: https://www.spiedigitallibrary.org/ContentImages/Journals/JMMMGF/17/4/041008/FigureImages/JM3_17_4_041008_f003.png. BTS margins are determined based on a variety of parameters - layer pairs, features considered, material used in the layers, etc."
+BUM,Business Update Meeting,Company-wide quarterly meeting which updates employees on the business outlook. Blue badge employees are expected to attend; Green badges are generally not allowed to attend.
+BVE,Better Version Exists,Utilized in CGM
+CTC or C2C,Corner To Corner ,(1) Two nearby features whose shortest connecting line is a non-Manhattan line between their corners. (2) The distance between two features in the arrangement defined by (1).
+C4,Controlled Collapse Chip Connection,A solder joint between a substrate and a flip chip whose height is controlled by the surface tension of the liquid solder.
+CA,Correction Agent,
+CAA,Critical Area Analysis,
+CADNAV,same as DB coordinates,Coordinates relative to lower left corner of seat .oas file.
+CAGR,Cumulative Average Growth Rate,
+CAMDEX,CATS based Metal Density Extraction,
+CAP,Corrective Action Plan,A written notice to employees that describes the performance problem and the actions required to fix the problem. Can also apply to suppliers and their performance.
+CAR,Chemically Amplified Resist,"Resist that when exposed to light creates an acid catalyst (PAG), and then when heated, the acid drives a chemical reaction that changes it's solubility in solvent, allowing it to be developed away."
+catch-22,,A dilemma or difficult circumstance from which there is no escape because of mutually conflicting or dependent conditions.
+CATS,Computer Aided Transcription System,
+CBC,Contour Based Check,"(1) A Mazama mode that produces model-based contours for a given mask and performs various checks on these contours, such as checks for bridging, pinching, deviation from target, etc. The checks to be performed (and their associated parameters) are set in a CBC recipe. (2) A CBC recipe. (3) ChkOPC, the TES module in which CBC is run."
+CBO,Contour Based Overlay,
+CCB,Change Control Board,"The group representing applicable engineering, manufacturing, quality, and planning functions, which dispositions and coordinates engineering changes to a product."
+CD,Critical Dimension,"A physical distance for a feature that is either (1) measured in the fab or (2) predicted by a model. The most frequent CDs that are measured are the width/height of a feature and the space between two features. (Not to be confused with: the unix command to change directories, Chris Destefano, Compact Disc, or Certificate of Deposit.)"
+CD – SEM,Critical Dimension Scanning Electron Microscopy,
+CDIS,Common Directory Information System,
+CDU,Critical Dimension Uniformity,Analogous to CER. LCDU: Local CDU.
+CE!,Copy Exactly!,A process for documenting and implementing change (or exceptions) to standards. Standardization of processes across manufacturing facilities and identifying the best processes then copying those processes to each facility.
+CEB,Constant Etch Bias,
+CER,Contact Edge Reduction,
+CER,Contour Edge Roughness,
+CF,Clear Field,"A mask for which features (polygons) represent chrome/mosi (or absorbing regions) and empty regions (the ""field"") represent glass (or transmitting regions)."
+CGM,Configuration Management System,CGM to replace CSMT
+CHCM/CMCM/etc,IMO PDVs. See PDV.,"Both CMCM and CHCM are EPSM plates sharing very similar plate film stacks. In CHCM, one stack film has been replaced by a carbon hard mask."
+CLG,Computational Lithography Group,See CLT.
+CLT,Computational Lithography Team,"A group in PTD that writes software for computational lithography and data analysis, including Mazama, ILT, Hudz, Imager, and other applications."
+CM,Coordination Meeting,
+CM,Correction module,A corrector in OPC that suggests segment movement at each iteration
+CMC,Chrome-less Mask,See CPL
+CMOS,Complimentary Metal Oxide Semi-Conductor,
+CNB,Connected Network Backup,
+CNL,Cannon Lake (processor codename),
+CNTD,Compact Negative Tone Dev.,Type of model.
+COAG,Contact on Active Gate,
+COB,Close Of Business,Synonym for end of day.
+COG,Chrome on Glass,A binary reticle that uses a kind of chromium compound on fused silica quartz to create a pattern template.
+CPL,Chrome-less Phase-shift Lithography,A Lithography process using a purely transmissive mask where some regions have been etched to create a 180-degree phase shift. Features are patterned using destructive interference that occurs near the boundary of these phase shift regions.
+CPP,Contacted Poly Pitch,The minimum distance between two poly (PC). Also known as Contacted Gate Pitch (CGP).
+CR,Corner Rounding,The shape of the contour near the corner of a target feature.
+CSI,Correction Set Instance,
+CSID,Correction Set ID,
+CSMT,Correction Set Master Table,
+CSO,Correction Set Owner,defines sizing table
+CTC or C2C,Corner To Corner ,(1) Two nearby features whose shortest connecting line is a non-Manhattan line between their corners. (2) The distance between two features in the arrangement defined by (1).
+CTG,California Technology Group,
+CTM,California Technology and Manufacturing,
+CVD,Chemical Vapor Deposition,A process to deposit atoms
+CWD,Current Working Directory,
+D0,Nominal exposure conditions,
+D2DB,Die to Database,In the context of QSA data acquisition.
+D4,Defect Disposition thru Design Data,
+DAG,Directed acyclic graph,"Some examples are commands in Calibre flows, OASIS file cell hierarchy, git commits, modules in a sequence equation"
+DBO,Diffraction Based Overlay,Overlay mark for diffraction based metrology. See also IBO.
+DCB,Diffusion Complement & Backbone,Refer RET Fab Glossary#Glossaryoflayers for a glossary of layer names.
+DCCD,Development Check Critical Dimension,CD in developed photoresist.
+DCF,Double Correction Fix,
+DDE,Design Drawn Extraction,
+DE,Design Enablement group,
+DF,Dark Field,"A mask for which features (polygons) represent glass (or transmitting regions) and empty regions (the ""field"") represent chrome/mosi (or absorbing regions)."
+DFG,Design Finishing Group,DFG owns the white=space fill flow
+DFM,Design For Manufacturability,In the context of Calibre
+DFT,Die Fit Target,"A frame cell used by IMO and Fab for visual indicator, pattern recognition, and registration"
+dg_12XX_CBC,design gauge class,dg = design gauge – 12XX = technology - CBC = Contour Based Check
+DGLM (or DGLm),Dynamic gas lock membrane,"From https://pure.tue.nl/ws/portalfiles/portal/146917108/Schlijper_Thesis_MRL_SCHLIJPER_20181102_PUBLIC.pdf, copied verbatim: ""An EUV lithography production tool uses EUV-light to expose photoresist on wafers. This EUV light has enough energy to induce a hydrogen plasma in the hydrogen background gas by so-called photoionization reactions. After creation of the first ions and electron, electron-impact collisions, plasma chemistry and recombination reactions take place. This EUV-induced plasma affects certain optical components of the machine, including capped pSi membranes. One of these capped pSi membranes is the DGLm, which filters out DUV and IR light while transmitting EUV-light."""
+DIC,Drop In Cell,A set of regular structures used for measurements at IMO regarding the mask-making process. These are also used opportunistically for Lithography measurements. Disposition cell used by both Fab and IMO for Registration and CD’s (isolated and nested)
+Dispo,Disposition,"The process of deciding how to handle violations (for example, from CBC) or similar items that need an engineer's attention and judgement."
+DLC,Dynamic learning corrector,A corrector module in OPC that uses data and regressions to adjust its behavior
+DMG,Dual Metal Gate,One of the model based implant layers
+DMM,Domain Mis-Match,"Near a domain boundary, OPC can behave differently in the cores on the two sides; for example, this can occur because each client only has access to the correction in its own core and not the correction performed by clients handling adjacent cores. When the domains are stitched back together at the end of OPC, this can lead to discrepancies near domain boundaries (DMM). Ideally, DMM should be fixed during OPC Fixup."
+DNIR,Do Not Inspect Region at IMO,
+DNP,Do Not Process,An ID used to prevent a variety of operations from being performed in our flows (including but not limited to OPC).
+DNU,Diffusion Negative Universal/Unified,Fin/Nanoribbon cut layer (EUV) - determines OGD extent of fin/ribbon. Think of it as a mask for removing diffusion/fins/ribbons  - Negative since switched to negative tone from a positive tone historically. Unified since multiple DUV masks got replaced with 1 EUV mask.
+,,Refer RET Fab Glossary#Glossaryoflayers for a glossary of layer names.
+DNW,Deep N-well,Layer
+DOA,Dead on Arrival,
+DOE,Design of Experiments / Diffractive Optical Element,Methods for the design of multi-factor experiments. Can also be used to refer to a particular experiment itself. Also stands for Diffractive Optical Element.
+DOF,Depth of Focus,The relative amount of focus shift the process can withstand and still print an acceptable image.
+DPM,Defect Per Million,In the context of Yield/Sort reports.
+DPR,Direct Print Ribbon,Refer RET Fab Glossary#Glossaryoflayers for a glossary of layer names.
+DPW,Die Per Wafer,"Yield number of expected ""good"" die on each wafer. Allows the Planner to forecast potential die out based on Wafer Starts."
+DRC,Design Rule Check,In the context of Calibre
+DRT,Design Rule and Tapeout (pronounced as Dirt),
+DSx,Diffusion Spacer,Refer RET Fab Glossary#Glossaryoflayers for a glossary of layer names.
+DT ,Design Technology,"Software for place & route tools, cadence interface, etc; not for circuit simulations"
+DUT,Design Under Test,
+DUV,Deep Ultra Violet,"The short-wavelength end of the ultraviolet spectrum; includes 248 nm and 193 nm, but not EUV."
+DVB,Deep Via Backside/Boundary,"Connects TCN to BM0 in Tyche - Also sets the OGD boundary of the standard logic cell (160H, 180H, etc)"
+DVE,Design Verification Engineering,Encodes tapeout flows based on sizing tables defined by CSO
+ETE or E2E,End To End,"(1) Two nearby features with parallel, adjacent edges that ""face"" or project onto one another. If the features have a high aspect ratio, then the facing edges should be the ""short"" side of the feature. (2) The distance between two features in such a configuration."
+EAM,Enterprise Access Management,One of the rights management tools used by Intel to oversee worker access to various reports and systems. The tool may be accessed here.
+EASE,Employee Access Support Environment,An internal source for human resource support services and tools. EASE was replaced by Employee Services.
+EB,Employee Bonus,A variable component of direct cash compensation that is dependent on the company and business unit performance based on specific business group performance and earnings per share growth. Formerly called Executive Bonus.
+ECBP,Employee Cash Bonus Plan,"An Intel benefit payable to employees twice a year, calculated as one-half day's pay for every 2% of corporate pretax profit or 4% of corporate net income; whichever is higher."
+ECD,Estimated Completion Date,
+ECO,Engineering Change Order,
+EDA,,Electronic Design Automation or Exploratory Data Analysis
+EDI,Estimated Die Impact,
+EDM,Edge Damage Monitor,Part of etch ring to test the reliability of ring during laser cut. It is placed towards the active area.
+EDS,Edge Data Sizing,"Originally Etch Data Sizing, now Edge Data Sizing due to expanded scope. Equation-based correction applied to tape data by IMO to account for long-range (~millimeters) effects in mask manufacturing (e.g. chrome density effects) analogous to our MEC correction for short-range (~micron) effects. Not to be confused with Pre-EDS sizing."
+EF Tgt,Exposure Field Targeting,
+ELF,Electronic Lot File,"Integrates with WorkStream to allow the creation of custom lot flows by the factory process engineer and then notifies the technician of non- standard processing (for holds, split/merge, etc)."
+EMGR,Electromagnetic guard ring,Used by Fab for Quality & Reliability testing
+EOBD,End of Business Day,
+EOL,End of Life,When a process is no longer produced at a facility. Depends on the data/usage - Broadly if some data is finalized.
+EOM,End of Message,Used to note there is no futher communication in the message. Often used in the subject area of an email to note there is nothing further to read in the body of the email.
+EPE,Edge Placement Error,Distance between the countour and target at the edge of a polygon
+EPSM,Embedded Phase Shift Mask or Attenuating Phase Shifting Mask (Also ePSM),"Reticle that uses 100% transmission regions (quartz), and ~6% transmission regions (MoSi) with a relative 180 degree phase shift."
+ER,Etch ring,
+ERSA,Employee Relations Self-Assessment,A comprehensive and systematic method of assessment to improve the employee relations environment.
+ERT,Emergency Response Team,Team of people trained to handle all site emergencies.
+ESD,positive source drain implant layer,D stands for dark field (ijn contrast to ESB). Can exist and/change names based on technology
+ETE or E2E,End To End,"(1) Two nearby features with parallel, adjacent edges that ""face"" or project onto one another. If the features have a high aspect ratio, then the facing edges should be on the short sides of the features. (2) The distance between two features in such a configuration."
+ETH,End To Hole,
+ETS,Exhaustive Test Set,May include some or all layers in gds
+EUV,Extreme Ultra Violet,
+F0,Nominal focus conditions,
+F0D0,"F0=Nominal focus, D0=Nominal Exposure Dose",
+F0DP2,Positive Exposure Dose (+2),
+F2F,Face to face,Meeting of all members in one physical location.
+FA,Flow Audit,
+FAB,Fabrication Facility,Front-end production facilities that produce wafers and other microprocessor memory products.
+FAMC,Fixed Alternate Metrocell,
+FCCD,Final Check Critical Dimension,"The after-etch inline critical dimension measurement (e.g., the CD in the wafer)."
+FCD DIC,Frame Critical Dimension Drop In Cell,
+FCO/FCSO,Fab Cellset Owner,Graphics Engineer
+FDR,Frame Design Rule,
+FE,Front-End,"Refers to beginning layers in the process, usually through CON"
+FEC,Fogging Error Correction,A type of long-range e-beam input pattern correction used in the context of writing patterns on mask resist using an e-bean writer.
+FECL,Front-End Community Lot,A shorter stack of layers for quick turnaround on testing rather than waiting for the full stack
+FECM,Front-End Coordination Meeting,
+FEM,Focus-Exposure Matrix,Also Finite Element Method.
+FFI,Foreign Function Interface,
+FFL,First Full Loop,First set of wafers manufactured using the full-process flow.
+FlexRay,Flexible Rays,An ASML illumination unit on optical scanners that uses a programmable array of thousands of individually adjustable micro-mirrors to generate a freeform pupilgram. See IIU.
+FMC,Frame Metro Cell,"A set of regular structures in the frame used by Lithography to measure process health, process variation, etc."
+FMLFC,Final Mask Layout Final/Fin Check,CD post final etch on all layers making a single process level (example: DNx - if x goes 1 to 3 then FMLFC is after DN3 has been etched) - DCCD -> PRE-ASH -> FCCD -> FMLFC
+FN2D0,Negative Focus (-2),
+FOF,Fox Oly Fox,
+FOH,,
+FOUP,Front Opening Unified Pod,Wafer carrier used in 300 mm processing.  The FOUP has it's own mini-environment that is cleaner than the ambient environment of the clean room
+FRE,Fab Revision for RET,FRE - Fab Revision for RET
+FSOL,Full Stack Overlay,Enable in-die overlay wafer measurement. OPC corrected DIC measured by IMO and Fab.
+FTI,Fin Trim Isolation,Layer. Refer RET Fab Glossary#Glossaryoflayers for a glossary of layer names.
+FTM model,Fast Thick Mask model,
+FTR,Fin Trim Removal,
+FUSE,It's a type of circuit layout that can still be modified (once) after production,
+FUT,Feature Under Test,
+FVTC,Flow Validation Test Case,
+FWP,Final White Paper,Published to document changes to model/creation of model for a new layer & presented/defended at SRB
+GAV,Grating Assisted Via,
+GCIB,Gas Cluster Ion Beam,https://en.wikipedia.org/wiki/Gas_cluster_ion_beam
+GCN,Gate Contact,A layer name
+GDS,Graphic Database System,Precursor to the OASIS databse format for circuit/photomask layout and design
+GEO,Gate Etch Out,
+GFA,Gross Failure Analysis,
+GL,Group Leader,A team member who facilitates and provides leadership direction for the team.
+GILA / TILA,Gate/Trench Inter Level Align,GILA = nitride layer that looks like a roman helmet
+GMF,Golden Mapping File,
+GOOP,,flowable nitride-like film that gets converted to oxide with a cure. (It's just goopy.)
+GPTW,Great Place to Work,Great Place to Work is an Intel value.
+GR,Guard Ring,
+GRC,Gross Reality Check,
+GTO,Global Tapeout Operations,
+GUI,Graphical User Interface,
+HCCD,Hardmask Check Critical Dimension,"A name sometimes used for dimensions measured in a hardmask layer post-etch. This also goes by a number of different names in different technologies and focus groups, depending on the process and the exact layer where the dimension is measured."
+HDBM,Hierarchical Database Manager,The Hierarchical Database Manager data structures are the fundamental units into which design (pre-opc)
+HDC,High Density Cell,A type of bitcell.
+HDRF,High Density Register File,
+HIP,Hard IP,
+HMC,Hardmask Confined,
+HPC,High Performance Cell,A type of bitcell.
+HSD,High Speed Database,
+HVM,High Volume Manufacturing,"After the process is stable and reliable, increasing the amount produced."
+HVQK,High Voltage Quick Kill,
+IAG,Intel Architecture Business Group,
+IBO,Image Based Overlay,Overlay mark for video image-based metrology. See also DBO.
+IC,Individual contributor,Rank and file engineer (not a group leader)
+ICF,Intel Custom Foundry,An Intel division that solicits designs from external customers for production in Intel fabs. Traditionally Intel has only produced chips that were designed within Intel.
+ICG,Intel Communications Group,
+ICTC,Internal corner to corner,MRC spec parameter
+ICV,IC (Integrated Circuit) Validator,Software produced by Synopsys that has various layout verification capabilities. RET typically utilizes the pattern matching function of this software.
+IDF,Information Disclosure Form,To document ideas that can become Intel Top Secret or patents
+IDRG,In-Die Reg Cell,"Metrology structures that are drawn using FDRs and use the same basic construction and integration into design as any other FDR structure. The content is drawn under FDRID, surrounded by beard, which then transitions to SDR layouts."
+IEM,Identify and Entitlement Management,
+IFE,Injury (or Incident) Free Environment,Project to develop the Intel workforce to become dedicated and personally committed to eliminating all occupational injuries and incidents requiring a paradigm shift in the belief that accidents just happen.
+IFS,Intel Foundry Services,System where reticle tapeout requests are submitted and tracked
+IIU,Intelligent Illuminator Unit,"A Nikon illumination unit used to generate free-form pupilgrams. It is a DLP-style, mirror-based arbitrary source generator similar to ASML's Flexray. See FlexRay."
+ILD,Interlayer Dielectric,
+ILT,Inverse Lithography Transform,Software made by CLT for performing OPC. Typically used on CMC layers.
+IMBO,Intel Management By Objective.,A process for long-range planning.
+IMO,Intel Mask Operations,The division of Intel that produces photolithography masks and does research into new mask production techniques.
+INT,Intensity,
+IP,Intellectual Property,
+IPC,In-Process Charging,IPC design rules allow charge mitigation strategies and designs to prevent material damage or etch inefficiencies due to accumulated charges during fab processing of the wafer stack
+IPS,Individual Performance Summary,
+IR,Improvement Required,
+IRIS,,Silicon carbide etch stop
+ISM,Intel Software Market,The Intel® Software Manager is a software utility that notifies users of the Intel® Software Development Tools when updates are available for their installed Intel software products.
+ISSC,In-Situ Strip and Clean,A Hitachi Etch cleaning module  
+ISO,ISO (not an acronym),"A standard to predict or monitor yield, independent of wafer and die size, which are fabricated on the same technology. "
+ISON,Isolation Nitride,
+ISS,Intel Software Supply,A division of Intel Technology that distributes software internally.
+IT,Information Technology,A strategic business group within the Intel organization.
+ITO,Intel Tapeout Operations,
+IU,Intel University,Program within Intel to administrate training.
+JDP,Joint Development Project,
+JETT,,P-type work-function metal (TiN)
+JF,Jones Farm,Another Intel Oregon campus near Evergreen and NE 25th in Hillsboro.
+KDE,K Desktop Environment,
+KIF,Kernel Input File,
+LCCD,Liner Check Critical Dimension,
+LDI,Layer Dependency Information,
+LEA,Lithography Enabling Algorithms,
+LEPSM,Line End Phase Shift Mask,An EPSM mask with phase assist features achieved at line ends through etching the quartz just like in APSM.
+LER,Line Edge Roughness,Variation in edge placement for a jagged or wavy edge. Often reported as a 3-sigma (standard deviation) value. Will be zero for a perfectly straight edge. See LWR below.
+LLN,Low Leakage N-type Implant layer,
+LLP,Low Leakage P-type Implant layer,
+LMB,Local Minima Basins,In the context of Optimization in MAZAMA
+LMB ,Litho Model Builder,Built by PTM to do optimization of Progen model parameters with Copter optimization program  Command Line: lmb -r 1.5.3 file.lmb > file.out &
+LMC,Litho Metrology Checker,Tachyon LMC is an ALT-based CBC tool.
+LO,Layer Owner,typically Fab Litho layer owner who owns reticle CD's and pattern integrity
+LOA,Leave of Absence,"An approved period of time off from work for medical, personal or military reasons."
+LOP,Layer Operating Point / Litho Operating Point,Layer from a previous technology that is being copied
+LRD,Lens-reticle Distortion,
+LRL,Long Running Layer,
+LTD,Logic Technology Development,"Intel's main fab R&D unit, which we all work in."
+LTI,Linear Time-invariant,
+LVS,Layout Versus Schematic,In the context of Calibre
+LWR,Line Width Roughness,"From Field Guide to Optical Lithography (Chris Mack, SPIE Press): ""When variations in the width of a resist feature occur quickly over the length of the feature, this variation is called linewidth roughness. When examining these variations along just one edge it is called line edge roughness (LER, see above). LER becomes important for feature sizes on the order of 100 nm or less, and can become a significant source of linewidth control problems for features below 50 nm. LER is caused by a number of statistically fluctuating effects at these small dimensions such as shot noise (photon flux variations), statistical distributions of chemical species in the resist such as photoacid generators, the random walk nature of acid diffusion during chemical amplification, and the nonzero size of resist polymers being dissolved during development. It is unclear which process or processes dominate in their contribution to LER."""
+LYA,Low Yield Analysis,A division of TMG.
+MAL,Materials Analysis Lab,Lab at Intel that deals with material characterization.
+MaPS ,Mazama Pattern Selector,A language used in HUDZ sampling to select user defined patterns from layouts.  
+MBM,Multi-Beam Manufacturing,In context of IMO e-beam writing. See VSB.
+MCM,Management Committee Member,
+MDP,Mask Data Preparation,
+MEC,Mask Error Correction,"Corrects for errors in the IMO process. MEC starts with the mask target (the output of OPC) and produces a layer that, when used in the actual IMO process, will approximately yield the mask target. The relationship between MEC and IMO is analogous to that between OPC and Lithography."
+MEEF,Mask Error Enhancement Factor,How much effect a 1 nm error on the drawn mask will have on the printed wafer.  It describes the sensitivity of the process to the reticle. X nm (1X magnification) ?CD on mask causes an Y nm  (1X magnification) on wafer. MEEF = Y/X.
+WEEF,Wafer Error Enhancement Factor,How much effect a 1 nm delta on the resist contour will have on the etch contour.  It describes the sensitivity of the etch process to the resist. X nm (1X magnification) ?CD on resist causes an Y nm  (1X magnification) on post-etch pattern. MEEF = Y/X. It will be close to MEEF_AEI/MEEF_ADI.
+MERLN,Model Error Reduction for Last Nm,
+MGA,,Modified Genetic Algorithm or Model Grid Aligner. Model grid aligner modifies the model ROI for each domain by snapping it to the nearest global model grid point
+MIC,Model-based Image Corrector,Improves upon PAC which was Pitch Aware Corrector for image inversion
+minhole,minimum sized hole,A resist hole of the smallest size allowed by design rules.
+ML,Multi-Layer,In the context of IMO mask fabrication.
+MLO,Multi-Layer Overlay,
+MOPC,Model Based OPC,
+MOQ,Manual Order Queue,Can setup a series of jobs to be delivered to an instrument.
+MOR,Model Of Record,The tool set identified by the Technology Development (TD) group for a particular process based on demand for a product.
+MoSi,Molybdenum Silicide,Opaque absorbing film used with fused silica substrates.  Has better adhesion to fused silica than chrome.
+MPC,Mask Proximity Correction,In the context of mask writing at IMO.
+MR,Module Recipe,Pairing of an RET module and a mask layer in order to be used in a Recipe Set. Used in TES.
+MRC,Mask Rule Check,"A rule that must be obeyed by the mask target (the output of OPC) in order for the mask to be produced by IMO. For example, there is a minimum segment size that can be reliably produced by the IMO process."
+,Management Review Committee,"Murthy R., Jim Keller , etc"
+MRS,Model Release Script,Perl script that aids in the release of OPC models
+MRV,Module Recipe Validation,
+MRWP,Mask Release White Paper,"One of these used to be written every time a mask was released with a new recipe set, until about mid-2017. See SRB."
+MT#,Metal layer #,The name of the metal layer. The number counts up from the front end (near the transistors) to the back end.
+MTT,Mean To Target,Mean Measured CD on plate (4X in midi - 1 in jobdeck) - Target CD on plate. In the context of qualifying a plate.
+MTS,Module Target Spec,"For each module in each technology, this is the amount of error that is ""allowed"" for that module by the program committee for that technology. Here, a module means any operation (a litho exposure, an etch, a polish, RET model, RET recipe, etc.) involved in the process. The program tries to put bounds on the total error in the process by bounding the amount of error that can come from each module. For example, RET recipe might be allotted 2 nm of deviation in a particular technology for a particular layer."
+MVS,Model Verification Script,
+NBM,NMOS Block Mask,
+NCAR,Negative Chemically Amplified Resist,See PCAR.
+NEO,New Employee Orientation,Required class for new hires.
+NES,Negative Source/Drain Implant Layer,Can exist/change name based on current technology. Refer RET Fab Glossary#Glossaryoflayers for a glossary of layer names.
+NGL,No-Gauge Layer,"A layer used in OPC recipes to indicate where gauges should not be created. This effectively prevents OPC from occurring on those sites. The no-gauge layer always contains the no-OPC layer (see DNP), but may contain other features. This distinction is important because the no-OPC layer is used for a variety of purposes in other recipes such as PreOPC and MEC."
+NPI,New Product Introduction,"New Product Introduction, or NPI, is a concept which describes the process required to bring a product from IPA - Implementation Plan Approval through PRQ - Production Release Qualification and into HVM - High Volume Manufacturing. The term New Product Introduction encompasses design, Tapeout, fabrication, wafer sort, unit assembly & test, validation, certification and qualification of High Volume Manufacturing (HVM) products as well as associated test vehicles and test chips. As such, 'Tapeout to NPI' is one of the major milestone/state changes in the lifecycle of product development at Intel."
+NTD,Negative Tone Develop,"Photoresist that, when not exposed to light, will wash away during the develop stage. See NCAR. The opposite of PCAR/PTD."
+NTH,Nice To Have,Utilized in CGM
+NTK,Need To Know,Used in place of sensitive data that is on a kneed to know basis.
+NWL,N-well,A fab layer that is used in negative implant doping.
+NZO,Nonzero offset,"From https://doi.org/10.1117/12.2583804 : ""It is well known that there may be a spatially dependent offset between overlay on targets and the device. This is commonly called a non-zero offset (NZO) [1], which is a comparison between device overlay measured with the CD SEM after etching (AEI) and optical overlay measured on targets after litho (ADI). In addition, the position of targets could impact the validity of corrections modeled using these targets."""
+OAI,Off Axis Illumination,Improves resolution by limiting the phase and orders of diffracted light exposed to the wafer.  Annular Illuminations is the most commonly practiced. Dipole and Quadrapole are other types.
+OASIS,Open Artwork System Interchange Standard,https://en.wikipedia.org/wiki/Open_Artwork_System_Interchange_Standard
+OBL,Outer boundary layer,Related to 3D mask effects in the model
+OCAC,On-Call Assistance Center,Phone system for human resource assistance -- 1-800-238-0486
+OGD,Orthogonal to Gate Direction,Parallel to fin direction
+OHV,Over-Head Vehicle,The individual cars on the AMHS that get/store lots from stocker to loading ports on tools.
+OLY,,Aluminum Oxide etch stop film
+OOO,Out of Office,"Used to indicate when an employee is away for work, vacation, or personal absence."
+OOP,Out of Plant,"Used to indicate when an employee is away for work, vacation, or personal absence."
+OOPS,OPC Ordinary Plot Script,JSL script which enables opening of .asd files
+OPC,Optical Proximity Correction,"The process of modifying the reticle to compensate for processing issues that keeps the printed wafer from being ideal.  (Corner rounding, iso-nested bias, etc.) In the context of Calibre"
+OPS,Operations,Often used as another name for Tapeout Operations (also known as ITO - Intel Tapeout Operations)
+OpX,Operational Excellence,"A rededication to Intel values focused on improving quality, productivity and output."
+OR,Oregon,"Here, this typically refers to the Oregon computing cluster (as opposed to SC, the Santa Clara computing cluster)."
+ORTO_e_1,Oregon Tapeout Environment e 1,Name of server environment or pool where jobs are run.
+OSO,Oxide Silicon Oxide,"Silicon Dioxide + Amorphous Silicon + Silicon Dioxide trilayer which is typically used as an ""etch stop + accumulation"" layer complex above an AHM (Amorphous Hard Mask). This is required to prevent AHM recess (partial etch down) when accumulating plugs (Example: 1278 TP1 and TP2).  The amorphous silicon acts as an etch stop for the oxide etch."
+OSWS,On Silicon White Space,For more Info ? Nisar
+OTF,Optical Transfer Function,See progen notes/manual for additional details
+OVL,Overlay,1. A MR which checks between the critical mask layer and non-critical mask layer (aka sub-layer) to make sure certain mask data between IMO write steps follow rules given in the blanking spec. 
+PAG,Photo Acid Generator,
+PAL,Pattern accumulation layer,
+PAMC,Process Bias Alternate Metrocell,
+PAS,Progress/Performance Against Schedule,
+PBM,PMOS Block Mask,
+PCAR,Positive Chemically Amplified Resist,See http://www.lithoguru.com/scientist/glossary/C.html. See NCAR.
+PCCD,PAL Check Critical Dimension,"A CD measured in PAL. This also goes by a number of different names in different technologies, depending on the process and the layer where the dimension is measured."
+PCL,Poly Cut Large,Layer - 1277 and 1278. Refer RET Fab Glossary#Glossaryoflayers for a glossary of layer names.
+PCx,"Poly Cut x (x = 1 ,2 ,3, etc)",Layer - also called PCT. Refer RET Fab Glossary#Glossaryoflayers for a glossary of layer names.
+PCP,Post-CMDL Processing,
+PDK,Product Design Kit,In the context of LTD Quarterly Updates
+PDL,Public Distribution List,
+PDS,Parallel Distribution System,
+PDS,Process Drawing Specification,
+PDV,Process Descriptor Value,Defines the process used at IMO to fabricate a certain mask from start to finish similar to a “route” in the fab. The PDV in the sizing MR is used to communicate the mask process that should be used for a given reticle.
+PEB,Post Exposure Bake,Wafer is baked after exposure to carry out the chemical reaction in CAR. Found in Lot checklist from lithography owner. 
+PEC,Poly End Cap,
+PF,Path Finding,
+PFO,Process Flow Overview,An overview of all the steps that a wafer undergoes in the fab for a particular production process.
+PFR,Pattern File Reuse,When a mask is taped out without execution of the recipe and instead data from a previous tapeout is used to construct the jobdeck. E.g. when the only thing changing for a mask is the PDV and the change is OPC/MEC neutral.
+PGD,Parallel to Gate Direction,Orthogonal to fin direction
+PHA,Pinhole Ash,
+PID,Photo-Induced Defect,Primary culprit in reducing mask lifetime in the fab.
+PLP,Poly Phase,Poly-silicon layer used to make transistor gates and interconnects
+PLRC,Proteus Lithography Rule Checker,
+PNTD,Physical Negative Tone Developer,
+PO,Projection Optics,
+POR,Plan Of Record,"Any agreed upon official ""plan"" such as a budget, schedule, process flow, equipment type, and etc."
+PPA,Power Performance Area,"PPA stands for power, performance and area, and historically these have been the three variables used in deciding how to optimize semiconductor designs."(ref: https://semiengineering.com/knowledge_centers/eda-design/definitions/ppa/)
+PPF,Peripheral Pattern File,"The PPF refers to the layout outside of the frame and devices, i.e. the layout is not in the active area that is printed on wafer. The PPF contains patterns needed by IMO and the scanner/inspection tools in the fab to align the reticle on to various tools. It also contains metrology structures used at IMO. PPFs are created by IMO and there is one that corresponds to each IMO plate type."
+PPG,Program Pattern Generator,Software tool built by PTM
+PPM,Program Priorities Meeting,
+PPTD,Physical Positive Tone Developer,
+PRC,Pattern Recognition Cell,
+Pre-EDS sizing,Pre-(Edge Data Sizing) sizing,Pre-EDS sizing is an underover/overunder applied to tape data before it is processed by IMO to clean the data of slivers resulting from MEC DMM. Pre-EDS sizing does essentially the same job as MEC Fixup (assuming boundary/blanking rectangle keepaways are enforced since MEC Fixup is presently applied only at the device level) and so is obsolete for 1276+ with the introduction of MEC Fixup. Not to be confused with EDS.
+PRQ,Production Release Qualification,"Production Release Qual (PRQ) uses data to verify that the product meets Intel's Q&R requirements and is ready for commercial shipment. This is the final stage of certification, which takes place after ATR and LEC, etc."
+,,PRQ is part of the Intel Product Life Cycle.
+PSM,Phase Shift Mask,"A reticle that utilizes phase shifts in light to improve resolution.  PSM can be attenuating or alternating. In the context of Calibre's SVRF tool used by the recipe team in PreOPC, this can refer to specific commands that were developed for some application that involved a PSM, but are actually just geometric operations that are not intrinsically related to PSM."
+PTD,Portland Technology Development,"Intel's main fab R&D division, which we all work in. This is a subset of LTD, but contains most of LTD."
+PTD,Positive Tone Develop,"Photoresist that, when exposed to light, will wash away during the develop stage. See PCAR. The opposite of NTD/NCAR."
+PTM,Process Technology Modeling,
+PVD,Physical Vapor Deposition,
+PWL,P-well,A fab layer that is used in positive implant doping.
+PWP,Preliminary White Paper,
+Q&R,Quality and Reliability,
+QA,Quality Assurance,
+QSA,?,QSA is another imaging tool like the CDSEM. Modelers collect images from the QSA tool typically for building the weak image metric.
+QTM,Quick Turnaround Monitor,Reduced fab process flow for a quick turnaround on defect/yield data at a very specific step in the fab process flow 
+R&U,Read and Understand,Usually used in the context of a SPEC.
+RA,Ronler Acres,The Intel Oregon campus where RET is located.
+RAO,Random Access Output,A strict OASIS file format used by Mazama to allow partial reading. TES has a module invoking raoUtil to make reading oasis files faster by mazama modules. See Mazama manual.
+RC,Resist Confined,
+RCG,Recent College Graduate,A graduate from a four year or higher program obtaining the degree within the last 12 months. Formerly known as NCG (New College Graduate).
+RDFT,Reticle Design Focus Team,
+RCM,Rambo Command Module,"The Rambo Command Module (RCM) is a small utility that will allow you to run Rambo Commands (originally from Split-Speed BIOS) with the full BIOS. This will allow you to test and validate your settings without having to solely rely on ITP or com port output. Additionally, the module can be loaded at multiple points throughout the boot processes to gather multiple data points."
+RCM,Recipe Convergence Monitoring,Tool within OPC libraries to monitor convergence of mask segment movements during correction. See Recipe compute monitoring (Mazama) and ALT Recipe Convergence Monitoring (ALT).
+RDM,Reference Data Management,Used by TTDOPS to scrape all TES/METIS transactions to launch jobs or record metrics - RDM Technical Details
+RDR,Restricted or Restrictive Design Rules,
+RECL, Rear End Community Lot, A shorter stack of layers for quick turnaround on testing rather than waiting for the full stack. RECL is backend metal on the frontside of the wafer. Metals are not connected to transistors.
+Reg,Registration,The (mis-)alignment between features within a single mask. Not to be confused with overlay.
+REPO,REcess POlish,
+RET,Resolution Enhancement Technology,A division of TTD.
+Reticle,Reticle,"In lithography, this is a synonym for ""plate"", ""mask"" or ""photomask."""
+RFC,Response Flow Checklist,A Response Flow Checklist is a list of things to check and do to re-stabilize a process when it goes Out Of Control or Out Of Spec. In the bussiness coord folder
+RIE,Reactive Ion Etch,Also know as Dry Etch.
+RISO,Repaired ISO,"Benchmark for wafer yield success (700 max), determined by defect density ''after'' repairable defects have been repaired. The yield is exp(-RISO/700), since this is the probability of 0 defects on a chip, assuming that the defects are Poisson-distributed."
+RISO,Redundant ISO,
+RLS,Rigorous Lithography Simulation,
+ROI,Region of interest,"In mazama, you set this for a model and that is where contours are generated."
+RS,Recipe Set,"A set of module recipes associated with a layer. These typically include PreOPC, ChkPreOPC, OPC, ChkOPC (CBC), MEC, ChkMEC, and others. All of these module recipes will be run in TES according to the SEQ for the layer."
+RSNDA,Restricted Secret Non Disclosure Agreement,Restricted Secret Non Disclosure Agreement
+RSO,Recipe Set Owner,The Recipe Team member who is responsible for a Recipe Set.
+RTP,Rapid Thermal Process,
+RTS,Regression Test Suite,A set of comprehensive tests for updating and changing testing tools
+RTW,Release to Write,Gives approval for jobdeck data to be released to IMO for mask write
+RU,Raster Unit,
+RUNDA,Restricted Use Non-Disclosure Agreement,An agreement that allows a party a restricted use of Intel Top Secret (RED Cover) information.
+RVE,Results Viewing Environment,In the context of Calibre
+RW,Real Work,
+SAC,System Address Controller,
+SADP,Self-Aligned Double Patterning,A process used to generate metal lines whose FCCD pitch is half of the DCCD pitch.
+SAQP,Self-Aligned Quadruple Patterning,A process used to generate metal lines whose FCCD pitch is one fourth of the DCCD pitch.
+Saffron,Saffron,A conformal ALD layer ~ 8 - 9 nm thick.
+SALID,Self ALigned Inter-level for DSA ,
+SAV,Self Aligned Via,See 1272 SAV Process Review.
+SB,Soft Bake,Resist bake post wafer coating. Found in Lot checklist from lithography owner. 
+SC,Santa Clara,"Here, this typically refers to the computing cluster located in Santa Clara, as opposed to the one located in Oregon."
+SCTO_d_1,Santa Clara Tapeout Environment d 1,Name of server environment or pool where jobs are run.
+SDR,Standard Design Rules,"The design rules that will be used in an actual product. During development, SDR is used in YLD/ULV chips (which mostly contain bitcells and, in 1276, Y-Test structures) and in most other locations. It is not used for frame structures (see FDR) or certain regions on test chips (see TSDR)."
+SEM,Scanning Electron Microscope,
+SEPE,Stochastic Edge Placement Error,
+SEQ,Sequence Equation,"A list of module recipes that need to be run in TES for a layer, specifying which modules are taking input from which other modules."
+SERP,Sheltered Employee Retirement Plan (or Program),SERP consists of three components: Profit Sharing Plan; 401(k) Savings Plan; Pension Plan. The Intel Profit Sharing Retirement Plan is designed to provide Eligible Employees with retirement benefits AND enhance their interest in Intel's success. The 401
+SIF,Special Instruction Form,Where engineers can make special processing requests of a lot at a specific step.
+SIR,Supervisor Injury/Incident Report,"A report that is completed by the manager or supervisor of an injured employee. The SIR form contains: A complete description of the incident, including the equipment and materials involved."
+SLA,Service Level Agreement,
+SLAM,Sacrificial Light Absorbing Material,"Intel process to put down an material prior to resist to improve exposure by limiting reflectivity.  The material generally is not photo-active, and must be etched open.  It is later removed after the pattern has been printed"
+SLES,SUSE Linux Enterprise Server,Open source Linux-based operating system developed by German company SUSE (“Software Und System-Entwicklung” - software and systems development) 
+SM,Special Metal,N-type work0fucntion metal (Ti-Al-Carbide)
+SMEO,Special Metal Etch Out,
+SMO,Source Map Optimization,"The stage of model development when the modeler chooses the intensity map for the light source that will be used by the stepper. Different sources have different advantages in terms of resolution in different directions and different pitches. SMO can refer to this process in general, or to a specific tool that is used to perform the process."
+SN,Supernova,A software platform associated with the QSB tool to analyze SEM image data
+SO,Synthesis Owner,The recipe team member who owns the synthesis recipe (probably called PreOPC1) for a given layer or layers. The synthesis step is where designer-drawn features are used to create the actual FCCD target for each mask that will be used in the fab.
+SOC,System On a Chip,
+SOG,Spin On Glass,General term whose purpose is the same as SLAM
+SOI,Silicon On Insulator,
+SOP,Stock Option Program,The Stock Option Program is an important part of Intel's compensation and benefits program. All employees considered by Intel to be regular full-time and part-time employees are eligible to be recommended for stock option grants. Stock options are a discr
+SPAF,Sub-resolution Phase Assist Feature,"In the context of LEPSM masks, these are features etched into the glass to improve line ETE resolution."
+SPC,Statistical Process Control,"The term ""SPC chart"" frequently comes up in discussions with Litho. Litho regularly makes control charts, based on metrocell SEM data, to determine whether tools are drifting or whether particular lots or wafers are outliers. When statistically aberrant data is observed, it must be investigated and dispositioned."
+SPM,Stepper Performance Marks,Frame cells used by Fab for “first-layer” (or intra-layer) registration.
+SPOC,Single Point of Contact,Person to talk to about a specific topic (e.g. a technology)
+SPP,Stock Participation Plan,The Stock Participation Plan (SPP) allows eligible Intel employees to purchase Intel Common Stock at a discounted rate through payroll deductions.
+SRAF,Sub-Resolution Assist Feature,To help with printing of layout on wafer. Used to improve mask image registration - Does not print on wafer - Check Sub-Resolution Assist Features (SRAFs)
+SRAM,Static Random Access Memory,Flip-flop latching circuit usually made of multiple transistors - now this means a set of logic units and bit cells
+SRB,Synthesis Review Board,"A committee that used to approve new recipe sets. In mid-2017, it was decided that the responsibilities of SRB should be passed to tech review, code review, and focus team reviews. See here. (Side note: The use of ""synthesis"" here is distinct from the use of ""synthesis"" in, for example, PreOPC1. The ""synthesis"" that was being reviewed here was the combination of all of the recipes in a recipe set. The idea was that SRB would look at the big picture to try to catch any errors that may occur in the release.)"
+SRC,SEM Review,A verification SEM tool supplied by Applied Materials.
+SRG,Sub-Resolution Grating,A dense grating of SRAFs.
+SRH,SEM Review Hitachi,A verification SEM tool supplied by Hitachi. Supposed to be very similar to our CD-SEMs.
+SRK,SEM Review KLA-Tencor,A verification SEM tool supplied by KLA-Tencor.
+SRL,Short Running Layer,
+SRPEC,Short Range Proximity Correction,A type of short range correction to the input of the e-beam writer when writing patterns on mask resist.
+SRR,Scribe Reference Rectangle,"Dimensions of final tapein seat, includes device and etch ring"
+SSAFI,Super Self-Alignment for Interconnects,The name of a fab process related to SAV.
+SSAFRON,Super Self Aligned for Front-End,
+SSH,Secure Socket Shell,UNIX-based command interface and protocol for securely getting access to a remote computer
+ST,Show Stopper ,Utilized in CGM
+STC,Small Test Case,
+STENCIL,Stencil of Patterns,A set of tools to extract unique patterns from an Oasis database. More information can be found here.
+STS or S2S,Side To Side,"(1) Two nearby features with parallel, adjacent edges that ""face"" or project onto one another. If the features have a high aspect ratio, then the facing edges should be on the long sides of the features. (2) The distance between two features in such a configuration."
+SVD,Singular Value Decomposition,See the Wikipedia page.
+SVRF,Standard Verification Rule Format,In the context of Calibre
+TAC,Technical Assistance Center,"Provides computer-related assistance to Intel employees. Phone Number: iNet 356-1234 (or your site phone access code followed by -1234, example: Santa Clara employees can dial 5-1234)."
+TAC,Tachyon Application Center (TAC ? TACX to prevent overloading the acronym),Tachyon is an ASML lithography simulation tool.
+TATR,Tapeout Automation Tool Requirements,
+TBD,To Be Determined.,The decision or creation will be at a future date not yet established.
+TC,Test Chip,"One type of seat in a reticle. Test chips are usually used to test and understand the limits of the production process by breaking certain design rules (e.g., deliberately introducing registration error, changing feature sizes, etc.) and using electrical test and/or SEM data to interpret the effect on the wafer."
+TCC,Transmission Cross-Coefficient,"Copied verbatim from source: ""An optical model is obtained by computing a set of Transmission Cross Coefficients (TCCs). Then, the intensity at wafer level is evaluated using these coefficients. Absorbing all illumination and pupil information, the TCCs completely characterize the system and thus computing aerial images for different mask patterns but the same optical setup can be done without recourse to TCC re-computation. This is particularly valuable for Resolution Enhancement Techniques (RETs) such as OPC."""
+TCN,Trench Contact,Layer specifying the source and drain of a transistor. Refer RET Fab Glossary#Glossaryoflayers for a glossary of layer names.
+TCS,Tapeout Computing Services,
+TEAL,,New N-type work function metal (new version of SM)
+TED,Transcription Enterprise Directory,
+TEDS,Training and Employee Development System,TEDS is the cert-tracking system for Intel. Every Intel employee has a TEDS account where certification requirements and Intel U course history are stored. TEDS Everyone is the web interface where all employees can view their accounts as Student Users.
+TES,Tapeout Execution System,
+TF,Through Focus,"Refers to behavior as the focus plane of the stepper is varied (or, equivalently, topography on the wafer moves the surface of the wafer with respect to the focus plane)."
+TG,Thick Gate,
+TI,Tape In,Layout databases are delivered to ITO
+TIC,Tapein Collateral,OASIS files that various design teams provide us in advance of a tapeout to ensure that our recipes are ready.
+TIE,Tapeout Integration Engineering,Executes PDS change requests from FCSO
+TLA,Three Letter Acronym,An initialism made with the first three letters of a term. An example is TLA for three-letter acronym.
+TLE,Tri-Layer Etch,An etch process involving the etch of three successive layers in the wafer stack. Example: an etch of SiARC (Silicon Anti-Reflective Coating) + CHM (Carbon Hard Mask) + SiO2 HM (oxide hard mask)
+TMA,Tapeout Mask Assurance,"A ""test"" tapeout used to (1) make sure that our tapeout process runs smoothly and (2) provide IMO with a sample jobdeck so that they can verify that their operations will also run smoothly"
+TMG,Technology Manufacturing Group,A strategic business group within the Intel organization.
+TMG – TD,Technology Manufacturing Group – Technology Development,Tapeout Manufacturing Group
+TO,Tape Out,ITO delivers maskdata from processed layout databases to IMO
+TOE,Tape Out Engineer,
+TOOPS,Tapeout Operations ,Business Group
+TOP,Tape-Out Project,A set of layout files and layers to be run in TES.  Typically there is a tapeout project associated with any given product or test vehicle.
+TO-PREP,Tape-Out Preparation,
+TPI,Track Per Inch,
+TPT,Throughput Time.,The time required to complete an operation or process.
+TPx,"Trench Contact Plug x (x = 1, 2, 3, etc)",Layer - also called TCP
+TR,Transition Region,Region in layout where pitch changes gradually.
+TRF,Tooling Request Form,
+True/False Scribe,,"Area on mask that is exposed/not exposed and serves for overlapping neighbor dies to check for die alignment, rotation, among other parameters."
+TSDR,Test Set Design Rules,"Special design rules used in certain structures drawn by E-Test. These structures are used to test the window in which the fab process (the entire process, including etch, polish, etc.) will work. For example, a certain feature type may be enlarged or shrunk until the process fails."
+TTD,Tapeout Technology Development,
+TTM,Time To Market,
+ULV,Ultra Low Voltage,One type of seat on a die - in the context of data automation
+UPF,Unified Process File,Circuit simulation model parameter file used in all of the design timing simulations to ensure that products meet performance targets before tapeout. Silicon to Simulation (sil2sim) mismatch happens when the actual fab performance doesn't meet the UPF targets.
+UPF,Unified Power Format,https://en.wikipedia.org/wiki/Unified_Power_Format
+UTX,,"Ghossoub, Marc Could you fill this out please? "
+VA#,Via #,"The via layer that sits on top of metal layer #. For example, VA1 sits on top of MT1. Refer RET Fab Glossary#Glossaryoflayers for a glossary of layer names."
+VCx,Via contact layers,Refer RET Fab Glossary#Glossaryoflayers for a glossary of layer names.
+VDF,Vertical Diffusion Furnace,
+VF,Virtual Factory,"Computer integrated manufacturing facilities working in harmony, so they function as a single organization. Intel uses ""Copy Exactly!"" to implement the best practices across the corporation."
+VGP,Via contact to Gate Plug ,Layer
+VGR,Via contact to Gate R,Layer
+VLSI,Very Large Scale Integration,
+VNC,Virtual Network Computing,
+VOC,Vendor of Choice,A program to conduct ongoing reviews of key customer needs and satisfaction. Program replaced in 2003 by the Customer Excellence Program. See CEP.
+VPN,Virtual Private Networks,See the Wikipedia page. A VPN is used at Intel to access the Intel network when offsite.
+VSB,Variable Shape Beam,In context of IMO e-beam writing. See MBM.
+VSIF,variable space intermediate film,
+VTA/B,Via contact TCN A/B,Layer. Refer RET Fab Glossary#Glossaryoflayers for a glossary of layer names.
+WCCG,Wireless Communications and Computing Group,
+WFH,Work From Home,
+WFM,Work-Function Metal,
+WI,Weak Image,See Failure Prediction (Weak-Image) Training: RET Model Team.
+WIP,1. Work in Progress,
+WIP,2. Wafers in Process,
+WLE,Work Life Effectiveness,Work environment solutions that reduce barriers to effectiveness caused by work and personal life challenges.
+WP,White Paper,Written documentation with an established format for providing detailed communication.
+WRC,Wafer Rule Check,"An old name for what we now call ""CBC violations."" The prefix ""wrc_"" is still attached to the names of the directories that CBC produces as output."
+WTK,Write to Know,"A program that allows employees to ask any business-related question about Intel and recieve answers. Questions can pertain to the entire company, a particular site or a particular business group."
+WTL,IMO Walk The Lot,a tapeout that will not result in NPI or an actual option plate but just to exercise various modules in IMO and/or fab
+WW,Work Week,"The week of the year, as a number. The first week of the year is WW1, and the last is WW52 or WW53."
+WWID,World Wide ID,Unique 8-digit (ex. 10012345) employee number assigned to each Intel employee or contractor.
+XT,eXTraction,
+X:Y,Layer Number : Datatype,In the context of Calibre layer classification 
+ZBB,Zero-Based Budgeting,"A form of budgeting in which every item must be re-approved for every budget cycle, rather than only changes from last cycle's budget. Some Intel people use this as a verb; to say that something ""has been ZBB'd"" means to say that it has been eliminated from the ""budget"" of engineering resources because it is not a high enough priority to pursue at this time."
+ADM,Added and Dropped data and MRC - New check within HTO tapeout flow which replaces reverse fracture under NHTO,,https://intelpedia.intel.com/Intel_Acronyms
+AIMS,Aerial Image Measurement Simulator - Mimics stepper parameters to simulate image of repair site at resist level,,
+APSM,Alternating Phase Shift Masks - A strong phase shift technique used for line/space patterns (poly),,
+ATD,Assembly Test Development,,
+ATM,Assembly Test Manufacturing,,
+C4,Controlled collapse chip connection,,
+CCB,Change Control Board  - Manages the process of introduction of new major software tools and hardware into the Tapeout Environment,,
+CD,Critical Dimension,,
+CRS,Compute Resource Statistics,,
+CSO,Definition #1:,,
+CSO,Cell Set Owner - Obsolete - See FCO,,
+CTI,Central Tape-In;  Linux area that is used for automated transfers from Design teams.  Example: /p/tapeout/CT27,,
+CTOE,Chuck's Table Of Experiments.  Named after Chuck Winstead one of the creators of Tapeout Execution System (TES).  CTOE is an Excel Plug-In that allows direct input of table entries in the TES primary database.  It is executed though Windows Terminal Server in the Fab Automation compute environment.,,
+DATUM,Data Administrator & Tapeout Utility Manager – the database driven tool by which we manage tapeouts. OBSOLETE,,
+DCB,Diffusion Check Backbone,,
+DDMS,Distributed Disk Management System - the tool that allocates working directories in Linux based on pre-provisioned storage volumes.,,
+DFM,1) Design For Manufacture - Techniques for mask design which improve FAB yields.2) Data Fabric Manager - Proprietary software sold by Network Appliance for managing the status of their fileservers.,,
+DFT,Die-Fit Target - tiny alignment marks used by the FAB for proper alignment of reticles in the steppers.,,
+DIC,Drop in Cells - DIC are CD (Critical Dimension) Cells that are added to open areas of the device on critical layers.  They are used by IMO metrology to measure nested and isolated straight line features on the mask to ensure the process is properly targeted.,,
+DICE,Drop In Cell Extractor - an application that extracts the DIC coordinates from a design file.,,
+DIQA,Design Initiatives and Quality Assurance - Group in IMO A&S dept. who owns quality assurance of tapeout automation software (among other things),,
+DISSECT,Data Insulation Separation Splitting and ExtraCtion Tool - Facilitates hierarchical tapeouts.  Breaks large device up into smaller pieces for fracture. OBSOLETE EOL on 1270,,
+DMLP,Device Module Level Plan,,
+DNP,1) Die NiPpon - Mask house which handles some Intel masks 2) Do Not Process - Layer name which covers areas of a design which should not be touched by an OPC flow,,
+DNx,Diffusion NOT 1/2/3 (10nm Mask Layers) ,,
+DP,Device Plan,,
+DRC,Design Rule Check - Performed by design to make sure their design passes process DRs,,
+DVE,Design Verification Engineering – DVE develops and supports process specific layout verification flows and capabilities as well as mask synthesis flows.,,
+EAM,Enterprise Access Management,,
+EAU,E-beam Address Units - The number of address units required to draw one micron of graphic data,,
+EC,Engineering Computing,,
+ECO,Engineering Change Order,,
+EDA,Electronic Design Automation,,
+EDI,Equivalent Die Impact - a way to indicate the impact of a yield fallout mechanism; EDI is based upon a specific product and die size,,
+EMIB,Embedded Multi-die Interconnect Bridge,,
+EPSM,Embedded Phase Shift Masks - A weak phase shift technique used for contact (via) holes and line/space layers (new for P1264).,,
+ETL,"Extract, Transform, Load - method to push data from one db to another.  Example: TES Primary DB ? Reports DB",,
+ER,Etch Ring,,
+EUV,Extreme Ultraviolet Lithography WIKI,,
+FAQ,Frequently Asked Questions,,
+FCO,"Fab Cellset Owner - 1) builds and delivers frames to enable tapeouts, 2) manages reticle CD’s used in tapeouts, 3) provides NPI information to wafer fabs to enable silicon processing, and 4) manages the frame working group.Formerly known as CSO prior to CGM",,
+FR,Fab Request,,
+FSI,Front Side Polyimide. It's basically a version of GV1 with a different process.,,
+FTD,Fin Trim Diode (FE Mask in FAB)  ,,
+HPC,High Performance Computing – Area of study formerly known as 'Supercomputing'.  HPC/Tapeout is the title of a group under PCAM who owns the tapeout computing environment.,,
+HIO,HIO is the IATA Airport Code for the Hillsboro Airport,,
+HSD,"High Speed Database - This obsolete system is our former ticketing system, and has been replaced by HSD-ES",,
+HTO,"Hierarchical Tape Out – For 1266 and beyond, how we plan to output to IMO.",,
+IFS,Intel Foundry Services,,
+IMO,Intel Mask Operations – Who we send layers to for manufacture of masks.,,
+Intel Acronyms,https://intelpedia.intel.com/Intel_Acronyms,,
+IPF,Itanium Processor Family - Family of processors manufactured and branded by Intel Corp which conform to the IA64 architecture spec.  Primarily aimed at high-end server and compute space.,,
+ITS,Intel Tapeout Services - a vue.js front end on top of HSD-ES.,,
+JDGS,"Job Deck Generation System – JDGS is used to create MEBES job decks, SMASH job decks, SCALED SMASH job decks, INDIVIDUAL PATTERN decks, Bump Mask tooling information sheet and Drop in cell coordinate files.",,
+JEM,Joint Engineering Meeting,,
+LAC,License Allocation Committee - Intel group with reps from all design projects where license allocation issues are dealt with.,,
+LDET, Layer Dependency Extraction Tables,,
+LDI,Layer Dependency interpreter,,
+LEA,Lithography Enabling Algorithms - Group within PTD who own OPC and related flows for enabling Intel's litho process capabilities.,,
+LMS,Laser Measurement System? - tiny alignment marks (usually shaped like a + (plus) sign in a square box) used by the FAB for proper alignment of reticles in the steppers.  They are sometimes also called “LMS Crosses”.,,
+LTD,Logic Technology Development - LTD's mission is to develop and ensure the effective use of integrated silicon logic technology to support Intel’s leadership as the preeminent building block supplier to the worldwide internet economy.,,
+LUV,"Look Up Version – OPC and PLRC flows used for a particular Tapeout, it is a “bundle” of CSI tables",,
+MCR,Metal Cap Reduction,,
+MDP,Mask Data Prep - Process at IMO by which mask data from tapeout is prepared for loading onto a particular mask writer.,,
+MDR,Mask Data Review,,
+ME,"Mask Engineering - We use the Linux group me as the group of Tapeout Engineers and support (who all report to Russ Plumley) as the primary group which Tapeout processes run as, and ergo have write permission to the Tapeout Projects.  People outside of that sphere are not given access to this Linux group as an inadvertent command could wipe out some portion of one or more Tapeout projects.   For read access to Tapeout data, we will grant access via the TOME group.",,
+MEBES,"Manufacturing Electron Beam Exposure System - E-beam tools at IMO which write masks.  Also, a pattern data format readable by said systems.",,
+MEC,Mask Error Correction,,
+METIS,Mask execution Tapeout Infrastructure System,,
+MLC,Module Load Control,,
+MLO,Multi-Layer Overlay,,
+MPF,Mutli Product Frame.  Multipule frames and devices extisting on one reticle.  Only one frame at a time is printed on the wafer during the manufacturing process.,,
+MPW,Multi Product Wafer.  Mulitiple devices manaufactured within one frame and printed on the same wafer.,,
+MRC,"Manufacturability Rules Check - flag problem areas for mask making, run as part of reverse fracture",,
+MRV,Module Recipe Validation,,
+MSE,Mask Synthesis Extraction,,
+MTS,Mask Tooling Services - Group within IMO,,
+MZ,Mazama,,
+NBS,New Business System – The system by which we release layers to IMO.,,
+NFS,"Network File System -  The Network File System (NFS) was developed to allow machines to mount a disk partition on a remote machine as if it were on a local hard drive. This allows for fast, seamless sharing of files across a network.",,
+NIS,Network Information Service - System for sharing account login information (and other things) across a large group of UNIX or UNIX-like systems.,,
+NPI,New Product Introduction,,
+NTI,New Technology Introduction,,
+OASIS,Open Artwork System Interchange Standard - SEMI standard defining an interchange and encapsulation format for hierarchical integrated circuit mask layout information.,,
+OGD / PGD,"Othoganal to Gate Direction (Y-direction), Parallel to Gate Direction (X-direction)",,
+OPC,Optical Proximity Correction - Hierarchically applies optical correction using model based methods.,,
+PAS,Performance Against Schedule,,
+PCAM,Platform Capabilities and Account Management - Name for what is essentially the group within IT who owns compute platforms and services.,,
+PDS,"Process Drawing Specification - lists the layers, plate types, polarity, and mask CDs and goes to the internal and external mask shops",,
+PDT,Product Development Team. Basically the division’s engineering/marketing/management forum to control the direction of the product. All product decisions are made through this team. ,,
+PDV ,Process Descriptor Value - An identifier for type of IMO mask manufacturing process.,,
+PGM,ProGram Meeting,,
+PLRC,"Proteus Lithography Rules Check - PLRC is a Proteus based application used to detect possible lithography violations ( bridging, pinching, pullback) OBSOLETE",,
+POR,Plan Of Record,,
+PPF,Peripheral Pattern File - Pattern files included in jobdecks which are placed in the mask periphery.,,
+pre_exec,Pre Execution program that runs as part of every Netbatch job to do just-in-time validation of the system.   See:   http://goto.intel.com/pre_exec,,
+Prime/Double Prime Tapeout,"A Prime/Double Prime (etc) tapeout is when we have shipped a product to IMO, but no wafers have been made AND design wants to make a change within same stepping.",,
+PROPEL,Product ROadmap and PrioritiEs ALlocation Tool.  Allows us to see upcoming Tapeouts.,,
+PSM,Phase Shift Mask,,
+PT,Pass-through,,
+RET,"Resolution Enhancement Technology - combination of OPC, Multipatterning, SRAFs, and other techniques to create an integrated pattern solution using masks and litho platforms",,
+RHEL,RedHat Enterprise Linux - 'Enterprise' Linux distribution sold by RedHat.   Currently the baseline OS on our IPF machines (as of q3'05),,
+RISO,Repaired ISO or Redundant ISO.,,
+RDM,Reference Data Management - Tool that intercepts YAML Files generated by TES or METIS and stores them in Mongo DB,,
+RSO,Recipe Set Owner,,
+RR,Release Review - Final Review of Project certifying it prior to Release to IMO,,
+RTW,Release-To-Write,,
+SCL,Synopsys Common Licensing - Software licensing system developed by Synopsys software.,,
+SFA,"Selected Field Area - used by CATS geo command to ensure data wholly contained within boundary OBSOLETE",,
+SLES,"SuSE Linux Enterprise Server - Linux distribution sold by Novell.  https://www.suse.com/products/server/   SLES12 SP5 is the current Tapeout POR Linux system, supported by TCS",,
+SRAF,Sub-Resolution Assist Feature,,
+SRR,Scribeline Reference Rectangle - Window containing 1 die + 1 etch ring,,
+SSG,Software Solutions Group,,
+STI,Shallow Trench Isolation,,
+TCAD,"Technology Computer Aided Design  - A department within Logic Technology Development. Intel's TCAD Division provides simulation software and support for development of Intel process, device, and circuit technologies.",,
+TCS,"Tapeout Compute Services (formerly HPC) - Supports the hardware (systems, networking, fileservers), operating systems, and system level software.  http://tcswiki.intel.com/",,
+TE,Transcription Enterprises - Original authors of CATS software OBSOLETE,,
+TES,Tapeout Execution System – The system under development for managing 1266 (and beyond) Tapeouts.,,
+TFP,Text Field Plot - IFGS output.  Graphical plot of location of each frame cell,,
+TFSE,Tapeout & Frames Software Engineering,,
+TIE,Technology Integration Engineering - Group within IMO,,
+TIP,Tapeout Interface Program (replaced with NBS),,
+TLA,Three Letter Acronym - A method of shorthand highly used at Intel.,,
+TNG,"Tapeout Number Gatherer – automated system for gathering and presenting TPT, PLRC/MRC and other information from a tapeout.  TNG is a tool that was developed by Roger Southwick from SCTO, and now it is transferred and owned by IMO A&S-DIQA for maintenance and future enhancements. OBSOLETE",,
+TOME,"TapeOut Mask Engineering - We use tome as one of the main Linux groups for broader access to Tapeout Data.   People in tome should not be able to write into TapeOut Project directories.",,
+TOOD,TapeOut Operations Development,,
+TOOP,TapeOut Operations Production,,
+TOP,TapeOut Project,,
+TOPS,"Tape Out Planning System  used to forecast tapeout resources of hardware, software, manpower, time, licenses, disk space, etc. OBSOLETE",,
+TPT,Through Put Time – amount of time taken to do a particular job.,,
+TRB,Tapeout Review Board,,
+TRF,"Tooling Request Form – The form used to approve a Tapeout for flows, money expenditure.  Contains plate revision/plate title, CD, CSID, Barcode, PDS, LUV, Lookup Version, FAB, Cost Center, and other information. OBSOLETE",,
+TRIFECTA,"Tapeout, RET, IMO, FAB Execution and Commit Tracking Automation",,
+TOMARS, TapeOut Metric And Reports System, https://tapeout-dev.intel.com/tomars_beta/#/a,a,
+LDE,Layer Dependency Extraction,
+STIG,Security technical implementaiont guide,
+SRG,Security Requiremnts guide,
+CCI,Control Correction Identifier,
+DCTR,Data Corruption Tracking,

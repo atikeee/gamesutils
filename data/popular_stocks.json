@@ -1,0 +1,104 @@
+[
+  {
+    "symbol": "DAL",
+    "name": "Delta Air Lines, Inc.",
+    "quantity": 250,
+    "price": 84.15
+  },
+  {
+    "symbol": "MCD",
+    "name": "McDonald's Corporation",
+    "quantity": 100,
+    "price": 240
+  },
+  {
+    "symbol": "AMZN",
+    "name": "Amazon.com, Inc.",
+    "quantity": 100,
+    "price": 251.46
+  },
+  {
+    "symbol": "HD",
+    "name": "The Home Depot, Inc.",
+    "quantity": 100,
+    "price": 300
+  },
+  {
+    "symbol": "NVDA",
+    "name": "NVIDIA Corporation",
+    "quantity": 50,
+    "price": 198
+  },
+  {
+    "symbol": "PEP",
+    "name": "PepsiCo, Inc.",
+    "quantity": 100,
+    "price": 130
+  },
+  {
+    "symbol": "T",
+    "name": "T",
+    "quantity": 500,
+    "price": 24.5
+  },
+  {
+    "symbol": "INTC",
+    "name": "Intel Corporation",
+    "quantity": 0,
+    "price": 0
+  },
+  {
+    "symbol": "NFLX",
+    "name": "Netflix, Inc.",
+    "quantity": 0,
+    "price": 0
+  },
+  {
+    "symbol": "UBER",
+    "name": "Uber Technologies, Inc.",
+    "quantity": 0,
+    "price": 0
+  },
+  {
+    "symbol": "PYPL",
+    "name": "PayPal Holdings, Inc.",
+    "quantity": 0,
+    "price": 0
+  },
+  {
+    "symbol": "BA",
+    "name": "The Boeing Company",
+    "quantity": 0,
+    "price": 0
+  },
+  {
+    "symbol": "LOW",
+    "name": "Lowe's Companies, Inc.",
+    "quantity": 0,
+    "price": 0
+  },
+  {
+    "symbol": "META",
+    "name": "Meta Platforms, Inc.",
+    "quantity": 0,
+    "price": 0
+  },
+  {
+    "symbol": "MSFT",
+    "name": "Microsoft Corporation",
+    "quantity": 0,
+    "price": 0
+  },
+  {
+    "symbol": "AMD",
+    "name": "Advanced Micro Devices, Inc.",
+    "quantity": 0,
+    "price": 0
+  },
+  {
+    "symbol": "ARM",
+    "name": "Arm Holdings plc",
+    "quantity": 0,
+    "price": 0
+  }
+]

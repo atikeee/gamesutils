@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Riddle Cards</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f3f3f3;
+      text-align: center;
+    }
+
+    .header {
+      position: relative;
+      padding: 20px;
+      background: #ffffff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .hint-btn {
+      position: absolute;
+      left: 20px;
+      top: 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    .hint-box {
+      margin-top: 10px;
+      display: none;
+      font-size: 18px;
+      color: #333;
+    }
+
+    .card-container {
+      margin-top: 40px;
+      perspective: 1000px;
+    }
+
+    .card {
+      margin: auto;
+      width: 600px;
+      height: 350px;
+      position: relative;
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+      cursor: pointer;
+    }
+
+    .card-inner {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    backface-visibility: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    color: white;
+    text-align: left;
+    }
+
+    .front {
+    background-color: #007bff;
+    }
+
+    .back {
+    background-color: #28a745;
+      transform: rotateY(180deg);
+    }
+
+    .card.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .nav-buttons {
+      position: fixed;
+      bottom: 20px;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 40px;
+    }
+
+    .nav-buttons button {
+      padding: 10px 25px;
+      font-size: 16px;
+      background-color: #28a745;
+      border: none;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .nav-buttons button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    #buzzInfo {
+      text-transform: uppercase;
+      font-weight: bold;
+      color: #d00;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <button class="hint-btn" onclick="showHint()">?</button>
+    <h2>🧠 Riddle Cards</h2>
+    
+    <div id="hintBox" class="hint-box"><strong>Hint:</strong> {{ data.hint.replace('\n', '<br>')|safe }}</div>
+  </div>
+  <p id="buzzInfo" ></p>
+
+  <div class="card-container" >
+    <div id="riddleCard" class="card" onclick="flipCard()">
+      
+      <div class="card-inner front">{{ data.question.replace('\n', '<br>')|safe }}</div>
+      
+      <div class="card-inner back">{{ data.answer.replace('\n', '<br>')|safe }}</div>
+    </div>
+  </div>
+
+
+  <div class="nav-buttons">
+    <a href="{{ url_for('riddle', index=data.index - 1) }}">
+      <button {% if data.index == 0 %}disabled{% endif %}>⬅️ Prev</button>
+    </a>
+    <a href="{{ url_for('riddle', index=data.index + 1) }}">
+      <button {% if data.index == data.total - 1 %}disabled{% endif %}>Next ➡️</button>
+    </a>
+  </div>
+
+  <script>
+    function flipCard() {
+      document.getElementById('riddleCard').classList.toggle('flipped');
+    }
+
+    function showHint() {
+      document.getElementById('hintBox').style.display = 'block';
+    }
+  </script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  const socket = io();
+  socket.on("buzz_trigger", (data) => {
+      const buzzInfo = document.getElementById("buzzInfo");
+      if(buzzInfo.textContent =="")
+        buzzInfo.textContent = `${data.name}`;
+      else
+        buzzInfo.textContent += " | "+`${data.name}`;
+  });
+</script>
+</body>
+</html>

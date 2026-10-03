@@ -1,0 +1,17 @@
+{
+  "title": "Exponent rules: hard practice",
+  "description": "Combine exponent rules across longer expressions and reason carefully about zero and negative bases.",
+  "grading": "auto",
+  "questions": [
+    {"id": "q1", "type": "write", "prompt": "Evaluate (2^7 × 2^3) ÷ 2^8. Type a whole number.", "answer": "4"},
+    {"id": "q2", "type": "write", "prompt": "Simplify (x^9 ÷ x^4) ÷ x^2, where x is nonzero. Type the variable expression without spaces.", "answer": "x^3"},
+    {"id": "q3", "type": "single", "prompt": "Evaluate (-3)^5 ÷ (-3)^3.", "options": [{"id": "a", "text": "-9"}, {"id": "b", "text": "9"}, {"id": "c", "text": "(-3)^8"}], "answer": "b"},
+    {"id": "q4", "type": "write", "prompt": "Find n: 4^n × 4^3 = 4^9. Type a whole number.", "answer": "6"},
+    {"id": "q5", "type": "write", "prompt": "Evaluate (5^6 ÷ 5^2) ÷ 5^3.", "answer": "5"},
+    {"id": "q6", "type": "single", "prompt": "A student claims a^8 ÷ a^3 = a^(8/3). For nonzero a, which is the correct simplification?", "options": [{"id": "a", "text": "a^5"}, {"id": "b", "text": "a^11"}, {"id": "c", "text": "a^(8/3)"}], "answer": "a"},
+    {"id": "q7", "type": "write", "prompt": "Simplify (b^7 × b^0) ÷ b^2, where b is nonzero. Type the variable expression without spaces.", "answer": "b^5"},
+    {"id": "q8", "type": "write", "prompt": "Evaluate 10^4 ÷ (10^2 × 10^1). Type a whole number.", "answer": "10"},
+    {"id": "q9", "type": "single", "prompt": "What is (-5)^0?", "options": [{"id": "a", "text": "-1"}, {"id": "b", "text": "0"}, {"id": "c", "text": "1"}], "answer": "c"},
+    {"id": "q10", "type": "write", "prompt": "Evaluate (2^6 ÷ 2^2) × (2^0 ÷ 2^1). Type a whole number.", "answer": "8"}
+  ]
+}

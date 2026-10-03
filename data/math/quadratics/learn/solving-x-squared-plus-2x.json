@@ -1,0 +1,43 @@
+{
+  "title": "Solving x^2 + 2x = 4",
+  "summary": "Use completing the square to solve a quadratic equation.",
+  "blocks": [
+    {
+      "type": "text",
+      "body": "We want to solve x^2 + 2x = 4. The goal is to turn the left side into one squared expression."
+    },
+    {
+      "type": "equation",
+      "latex": "x^2 + 2x = 4"
+    },
+    {
+      "type": "text",
+      "body": "Take half of the coefficient of x, then square it. Half of 2 is 1, and 1 squared is 1. Add 1 to both sides."
+    },
+    {
+      "type": "equation",
+      "latex": "x^2 + 2x + 1 = 4 + 1"
+    },
+    {
+      "type": "equation",
+      "latex": "(x + 1)^2 = 5"
+    },
+    {
+      "type": "text",
+      "body": "Take the positive and negative square roots. Both signs are needed because both  sqrt(5) and -sqrt(5) square to 5."
+    },
+    {
+      "type": "equation",
+      "latex": "x + 1 = \\pm\\sqrt{5}"
+    },
+    {
+      "type": "equation",
+      "latex": "\\boxed{x = -1 \\pm \\sqrt{5}}"
+    },
+    {
+      "type": "callout",
+      "title": "Check the result",
+      "body": "Substituting either value into x^2 + 2x gives 4. The two solutions are approximately x = 1.236 and x = -3.236."
+    }
+  ]
+}

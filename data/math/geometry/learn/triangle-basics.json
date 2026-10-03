@@ -1,0 +1,46 @@
+{
+  "title": "Triangle angle sum",
+  "summary": "Learn why the interior angles of every triangle add up to 180 degrees.",
+  "blocks": [
+    {
+      "type": "text",
+      "body": "A triangle always has three interior angles. No matter how wide, narrow, tall, or tilted the triangle is, the three angles add up to 180 degrees."
+    },
+    {
+      "type": "equation",
+      "latex": "A + B + C = 180^\\circ"
+    },
+    {
+      "type": "text",
+      "body": "If two angles are known, subtract their sum from 180 degrees to find the missing angle."
+    },
+    {
+      "type": "equation",
+      "latex": "A = 52^\\circ,\\quad B = 63^\\circ,\\quad C = 180^\\circ - 52^\\circ - 63^\\circ = 65^\\circ"
+    },
+    {
+      "type": "geometry-example",
+      "label": "A triangle with vertices (-5, -2), (0, 4), and (5, -2)",
+      "xRange": [-8, 8],
+      "yRange": [-5, 5],
+      "shapes": [
+        {"type": "triangle", "points": [[-5, -2], [0, 4], [5, -2]]},
+        {"type": "point", "points": [[-5, -2]], "color": "#e46b3d"},
+        {"type": "point", "points": [[0, 4]], "color": "#e46b3d"},
+        {"type": "point", "points": [[5, -2]], "color": "#e46b3d"}
+      ]
+    },
+    {
+      "type": "callout",
+      "title": "Try it",
+      "body": "A triangle has angles of 35 degrees and 85 degrees. What is the third angle?"
+    },
+    {
+      "type": "geometry-drawing",
+      "title": "Draw geometric shapes",
+      "xRange": [-8, 8],
+      "yRange": [-5, 5],
+      "shapes": ["point", "segment", "line", "ray", "triangle", "rectangle", "circle", "polygon"]
+    }
+  ]
+}
