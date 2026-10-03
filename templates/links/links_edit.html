@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Edit Bookmarks</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --surface2: #1c2330;
+      --border:   #30363d;
+      --text:     #e6edf3;
+      --muted:    #8b949e;
+      --soft:     #484f58;
+      --accent:   #58a6ff;
+      --green:    #3fb950;
+      --orange:   #ffa657;
+      --red:      #f85149;
+      --purple:   #d2a8ff;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    header a.back { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600; }
+    header a.back:hover { color: var(--text); }
+    header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 18px; font-weight: 800;
+      flex: 1;
+      background: linear-gradient(130deg, var(--text) 40%, var(--accent));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .btn {
+      padding: 8px 16px; border-radius: 8px; border: none;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 700; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-save   { background: var(--green);  color: #0d1117; }
+    .btn-save:hover   { background: #56d364; }
+    .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-discard { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-discard:hover { border-color: var(--red); color: var(--red); }
+    .status-msg {
+      font-size: 13px; font-weight: 600; padding: 6px 12px;
+      border-radius: 6px; display: none;
+    }
+    .status-msg.ok  { background: rgba(63,185,80,0.15); color: var(--green); display: inline-block; }
+    .status-msg.err { background: rgba(248,81,73,0.15);  color: var(--red);   display: inline-block; }
+
+    /* ── LAYOUT ── */
+    .workspace {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      gap: 0;
+    }
+
+    /* ── SYNTAX GUIDE SIDEBAR ── */
+    .guide {
+      width: 240px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 16px 14px;
+    }
+    .guide h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 12px; font-weight: 800;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--soft); margin-bottom: 14px;
+    }
+    .guide-block { margin-bottom: 18px; }
+    .guide-label {
+      font-size: 11px; font-weight: 700;
+      color: var(--muted); margin-bottom: 6px;
+    }
+    .guide-sample {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.8;
+      color: var(--muted);
+      white-space: pre;
+    }
+    .g-topic   { color: #ffa657; font-weight: 700; }
+    .g-sub     { color: #d2a8ff; }
+    .g-link    { color: #79c0ff; }
+    .g-url     { color: #3fb950; }
+    .guide-note {
+      font-size: 11px; color: var(--soft);
+      line-height: 1.6; margin-top: 8px;
+    }
+    .guide-note code {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--surface2);
+      padding: 1px 5px; border-radius: 4px;
+      font-size: 11px; color: var(--muted);
+    }
+
+    /* ── EDITOR AREA ── */
+    .editor-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .editor-toolbar {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .editor-toolbar span {
+      font-size: 12px; color: var(--muted); font-weight: 500;
+    }
+    .mini-btn {
+      padding: 4px 10px; border-radius: 5px; border: 1px solid var(--border);
+      background: transparent; color: var(--muted); font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.12s;
+    }
+    .mini-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    textarea#editor {
+      flex: 1;
+      background: var(--bg);
+      border: none;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13.5px;
+      line-height: 1.75;
+      padding: 16px 20px;
+      resize: none;
+      outline: none;
+      overflow-y: auto;
+      tab-size: 4;
+      white-space: pre;
+      overflow-x: auto;
+    }
+    textarea#editor::selection { background: rgba(88,166,255,0.25); }
+
+    /* Line indicator overlay (faint, decorative) */
+    .cursor-info {
+      position: absolute;
+      bottom: 10px; right: 16px;
+      font-size: 11px; color: var(--soft);
+      font-family: 'JetBrains Mono', monospace;
+      pointer-events: none;
+    }
+
+    /* ── UNSAVED INDICATOR ── */
+    .unsaved-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--orange);
+      display: none;
+      flex-shrink: 0;
+    }
+    .unsaved-dot.visible { display: block; }
+
+    /* ── MOBILE ── */
+    @media (max-width: 640px) {
+      .guide { display: none; }
+      textarea#editor { font-size: 12px; padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/links" class="back">← Bookmarks</a>
+  <h1>✏️ Edit Bookmarks</h1>
+  <span class="unsaved-dot" id="unsavedDot" title="Unsaved changes"></span>
+  <span class="status-msg" id="statusMsg"></span>
+  <button class="btn btn-discard" id="discardBtn">Discard</button>
+  <button class="btn btn-save" id="saveBtn">Save</button>
+</header>
+
+<div class="workspace">
+
+  <!-- SYNTAX GUIDE -->
+  <aside class="guide">
+    <h3>Format Guide</h3>
+
+    <div class="guide-block">
+      <div class="guide-label">Structure</div>
+      <div class="guide-sample"><span class="g-topic">Topic</span>
+    <span class="g-sub">Subtopic</span>
+        <span class="g-link">Link name</span>,<span class="g-url">https://...</span>
+        <span class="g-link">Link name</span>,<span class="g-url">https://...</span></div>
+    </div>
+
+    <div class="guide-block">
+      <div class="guide-label">Indent Rules</div>
+      <div class="guide-note">
+        <code>0 spaces</code> → Topic<br/>
+        <code>4 spaces</code> → Subtopic<br/>
+        <code>8 spaces</code> → Link, URL<br/>
+        Use comma or tab to separate name from URL.
+      </div>
+    </div>
+
+    <div class="guide-block">
+      <div class="guide-label">Comments &amp; Blanks</div>
+      <div class="guide-note">
+        Lines starting with <code>#</code> are ignored.<br/>
+        Blank lines are ignored too.
+      </div>
+    </div>
+
+    <div class="guide-block">
+      <div class="guide-label">Example</div>
+      <div class="guide-sample"><span class="g-topic">Learning</span>
+    <span class="g-sub">Python</span>
+        <span class="g-link">docs</span>,<span class="g-url">https://docs.python.org</span>
+        <span class="g-link">tutorial</span>,<span class="g-url">https://realpython.com</span>
+    <span class="g-sub">Linux</span>
+        <span class="g-link">man pages</span>,<span class="g-url">https://man7.org</span></div>
+    </div>
+
+    <div class="guide-block">
+      <div class="guide-label">Tips</div>
+      <div class="guide-note">
+        • Save with <code>Ctrl+S</code><br/>
+        • Tab key inserts 4 spaces<br/>
+        • Changes are live on /links immediately after save
+      </div>
+    </div>
+  </aside>
+
+  <!-- EDITOR -->
+  <div class="editor-wrap">
+    <div class="editor-toolbar">
+      <span id="lineCount">0 lines</span>
+      <button class="mini-btn" onclick="insertTemplate()">+ Add Topic</button>
+      <button class="mini-btn" onclick="insertSubtemplate()">+ Add Subtopic</button>
+      <button class="mini-btn" onclick="insertLinkTemplate()">+ Add Link</button>
+    </div>
+    <textarea id="editor" spellcheck="false">{{ content }}</textarea>
+    <div class="cursor-info" id="cursorInfo">Ln 1, Col 1</div>
+  </div>
+
+</div>
+
+<script>
+  const editor     = document.getElementById('editor');
+  const saveBtn    = document.getElementById('saveBtn');
+  const discardBtn = document.getElementById('discardBtn');
+  const statusMsg  = document.getElementById('statusMsg');
+  const unsavedDot = document.getElementById('unsavedDot');
+  const lineCount  = document.getElementById('lineCount');
+  const cursorInfo = document.getElementById('cursorInfo');
+
+  // original content for discard
+  const originalContent = editor.value;
+  let isDirty = false;
+
+  // ── Dirty tracking ──
+  editor.addEventListener('input', () => {
+    isDirty = editor.value !== originalContent;
+    unsavedDot.classList.toggle('visible', isDirty);
+    saveBtn.disabled = !isDirty;
+    updateStats();
+  });
+
+  function updateStats() {
+    const lines = editor.value.split('\n').length;
+    lineCount.textContent = lines + ' lines';
+  }
+  updateStats();
+  saveBtn.disabled = true;
+
+  // ── Cursor info ──
+  editor.addEventListener('keyup', updateCursor);
+  editor.addEventListener('click', updateCursor);
+  function updateCursor() {
+    const text = editor.value.substring(0, editor.selectionStart);
+    const lines = text.split('\n');
+    cursorInfo.textContent = `Ln ${lines.length}, Col ${lines[lines.length - 1].length + 1}`;
+  }
+
+  // ── Tab key → 4 spaces ──
+  editor.addEventListener('keydown', e => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const start = editor.selectionStart;
+      const end   = editor.selectionEnd;
+      editor.value = editor.value.substring(0, start) + '    ' + editor.value.substring(end);
+      editor.selectionStart = editor.selectionEnd = start + 4;
+      editor.dispatchEvent(new Event('input'));
+    }
+    // Ctrl+S / Cmd+S to save
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      if (!saveBtn.disabled) save();
+    }
+  });
+
+  // ── Discard ──
+  discardBtn.addEventListener('click', () => {
+    if (!isDirty || confirm('Discard all unsaved changes?')) {
+      editor.value = originalContent;
+      isDirty = false;
+      unsavedDot.classList.remove('visible');
+      saveBtn.disabled = true;
+      updateStats();
+      showStatus('ok', 'Discarded');
+    }
+  });
+
+  // ── Save ──
+  saveBtn.addEventListener('click', save);
+
+  function save() {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    const form = new FormData();
+    form.append('content', editor.value);
+    fetch('/links/edit', {method: 'POST', body: form})
+      .then(r => r.json())
+      .then(d => {
+        if (d.status === 'success') {
+          isDirty = false;
+          unsavedDot.classList.remove('visible');
+          showStatus('ok', d.message || 'Saved ✓');
+        } else {
+          showStatus('err', d.message || 'Save failed');
+          saveBtn.disabled = false;
+        }
+        saveBtn.textContent = 'Save';
+      })
+      .catch(() => {
+        showStatus('err', 'Network error');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      });
+  }
+
+  // ── Status message ──
+  let statusTimer;
+  function showStatus(type, msg) {
+    statusMsg.className = 'status-msg ' + type;
+    statusMsg.textContent = msg;
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => { statusMsg.className = 'status-msg'; }, 3000);
+  }
+
+  // ── Insert snippets ──
+  function insertAtCursor(text) {
+    const start = editor.selectionStart;
+    const end   = editor.selectionEnd;
+    editor.value = editor.value.substring(0, start) + text + editor.value.substring(end);
+    editor.selectionStart = editor.selectionEnd = start + text.length;
+    editor.focus();
+    editor.dispatchEvent(new Event('input'));
+  }
+
+  function insertTemplate()     { insertAtCursor('\nNewTopic\n    Subtopic\n        Link name,https://example.com\n'); }
+  function insertSubtemplate()  { insertAtCursor('\n    New Subtopic\n        Link name,https://example.com\n'); }
+  function insertLinkTemplate() { insertAtCursor('\n        Link name,https://example.com'); }
+
+  // ── Warn on unload if dirty ──
+  window.addEventListener('beforeunload', e => {
+    if (isDirty) { e.preventDefault(); e.returnValue = ''; }
+  });
+</script>
+</body>
+</html>

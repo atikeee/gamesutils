@@ -1,0 +1,5 @@
+Mary has four daughters, and each of her daughters has a brother. How many children does Mary have?
+***
+5
+***
+easy 

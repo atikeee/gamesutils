@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Acronym Dictionary</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- Sakura CSS for styling -->
+  <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css">
+  <style>
+    body {
+      max-width: 100vw !important;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      min-height: 100vh;
+      background: #fff;
+      box-sizing: border-box;
+      overflow-x: hidden;
+    }
+    .container {
+      width: 100vw;
+      margin: 0;
+      padding: 0 0.5em;
+      box-sizing: border-box;
+    }
+    h1, .search-box {
+      margin-left: 0.2em;
+      margin-right: 0.2em;
+    }
+    .search-box {
+      width: calc(100vw - 0.4em);
+      max-width: 100vw;
+      font-size: 1.1em;
+      box-sizing: border-box;
+    }
+    .table-wrapper {
+      width: 100vw;
+      max-width: 100vw;
+      overflow-x: auto;
+      margin: 0;
+      padding: 0;
+    }
+    table {
+      width: 100vw;
+      max-width: 100vw;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.5em 0.3em;
+      word-break: break-word;
+    }
+    th {
+      background: #f8f8f8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Acronym Dictionary</h1>
+    <input class="search-box" type="text" id="search" placeholder="Type to filter acronyms..." autofocus>
+
+    <!-- Add Acronym Form -->
+    <div style="margin: 0.5em 0.2em 1em;">
+      <fieldset style="border: 1px solid #ccc; padding: 0.5em;">
+        <legend>Add Acronym</legend>
+        <div style="display:flex; flex-wrap:wrap; gap:0.5em;">
+          <input type="text" id="newAcronym" placeholder="Acronym" style="flex:1; min-width:10ch;">
+          <input type="text" id="newMeaning" placeholder="Meaning" style="flex:2; min-width:15ch;">
+          <input type="text" id="newDescription" placeholder="Description (optional)" style="flex:3; min-width:15ch;">
+          <button type="button" id="addBtn">Add</button>
+        </div>
+        <div id="addStatus" style="margin-top:0.3em; font-size:0.9em;"></div>
+      </fieldset>
+    </div>
+
+    <div class="table-wrapper">
+      <table id="acronym-table">
+        <thead>
+          <tr>
+            <th style="width:20%;">Acronym</th>
+            <th style="width:35%;">Meaning</th>
+            <th style="width:45%;">Description</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <!-- Data rows go here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <script>
+    let data = [];  // will hold all rows from CSV
+
+    async function loadCSVAndRenderTable() {
+      const response = await fetch('/acronyms/data');
+      const csvText = await response.text();
+      data = Papa.parse(csvText, {header: true, skipEmptyLines: true}).data;
+
+      const tbody = document.getElementById('table-body');
+
+      function getCell(val) {
+        return (typeof val === 'string') ? val.trim() : (val ?? '');
+      }
+
+      function renderRows(rows) {
+        tbody.innerHTML = '';
+        for (const row of rows) {
+          const acronym = getCell(row.Acronym);
+          const meaning = getCell(row.Meaning);
+          const desc = getCell(row.Description);
+          if (acronym.length && meaning.length) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${acronym}</td><td>${meaning}</td><td>${desc}</td>`;
+            tbody.appendChild(tr);
+          }
+        }
+      }
+
+      window._acronymsRenderRows = renderRows;
+      window._acronymsGetCell = getCell;
+
+      renderRows(data);
+
+      // Filter only by Acronym
+      const search = document.getElementById('search');
+      search.addEventListener('input', function() {
+        const value = this.value.trim().toLowerCase();
+        const filtered = data.filter(row => {
+          const acronym = getCell(row.Acronym).toLowerCase();
+          const meaning = getCell(row.Meaning);
+          return acronym.length && meaning.length && acronym.includes(value);
+        });
+        renderRows(filtered);
+      });
+    }
+
+    async function addAcronym() {
+      const acronymInput = document.getElementById('newAcronym');
+      const meaningInput = document.getElementById('newMeaning');
+      const descInput = document.getElementById('newDescription');
+      const statusEl = document.getElementById('addStatus');
+
+      const acronym = acronymInput.value.trim();
+      const meaning = meaningInput.value.trim();
+      const description = descInput.value.trim();
+
+      if (!acronym || !meaning) {
+        statusEl.textContent = "Acronym and Meaning are required.";
+        statusEl.style.color = "red";
+        return;
+      }
+
+      statusEl.textContent = "Saving...";
+      statusEl.style.color = "black";
+
+      try {
+        const resp = await fetch('/acronyms/add', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ acronym, meaning, description })
+        });
+
+        const resJson = await resp.json();
+        if (!resp.ok || resJson.status !== "success") {
+          throw new Error(resJson.message || "Failed to save.");
+        }
+
+        data.push({
+          Acronym: acronym,
+          Meaning: meaning,
+          Description: description
+        });
+
+        const search = document.getElementById('search');
+        const value = search.value.trim().toLowerCase();
+        const getCell = window._acronymsGetCell;
+        const renderRows = window._acronymsRenderRows;
+        const filtered = value
+          ? data.filter(row => {
+              const a = getCell(row.Acronym).toLowerCase();
+              const m = getCell(row.Meaning);
+              return a.length && m.length && a.includes(value);
+            })
+          : data;
+
+        renderRows(filtered);
+
+        acronymInput.value = "";
+        meaningInput.value = "";
+        descInput.value = "";
+
+        statusEl.textContent = "Added.";
+        statusEl.style.color = "green";
+      } catch (e) {
+        statusEl.textContent = "Error: " + e.message;
+        statusEl.style.color = "red";
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadCSVAndRenderTable();
+      const addBtn = document.getElementById('addBtn');
+      if (addBtn) {
+        addBtn.addEventListener('click', addAcronym);
+      }
+    });
+  </script>
+</body>
+</html>

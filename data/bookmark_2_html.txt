@@ -1,0 +1,281 @@
+Intel
+    wiki
+        all server,https://wiki.ith.intel.com/spaces/TTDOPS/pages/3682994526/Service+Migration+to+SC+Business+Continuity+between+Tapeout+sites
+        mongo update 8,https://wiki.ith.intel.com/spaces/TTDOPS/pages/4726758499/MongoDB+Upgrade+to+8
+        mazama 11.0.0 utilities qual,https://wiki.ith.intel.com/spaces/TTDOPS/pages/3118877444/MZ+11.0.0+Utilities+Qual#MZ11.0.0UtilitiesQual-stepname
+        mazama 12.5.1 qual,https://wiki.ith.intel.com/spaces/TTDOPS/pages/4605817290/MZ+12.5.1+Utilities+Qual  
+        mazama 12.6.1,https://wiki.ith.intel.com/spaces/TTDOPS/pages/4791513446/MZ+12.6.1+Minor+Qual
+        mazama 13.2.1,https://wiki.ith.intel.com/spaces/TTDOPS/pages/4932477738/MZ+13.2.1+Major+qual
+        module ownership,https://wiki.ith.intel.com/spaces/TTDOPS/pages/1364730161/Module+Ownership
+        tools automation,https://wiki.ith.intel.com/spaces/TTDOPS/pages/1180502777/Tools+automation
+        all scripts,https://wiki.ith.intel.com/spaces/TTDOPS/pages/4932470995/SLES15+SP7+Activity+-+All+Scripts
+        scripts,https://wiki.ith.intel.com/spaces/TTDOPS/pages/1180502949/Scripts
+        TTD wiki,https://wiki.ith.intel.com/spaces/TTDOPS/pages/1180503220/TTD+Stakeholders
+        Triage rotation,https://wiki.ith.intel.com/spaces/TTDOPS/pages/1180503268/Triage+Rotation
+        Tapeout compute infrastructur,https://wiki.ith.intel.com/spaces/TTDOPS/pages/2159264004/Training+TTD+Tapeout+Compute+Infrastructure
+        dedicated host, https://wiki.ith.intel.com/spaces/TTDOPS/pages/1544700712/Dedicated+Hosts
+        module equivalence,https://wiki.ith.intel.com/spaces/TTDOPS/pages/1355089427/Equivalent+new+tools+vs+older+depricated+tools
+        validation ownership,https://wiki.ith.intel.com/spaces/TTDOPS/pages/1860109910/Validation+Ownership
+    sharepoint
+        whitepaper template,https://intel.sharepoint.com/:w:/r/sites/ltdttdccb/_layouts/15/Doc2.aspx?action=edit&sourcedoc=%7B7e72af71-974b-46ca-b1e3-9dcc8d784af1%7D&wdOrigin=TEAMS-MAGLEV.teamsSdk_ns.rwc&wdExp=TEAMS-TREATMENT&wdhostclicktime=1773874038038&web=1
+        CCB horizon,https://intel.sharepoint.com/:x:/r/sites/ltdttdccb/_layouts/15/Doc.aspx?sourcedoc=%7BFC87A333-F783-48DC-94E3-E3AA7AA9027E%7D&file=TTD%20CCB%20Horizon.xlsx&action=default&mobileredirect=true
+        Module review,https://intel.sharepoint.com/sites/ptdttdopsmoduleeng/Shared%20Documents/Forms/AllItems.aspx?csf=1&web=1&e=rCFaZD&CID=6f271696-13b4-4820-a48c-e8c640e3cfe8&FolderCTID=0x012000F4D14DFED570A54194A998C7E6EA4835&id=%2Fsites%2Fptdttdopsmoduleeng%2FShared%20Documents%2FModule%20Engineering%20WG%2FModule%20Reviews
+        This wk WP,https://intel.sharepoint.com/sites/ltdttdccb/Shared%20Documents/Forms/AllItems.aspx?FolderCTID=0x012000897102C125F83941ADC8480C8A462CDC&id=%2Fsites%2Fltdttdccb%2FShared%20Documents%2FThis%20Weeks%20White%20Papers
+        powerbi dashboard,https://pbiprovisioned-dev.intel.com/Reports/browse/Foundry%20Tapeout%20Services%20Dashboard
+        powerbi dashboard prod,https://pbirs01.intel.com/reports/browse/Foundry%20Tapeout%20Services%20Dashboard
+    AI
+
+        AI training,https://intel.sharepoint.com/sites/C4S_AI/SitePages/Live-Training-Sessions.aspx
+        intel AI tools,https://circuit.intel.com/content/np/sites/AIInside/AITools1.html
+        intel AI tools,https://wiki.ith.intel.com/pages/viewpage.action?pageId=3341530451
+        intel ai,https://intel.sharepoint.com/sites/AIInside/SitePages/Tools/generative-ai-tools.aspx
+        clipzap,https://www.clipzap.ai
+        DesignArena,https://www.designarena.ai  
+        Dictanote,https://dictanote.co/pro/
+        arena,https://arena.ai
+        intel ai collab,https://apps.powerapps.com/play/e/default-46c98d88-e344-4ed4-8496-4ed7712e255d/a/f9ec6720-efd7-488d-a693-55007a9a185e?tenantId=46c98d88-e344-4ed4-8496-4ed7712e255d&source=AppSharedV3&hint=8cb9e513-4eb9-44cd-ba76-43dc92bf5bf7&sourcetime=1708853699724
+        
+    tools
+        List tools,https://wiki.ith.intel.com/spaces/TTDOPS/pages/1180502777/Tools+automation
+        Auto Override,https://tapeout.intel.com/mlc/#/auto_overrides
+        Auto OPC,https://tapeout.intel.com/mlc/#/auto_opcr
+        MLC,https://tapeout.intel.com/mlc
+        AXLE,https://tapeout.intel.com/axle
+        DCTR,https://tapeout.intel.com/dctr/#/
+        Torch,https://tapeout.intel.com/torch/
+        Huddle,https://tapeout.intel.com/torch/#/Huddle
+        IMO,https://tapeout.intel.com/torch/#/IMO
+        LDI,https://tapeout.intel.com/ldi
+        LDI_beta,https://tapeout-dev-sles12.to.intel.com/ldi_beta
+        TOMAR,https://tapeout.intel.com/tomars/#/
+        AutoOps new request,https://autoopswebservice.swissautoops.intel.com
+        airflow,http://tsciwrkr06.sc.intel.com:8081
+        ttdreports apis,https://torimetpweb.to.intel.com/ttdreports/docs
+        netbatch job remove,https://autoopswebservice.swissautoops.intel.com/domains/HPC/flows/nb_job_remove
+        preometheus,http://tsciprom10.sc.intel.com:9090/
+        powerapps,https://apps.powerapps.com
+        jenkins apache,http://torijkns03.to.intel.com:9099/job/Apache/
+        module eng,http://torijkns03.to.intel.com:9099/job/module-engineering/
+    info
+
+        intel proxy,https://intelpedia.intel.com/Proxy_at_Intel#npm_.28node.js.29
+        Attendence Onsite Presence Dashboard,https://app.powerbi.com/reportEmbed?reportId=9adb054c-207a-4b8c-b2dc-5f56b9f8c28d&autoAuth=true&ctid=46c98d88-e344-4ed4-8496-4ed7712e255d
+        Intel Calender holiday,https://phonebook.intel.com/cgi-bin/phonecal?e=
+        LTD training report, https://ltdtraining.intel.com/report/default.asp?wwid=11631427
+        VS code setup,https://wiki.ith.intel.com/spaces/TTDOPS/pages/1807933093/Visual+Studio+Code+Setup
+        netbatch doc,https://intel.sharepoint.com/sites/Netbatch/Customer%20docs/Forms/AllItems.aspx
+    SDL
+
+    docker registry,
+
+Learning
+
+    AI
+
+        learn deeplearning,https://www.blackbox.ai/
+
+        AI podcast,https://omny.fm/shows/technically-speaking/ai-education-programs-with-intel
+
+    Linux
+
+        grep manual,https://man7.org/linux/man-pages/man1/grep.1.html
+
+        16 linux commands,https://www.binarytides.com/linux-commands-hardware-info/
+
+    Interview Prep
+
+        math problems,https://projecteuler.net/archives
+
+        c# interview question,https://www.simplilearn.com/tutorials/c-sharp-tutorial/c-sharp-interview-questions
+
+        leetcode 75 questions,https://www.teamblind.com/post/new-year-gift-curated-list-of-top-75-leetcode-questions-to-save-your-time-oam1oreu
+
+        leetcode 150 Questions,https://leetcode.com/studyplan/top-interview-150/
+
+        programming problems,https://www.techiedelight.com/
+
+        programming problems,https://adriann.github.io/programming_problems.html
+
+        skill dev,https://www.hackerrank.com/skills-directory
+
+        prep kit,https://www.hackerrank.com/interview/preparation-kits
+
+        System Design,https://bytebytego.com/courses/system-design-interview/
+
+        coding platform,https://coderbyte.com/
+
+        coding platform,https://www.codewars.com/
+
+    Cheat sheet
+
+        git,https://about.gitlab.com/images/press/git-cheat-sheet.pdf
+
+        vim,https://vim.rtorr.com/
+
+        vim tips,https://vim.fandom.com/wiki/Best_Vim_Tips
+
+        Mac Shortcuts,https://support.apple.com/en-us/102650
+
+    Misc
+
+        git book,https://git-scm.com/book/en/v2
+
+        Modern Standby,https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/modern-standby-vs-s3
+
+    book
+
+        Powershell for sysadmin,https://www.oreilly.com/library/view/powershell-for-sysadmins/9781098122638/
+
+        Learn powershell,https://www.oreilly.com/library/view/learn-windows-powershell/9781617294167/
+
+        Ipython wiki notebook,https://github.com/Carreau/ipython-wiki/blob/master/A-gallery-of-interesting-IPython-Notebooks.md#introductory-tutorials
+
+Tools
+
+    image to text
+
+        Capture2text download,https://capture2text.sourceforge.net/
+
+        photo to text ms download,https://apps.microsoft.com/detail/9nblggh6hrzh
+
+        Image to text,https://www.imagetotext.io/
+
+    Text/file share
+
+        multitool no login,https://system.tips/text/text-share
+
+        qtext,https://kuick.io/
+
+        text share,https://rentry.co/
+
+        filexfer,https://file.pizza/
+
+        any size file,https://limewire.com/
+
+    Utility
+
+        rweverything download,https://rweverything.com/download/
+
+        rweverything usage,https://wiki.ith.intel.com/display/DebugEncyclopedia/Read+Write+Everything+tool+-+usage+notes
+
+        Rawcap(net sniffer),https://www.netresec.com/?page=RawCap
+
+        fuzzing tool,https://github.com/googleprojectzero/winafl
+
+        sysinternal tools download,https://learn.microsoft.com/en-us/sysinternals/downloads/
+
+        sysinternal download,https://live.sysinternals.com/
+
+        afl tool, https://lcamtuf.coredump.cx/afl/
+
+        poolmon find mem leak,https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/using-poolmon-to-find-a-kernel-mode-memory-leak
+
+        install win dbg,https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/?redirectedfrom=MSDN
+
+        asn parser and more,https://pkitools.net/pages/ca/asn1.html
+
+        asn parser,https://lapo.it/asn1js
+
+        write to/from mem,https://github.com/pavel-a/devmemX
+
+        design,https://www.canva.com/
+
+        sketchpad,https://sketch.io/sketchpad/
+
+        fakefb,https://fakedetail.com/fake-facebook-chat-generator
+
+ToolsAI
+
+    LLM
+        consensus,https://consensus.app
+        prompt ai,https://www.blackbox.ai/
+        clipzap,https://www.clipzap.ai
+        Claude,https://claude.ai/
+        dictanote,https://dictanote.co/pro/
+        designarena,https://www.designarena.ai
+        arena ai,https://arena.ai
+    Misc
+
+        multi AI, https://www.yeschat.ai/
+
+        Unknown,https://theresanaiforthat.com/
+
+
+
+MyPersonal
+
+    Games
+
+        bang,http://chriscarr.name:8080/westerncardgame/index.html
+
+        7 game collections,https://netgames.io/games/
+
+        collections, https://tabletopia.com/games
+
+        rubric cube solver,https://rubiks-cube-solver.com/how-to-solve/
+
+        bridge imp calculater,https://huggingface.co/spaces/Rahmanma/bridge_imp_calculator
+
+        bridge score, https://huggingface.co/spaces/Rahmanma/bridge_scoring
+
+    bills
+
+        HOA,https://commonres.twa.rentmanager.com/
+
+        PGE,https://portlandgeneral.com/
+
+        TVWD,https://oprusipng-opencloud.openintl.com/
+
+        Gas,https://www.online-billpay.com/
+
+    Stock
+
+        check stock,https://www.tradingview.com/chart/
+
+        IPO listing,https://www.nasdaq.com/market-activity/ipos
+
+        googlefinance watchlist,https://www.google.com/finance/portfolio/watchlist
+
+    Misc
+
+        My Pages,https://itsforfun.pythonanywhere.com/
+
+        My Pages2,https://gamesutils.onrender.com/
+
+        hugging face,https://huggingface.co/Rahmanma
+
+        github page1,https://atikeee.github.io/
+
+        github page2,https://mohammadarahman.github.io/
+
+        Bangla Book,https://github.com/atikeee/bongboi
+
+        Study Book,https://github.com/atikeee/Textbooks-and-study-material
+
+        misc soft,https://github.com/atikeee/misc_codes
+
+        my domain: https://dash.cloudflare.com/login
+
+        free domain: 
+
+
+
+Areeba
+
+    Books
+
+        free books,https://monkeypen.com/pages/free-childrens-books    
+
+    Misc
+
+        Game Making,https://scratch.mit.edu/projects/editor/?tutorial=getStarted
+
+        Typing lesson,https://www.roomrecess.com/games/TypingTutorForKids/play.html
+
+    School
+
+        ParentVue,https://parentvue.beaverton.k12.or.us/PXP2_Login.aspx
+
+        Homeschool curriculam,https://www.homeschoolmath.net/teaching/NC_3-5_resources.php
+
+        worksheet,https://www.commoncoresheets.com/using-substitution-to-solve-problems/95/download

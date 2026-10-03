@@ -1,3 +1,4 @@
 *.pyc
 /.gitignore
 bkp*
+/templates/triagemails/

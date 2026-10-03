@@ -35,6 +35,7 @@ const CARD_COSTS = {
     'city': { 'rock': 3, 'hay': 2 },
     'dev': { 'rock': 1, 'sheep': 1, 'hay': 1 }
 };
+const PLAYER_PIECE_LIMITS = { house: 5, city: 4, road: 15 };
 let globalDevCardDeck = [];
 
 let offsetX = 0;
@@ -965,6 +966,13 @@ canvas.addEventListener('click', async (event) => {
         }
     } else if (isPlayerPage) {
         if (selectedPlayerTool === 'house') {
+            const houseCount = (allPlayersData[PLAYER_ID].structures || []).filter(
+                structure => structure.type === 'house'
+            ).length;
+            if (houseCount >= PLAYER_PIECE_LIMITS.house) {
+                showMessage('You have no houses left. Upgrade one of your houses to a city before building another.', 'error');
+                return;
+            }
             
             const clickedJunction = getClosestJunction(mouseX, mouseY);
             if (clickedJunction) {
@@ -979,6 +987,14 @@ canvas.addEventListener('click', async (event) => {
                 }
 
                 if (existingStructure) {
+            const cityCount = (allPlayersData[PLAYER_ID].structures || []).filter(
+                structure => structure.type === 'city'
+            ).length;
+            if (cityCount >= PLAYER_PIECE_LIMITS.city) {
+                showMessage('You have already placed all 4 cities.', 'error');
+                return;
+            }
+
                     showMessage('A structure already exists here.', 'error');
                 } else if (hasAdjacentSettlement(clickedJunction)) {
                     showMessage('A house or city must be at least two intersections away from another settlement.', 'error');
@@ -988,6 +1004,12 @@ canvas.addEventListener('click', async (event) => {
                     {
                         allPlayersData[PLAYER_ID].structures.push({ type: selectedPlayerTool, junction: clickedJunction, owner: PLAYER_ID });
                         showMessage(`${selectedPlayerTool} placed!`);
+                const roadCount = (allPlayersData[PLAYER_ID].roads || []).length;
+                if (roadCount >= PLAYER_PIECE_LIMITS.road) {
+                    showMessage('You have already placed all 15 roads.', 'error');
+                    return;
+                }
+
                         updatePlayerUI();
                         actionSuccessful = true;
                     }
@@ -1293,7 +1315,7 @@ function resizeCanvas() {
     const containerWidth = canvas.parentElement.clientWidth;
     const containerHeight = canvas.parentElement.clientHeight;
     console.log("c: w"+containerWidth+"h"+containerHeight);
-    const aspectRatio = 1.2 / 1;
+    const aspectRatio = isPlayerPage && window.matchMedia('(max-width: 768px)').matches ? 0.95 : 1.2;
     let newWidth = containerWidth * mapZoomLevel;
     let newHeight = newWidth / aspectRatio;
 
@@ -1327,11 +1349,12 @@ function resizeCanvas() {
         maxRawY += portExtent;
         const boardWithPortsWidth = maxRawX - minRawX;
         const boardWithPortsHeight = maxRawY - minRawY;
+        const boardPadding = isPlayerPage && window.matchMedia('(max-width: 768px)').matches ? 12 : 48;
 
         boardScale = Math.min(
             1,
-            (canvas.width - 48) / boardWithPortsWidth,
-            (canvas.height - 48) / boardWithPortsHeight
+            (canvas.width - boardPadding) / boardWithPortsWidth,
+            (canvas.height - boardPadding) / boardWithPortsHeight
         );
 
         offsetX = (canvas.width / boardScale / 2) - (minRawX + boardWithPortsWidth / 2);
@@ -1814,21 +1837,33 @@ async function playdevcard(currentPlayerId, item) {
 function renderGameScoreboard() {
     if (!isGamePage) return;
 
-    const playerIds = ['player1', 'player2', 'player3', 'player4'];
-    const longestRoadOwner = playerIds.find(playerId => allPlayersData[playerId].longestroad) || '';
-    const largestArmyOwner = playerIds.find(playerId => allPlayersData[playerId].largestarmy) || '';
+    const seatPlayerIds = ['player1', 'player2', 'player3', 'player4'];
+    const registeredOrder = Array.isArray(allPlayersData._turnOrder)
+        ? allPlayersData._turnOrder.filter(playerId => seatPlayerIds.includes(playerId))
+        : [];
+    const playerIds = [...new Set([...registeredOrder, ...seatPlayerIds])];
+    const longestRoadOwner = seatPlayerIds.find(playerId => allPlayersData[playerId].longestroad) || '';
+    const largestArmyOwner = seatPlayerIds.find(playerId => allPlayersData[playerId].largestarmy) || '';
     const longestRoadDropdown = document.getElementById('pl-dropdown');
     const largestArmyDropdown = document.getElementById('la-dropdown');
+    const scoreboardBody = document.querySelector('#assignpoint table tbody');
 
-    playerIds.forEach((playerId, index) => {
+    playerIds.forEach(playerId => {
         const player = allPlayersData[playerId];
-        document.getElementById(`cell-${index}-0`).textContent = player.playerName;
-        document.getElementById(`cell-${index}-1`).textContent = player.score;
-        document.getElementById(`cell-${index}-2`).textContent = player.hand.length;
-        document.getElementById(`cell-${index}-3`).textContent = Number(player.knightplayed) || 0;
-        document.getElementById(`cell-${index}-4`).textContent = player.devCards.length;
-        if (longestRoadDropdown.options[index + 1]) longestRoadDropdown.options[index + 1].textContent = player.playerName;
-        if (largestArmyDropdown.options[index + 1]) largestArmyDropdown.options[index + 1].textContent = player.playerName;
+        const row = scoreboardBody.querySelector(`[data-player-id="${playerId}"]`);
+        if (!row) return;
+
+        row.cells[0].textContent = player.playerName;
+        row.cells[1].textContent = player.score;
+        row.cells[2].textContent = player.hand.length;
+        row.cells[3].textContent = Number(player.knightplayed) || 0;
+        row.cells[4].textContent = player.devCards.length;
+        scoreboardBody.appendChild(row);
+
+        const longestRoadOption = longestRoadDropdown.querySelector(`option[value="${playerId}"]`);
+        const largestArmyOption = largestArmyDropdown.querySelector(`option[value="${playerId}"]`);
+        if (longestRoadOption) longestRoadOption.textContent = player.playerName;
+        if (largestArmyOption) largestArmyOption.textContent = player.playerName;
     });
 
     longestRoadDropdown.value = longestRoadOwner;

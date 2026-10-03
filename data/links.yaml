@@ -1,0 +1,241 @@
+AI:
+  icon: "👥"
+  color: "#58a6ff"
+  links:
+    AI training: "https://intel.sharepoint.com/sites/C4S_AI/SitePages/Live-Training-Sessions.aspx"
+    intel AI tools: "https://circuit.intel.com/content/np/sites/AIInside/AITools1.html"
+    intel AI tools2: "https://wiki.ith.intel.com/pages/viewpage.action?pageId=3341530451"
+    learn deeplearning: "https://www.blackbox.ai"
+    AI podcast: "https://omny.fm/shows/technically-speaking/ai-education-programs-with-intel"
+    prompt ai: "https://www.blackbox.ai/"
+    Claude: "https://claude.ai/"    
+
+Tapeout:
+  icon: "🎮"
+  color: "#f0883e"
+  links:
+    cmeet: "https://ilearn.intel.com/next/categories/11562"
+    Tools draw: "https://drawio.intel.com/"
+    Netbatch sharepoint: "https://intel.sharepoint.com/sites/Netbatch/Customer%20docs/Forms/AllItems.aspx?viewid=232c7988-3e3d-45d7-bb5b-553f8683efdb&amp;id=%2Fsites%2FNetbatch%2FCustomer%20docs%2FNetbatchUserGuide_8_3_0%2Epdf&amp;parent=%2Fsites%2FNetbatch%2FCustomer%20docs"
+    Slides TO manuf overview: "https://ltdtrngcourses.intel.com/prod/0020034998_TapeoutManufacturingOverviewTTDOperations_LGAA/index2.html"
+    TO Dashboard: "https://dashboard.to.intel.com/login"
+    LTD Training: "https://ltdtraining.intel.com/report/default.asp?wwid=11631427"
+    TTD OPS ME issue board: "https://torigit01.to.intel.com/groups/module-engineering/-/boards/282?iteration_id=Current"
+    Tapeout Fileserver: "https://hsd-ifs.cps.intel.com/hsd/ifs/#document/PrintVersion.aspx?document_id=100377011&amp;homepage=yes&amp;rev=4"
+    Huddle: "https://tapeout.intel.com/torch/Huddle#/Huddle"
+    ECO: "https://tapeout.intel.com/its/#/eco/new"
+    MLC: "https://tapeout.intel.com/mlc/#/"
+    AXLE: "https://tapeout.intel.com/torch/axle#/1227%20only"
+    DCTR: "https://tapeout.intel.com/dctr/#/"
+    LDI: "https://tapeout.intel.com/ldi"
+    LDI beta: "https://tapeout-dev-sles12.to.intel.com/ldi_beta"
+    TOMARS: "https://tapeout.intel.com/tomars/#/"
+    Trifecta: "https://trifecta.intel.com/mask-details/userview?from=08.12.2025&amp;to=02.12.2026"
+    HSD fab request search: "https://hsd-ifs.cps.intel.com/hsd/ifs/#search/result.aspx?reloadf=2&amp;focus=fab_request&amp;global_list=on&amp;usr_query_id=1946886&amp;default_query_id=1946886&amp;hidemenu=1&amp;hsdaction=viewfabreq&amp;link_request_from=portal&amp;protalhost="
+    Intel federal employee database: "https://ifed.intel.com/IEDCFList"
+    
+Learning:
+  icon: "📚"
+  color: "#e3b341"
+  links:
+    DCTR wiki: "https://wiki.ith.intel.com/pages/viewpage.action?pageId=1286768142&amp;spaceKey=TTDOPS&amp;title=DCTR%2B-%2BAutomated%2BData%2BCorruption%2BRFC"
+    TTD OPS wiki: "https://wiki.ith.intel.com/spaces/viewspace.action?key=TTDOPS"
+    Metis wiki: "https://wiki.ith.intel.com/spaces/metis/pages/1236323399/Getting+Started"
+    Group Expectations PPT: "https://intel.sharepoint.com/:p:/r/sites/ltdttdmetis/_layouts/15/Doc.aspx?sourcedoc=%7BD2AF2EBF-29D7-474E-B7C9-2F56F4861DA3%7D&amp;file=TIQDE%20Group%20Expectations.pptx&amp;wdLOR=c35718BAC-AC96-4ED8-B22F-7FE500F898BF&amp;fromShare=true&amp;action=edit&amp;mobileredirect=true"
+    TTDOPS Home wiki: "https://wiki.ith.intel.com/spaces/viewspace.action?key=TTDOPS"
+    Netbatch sharepoint doc: "https://intel.sharepoint.com/sites/Netbatch/Customer%20docs/Forms/AllItems.aspx?id=%2Fsites%2FNetbatch%2FCustomer%20docs&amp;viewid=232c7988-3e3d-45d7-bb5b-553f8683efdb"
+  
+  
+Tools:
+  icon: "🔧"
+  color: "#ffa657"
+  links:
+    rweverything download: "https://rweverything.com/download/"
+    rweverything usage: "https://wiki.ith.intel.com/display/DebugEncyclopedia/Read+Write+Everything+tool+-+usage+notes"
+    Rawcap(net sniffer): "https://www.netresec.com/?page=RawCap"
+    fuzzing tool: "https://github.com/googleprojectzero/winafl"
+    sysinternal tools download: "https://learn.microsoft.com/en-us/sysinternals/downloads/"
+    sysinternal download: "https://live.sysinternals.com/"
+    afl tool: "https://lcamtuf.coredump.cx/afl/"
+    poolmon find mem leak: "https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/using-poolmon-to-find-a-kernel-mode-memory-leak"
+    install win dbg: "https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/?redirectedfrom=MSDN"
+    asn parser and more: "https://pkitools.net/pages/ca/asn1.html"
+    asn parser: "https://lapo.it/asn1js"
+    write to/from mem: "https://github.com/pavel-a/devmemX"
+    design: "https://www.canva.com/"
+    sketchpad: "https://sketch.io/sketchpad/"
+    multitool no login: "https://system.tips/text/text-share"
+    qtext: "https://kuick.io/"
+    text share: "https://rentry.co/"
+    filexfer: "https://file.pizza/"
+    any size file: "https://limewire.com/"
+    Capture2text download: "https://capture2text.sourceforge.net/"
+    photo to text ms download: "https://apps.microsoft.com/detail/9nblggh6hrzh"
+    Image to text: "https://www.imagetotext.io/"
+    
+GIT:
+  icon: "📰"
+  color: "#d2a8ff"
+  links:
+    GITlab LDI : "https://torigit01.to.intel.com/ttdops-automation/LDI"
+    GitLab Projects: "https://torigit01.to.intel.com/"
+    git: "https://about.gitlab.com/images/press/git-cheat-sheet.pdf"
+    vim: "https://vim.rtorr.com/"
+    vim tips: "https://vim.fandom.com/wiki/Best_Vim_Tips"
+    Mac Shortcuts: "https://support.apple.com/en-us/102650"
+
+Finance:
+  icon: "💰"
+  color: "#79c0ff"
+  links:
+    HOA: "https://commonres.twa.rentmanager.com/"
+    PGE: "https://portlandgeneral.com/"
+    TVWD: "https://oprusipng-opencloud.openintl.com/"
+    Gas: "https://www.online-billpay.com/"
+    check stock: "https://www.tradingview.com/chart/"
+    IPO listing: "https://www.nasdaq.com/market-activity/ipos"
+    googlefinance watchlist: "https://www.google.com/finance/portfolio/watchlist"
+
+
+
+#Shopping:
+#  icon: "🛒"
+#  color: "#ff7b72"
+#  links:
+#    Amazon: "https://www.amazon.com"
+#    eBay: "https://www.ebay.com"
+#    AliExpress: "https://www.aliexpress.com"
+#    Etsy: "https://www.etsy.com"
+#    IKEA: "https://www.ikea.com"
+#
+#Travel:
+#  icon: "✈️"
+#  color: "#56d364"
+#  links:
+#    Google Flights: "https://flights.google.com"
+#    Booking.com: "https://www.booking.com"
+#    Airbnb: "https://www.airbnb.com"
+#    TripAdvisor: "https://www.tripadvisor.com"
+#    Google Maps: "https://maps.google.com"
+#
+
+#
+#
+#
+#Health:
+#  icon: "🏥"
+#  color: "#bc8cff"
+#  links:
+#    WebMD: "https://www.webmd.com"
+#    NHS: "https://www.nhs.uk"
+#    MyFitnessPal: "https://www.myfitnesspal.com"
+#    Healthline: "https://www.healthline.com"
+#    Calm: "https://www.calm.com"
+#
+#Home:
+#  icon: "🏠"
+#  color: "#63e6be"
+#  links:
+#    Router: "http://192.168.1.1"
+#    NAS: "http://192.168.1.100"
+#    Pi-hole: "http://192.168.1.200/admin"
+#    Home Assistant: "http://192.168.1.150:8123"
+#    Plex: "http://192.168.1.100:32400"
+#
+#Tech:
+#  icon: "🤖"
+#  color: "#58a6ff"
+#  links:
+#    Anthropic Claude: "https://claude.ai"
+#    OpenAI: "https://openai.com"
+#    Hugging Face: "https://huggingface.co"
+#    Product Hunt: "https://www.producthunt.com"
+#    TechCrunch: "https://techcrunch.com"
+#
+#Photos:
+#  icon: "📷"
+#  color: "#f78166"
+#  links:
+#    Google Photos: "https://photos.google.com"
+#    Unsplash: "https://unsplash.com"
+#    Pexels: "https://www.pexels.com"
+#    Flickr: "https://www.flickr.com"
+#    Imgur: "https://imgur.com"
+#
+#Food:
+#  icon: "🥗"
+#  color: "#3fb950"
+#  links:
+#    Allrecipes: "https://www.allrecipes.com"
+#    Tasty: "https://tasty.co"
+#    BBC Good Food: "https://www.bbcgoodfood.com"
+#    Food Network: "https://www.foodnetwork.com"
+#
+#Sports:
+#  icon: "🏆"
+#  color: "#ffa657"
+#  links:
+#    ESPN: "https://www.espn.com"
+#    BBC Sport: "https://www.bbc.com/sport"
+#    FlashScore: "https://www.flashscore.com"
+#    Sky Sports: "https://www.skysports.com"
+#    Transfermarkt: "https://www.transfermarkt.com"
+#
+#Science:
+#  icon: "🔬"
+#  color: "#79c0ff"
+#  links:
+#    NASA: "https://www.nasa.gov"
+#    Nature: "https://www.nature.com"
+#    Science Daily: "https://www.sciencedaily.com"
+#    New Scientist: "https://www.newscientist.com"
+#
+#Music:
+#  icon: "🎵"
+#  color: "#d2a8ff"
+#  links:
+#    Spotify: "https://www.spotify.com"
+#    SoundCloud: "https://soundcloud.com"
+#    Bandcamp: "https://bandcamp.com"
+#    Genius Lyrics: "https://genius.com"
+#    Last.fm: "https://www.last.fm"
+#
+#Art:
+#  icon: "🎨"
+#  color: "#ff7b72"
+#  links:
+#    Behance: "https://www.behance.net"
+#    Dribbble: "https://dribbble.com"
+#    ArtStation: "https://www.artstation.com"
+#    Canva: "https://www.canva.com"
+#    Adobe Color: "https://color.adobe.com"
+#
+#Security:
+#  icon: "🔒"
+#  color: "#56d364"
+#  links:
+#    Have I Been Pwned: "https://haveibeenpwned.com"
+#    VirusTotal: "https://www.virustotal.com"
+#    Cloudflare: "https://www.cloudflare.com"
+#    Bitwarden: "https://bitwarden.com"
+#    1Password: "https://1password.com"
+#
+#Weather:
+#  icon: "☀️"
+#  color: "#e3b341"
+#  links:
+#    Weather.com: "https://weather.com"
+#    AccuWeather: "https://www.accuweather.com"
+#    Windy: "https://www.windy.com"
+#    Rain Radar: "https://www.rainviewer.com"
+#    
+#Gaming:
+#  icon: "💼"
+#  color: "#3fb950"
+#  links:
+#
+#
+#Media:
+#  icon: "🎬"
+#  color: "#f78166"
+#  links:

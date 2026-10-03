@@ -1,0 +1,9 @@
+# Codenames: Blizzard (currently incomplete)
+
+TALENT
+SHRINE
+ALLIANCE
+SWARM
+=SILVER
+SILICON
+WAND

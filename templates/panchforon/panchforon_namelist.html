@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Panchforon - Name List</title>
+    <style>
+         body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: auto;
+            padding: 30px;
+            background-color: #f9f9f9;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            font-size: 1rem;
+            flex-grow: 1;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn-add {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-del {
+            background-color: #e74c3c;
+            color: white;
+            margin-left: 10px;
+        }
+
+        .players {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .players ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .players li {
+            padding: 8px 10px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .player-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .btn-clear {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .btn-random {
+            background-color: #9b59b6;
+            color: white;
+        }
+
+        .btn-start {
+            background-color: #2ecc71;
+            color: white;
+            width: 100%;
+            padding: 15px;
+            font-size: 1.3rem;
+            margin-top: 30px;
+        }
+
+        .message {
+            color: red;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h2>Panchforon - Player Setup</h2>
+    {% if message %}
+        <div class="message">{{ message }}</div>
+    {% endif %}
+    <form method="post">
+        <div class="form-group">
+            <input type="text" name="player" placeholder="Enter player name">
+            <button type="submit" name="action" value="add" class="btn-add">Add Player</button>
+        </div>
+    </form>    <div class="players">
+        <ul>
+            {% for player in pf_players %}
+                <li>
+                    {{ player }}
+                    <form method="post" style="display:inline;">
+                        <input type="hidden" name="name_to_del" value="{{ player }}">
+                        <button type="submit" name="action" value="delete" class="btn-del">Delete</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="player-controls">
+        <form method="post">
+            <button type="submit" name="action" value="clear" class="btn-clear">Clear All</button>
+        </form>
+        <form method="post">
+            <button type="submit" name="action" value="randomize" class="btn-random">Randomize</button>
+        </form>
+    </div>
+
+    <form method="post">
+        <button type="submit" name="action" value="start" class="btn-start">Start New Game</button>
+    </form>
+</body>
+</html>

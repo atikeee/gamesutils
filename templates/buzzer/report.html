@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Buzz Report</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <style>
+        body { padding: 2rem; background-color: #f4f4f4; }
+        .container { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="mb-4">Buzz Report</h2>
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr><th>Name</th><th>IP</th><th>Time</th><th>Note</th></tr>
+            </thead>
+            <tbody id="buzzerEntries" aria-live="polite">
+        {% for entry in entries %}
+        <tr>
+            <td>{{ entry.name }}</td>
+            <td>{{ entry.ip }}</td>
+            <td>{{ entry.time }}</td>
+            <td>{{ entry.note }}</td>
+        </tr>
+        {% endfor %}
+            </tbody>
+        </table>
+        <p id="noEntries" {% if entries %}hidden{% endif %}>No entries yet.</p>
+        <form id="clearAllForm" method="post" action="{{ url_for('report') }}" class="mt-3">
+            <button type="submit" class="btn btn-outline-danger">Clear All</button>
+        </form>
+        <form method="post" action="{{ url_for('shuffle_names') }}" class="mt-3">
+            <button type="submit" class="btn btn-outline-info">Randomize Names</button>
+        </form>
+        {% if unique_names %}
+        <div class="mt-4">
+            <h4>Unique Randomized Names</h4>
+            <ul class="list-group">
+                {% for name in unique_names %}
+                <li class="list-group-item">{{ name }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        <a href="/" class="btn btn-link mt-3">Home</a>
+    </div>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        const entriesBody = document.getElementById('buzzerEntries');
+        const noEntries = document.getElementById('noEntries');
+
+        socket.on('buzz_trigger', (entry) => {
+            const row = document.createElement('tr');
+            [entry.name, entry.ip, entry.time, entry.note].forEach((value) => {
+                const cell = document.createElement('td');
+                cell.textContent = value ?? '';
+                row.appendChild(cell);
+            });
+            entriesBody.appendChild(row);
+            noEntries.hidden = true;
+        });
+
+        socket.on('buzz_cleared', () => {
+            clearEntries();
+        });
+
+        function clearEntries() {
+            entriesBody.replaceChildren();
+            noEntries.hidden = false;
+        }
+
+        document.getElementById('clearAllForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const response = await fetch(event.currentTarget.action, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (response.ok) {
+                clearEntries();
+            } else {
+                window.location.reload();
+            }
+        });
+
+    </script>
+</body>
+</html>

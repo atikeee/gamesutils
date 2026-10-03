@@ -11,23 +11,68 @@
     body { font-family: sans-serif; background: #f9f9f9; padding: 20px; }
     .section-container { margin-bottom: 40px; border-bottom: 2px solid #ccc; padding-bottom: 20px; }
     .common-data { background: #eee; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
     table, th, td { border: 1px solid #999; }
     th, td { padding: 8px; text-align: left; }
+    th { background-color: #eaeaea; font-weight: bold; }
     .status-processed { background-color: #d4edda !important; }
     .changed { background-color: #fff3cd !important; border: 2px solid #ffc107; }
-    #floating-save { position: fixed; top: 20px; right: 20px; padding: 15px 25px; background: #238636; color: white; border: none; border-radius: 5px; cursor: pointer; z-index: 1000; }
-    /* Specifically target the Status column (4th column in your table) */
-    table td:nth-child(4), 
-    table th:nth-child(4) {
-        width: 70px; /* Forces browser to give it only the space it needs */
-        white-space: nowrap; /* Prevents the cell from wrapping */
+    .saved-confirm { background-color: #d1e7dd !important; border: 2px solid #198754; }
+    #floating-save, #dup-toggle-btn {
+        position: fixed;
+        top: 20px;
+        width: 110px;
+        height: 48px;
+        border: none;
+        border-radius: 5px;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        z-index: 1000;
     }
-    table td:nth-child(5), 
-    table th:nth-child(5) {
-        width: 20px; /* Forces browser to give it only the space it needs */
-        white-space: nowrap; /* Prevents the cell from wrapping */
+    #floating-save { right: 20px; background: #238636; }
+    #dup-toggle-btn { right: 140px; background: #1f6feb; }
+    #data-file-form {
+        position: fixed;
+        top: 20px;
+        right: 260px;
+        z-index: 1000;
+        display: flex;
+        gap: 10px;
+        align-items: center;
     }
+    #timestamp-filter {
+        height: 48px;
+        width: 180px;
+        border: 1px solid #999;
+        border-radius: 5px;
+        padding: 0 10px;
+        background: white;
+        font-size: 14px;
+        box-sizing: border-box;
+    }
+    #timestamp-filter::placeholder {
+        color: #999;
+    }
+    #data-file-select {
+        height: 48px;
+        min-width: 260px;
+        border: 1px solid #999;
+        border-radius: 5px;
+        padding: 0 10px;
+        background: white;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    
+    /* Column sizing for all columns */
+    table td:nth-child(1), table th:nth-child(1) { width: 40px; text-align: center; }
+    table td:nth-child(2), table th:nth-child(2) { width: 140px; white-space: nowrap; overflow: hidden; }
+    table td:nth-child(3), table th:nth-child(3) { width: 130px; overflow: hidden; word-wrap: break-word; }
+    table td:nth-child(4), table th:nth-child(4) { width: 130px; overflow: hidden; word-wrap: break-word; }
+    table td:nth-child(5), table th:nth-child(5) { width: 150px; overflow: hidden; word-wrap: break-word; }
+    table td:nth-child(6), table th:nth-child(6) { width: 70px; white-space: nowrap; overflow: hidden; }
+    table td:nth-child(7), table th:nth-child(7) { width: auto; overflow: hidden; word-wrap: break-word; }
 
     /* Ensure the dropdown itself behaves */
     .status-select {
@@ -37,20 +82,61 @@
         cursor: pointer;
     }
     .preview-tooltip {
-    display: none;
-    position: absolute;
-    width: 400px;
-    height: 300px;
-    background: white;
-    border: 1px solid #ccc;
-    z-index: 1000;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    overflow: hidden;
-}
-.preview-tooltip iframe { width: 100%; height: 100%; border: none; }
+        display: none;
+        position: absolute;
+        width: 400px;
+        height: 300px;
+        background: white;
+        border: 1px solid #ccc;
+        z-index: 1000;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        overflow: hidden;
+    }
+    .preview-tooltip iframe { width: 100%; height: 100%; border: none; }
+    /* Resizable columns */
+    th { position: relative; user-select: none; }
+    th.resizable::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        cursor: col-resize;
+        background: linear-gradient(to right, transparent, #ccc, transparent);
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    th.resizable:hover::after { opacity: 1; }
+    th.resizing::after { opacity: 1; background: #0066ff; }
+    
+    /* Sortable column styling */
+    th.sortable { cursor: pointer; }
+    th.sortable:hover { background-color: #d0d0d0; }
+    th.sortable::before {
+        content: ' ⇅';
+        font-size: 1.1em;
+        color: #999;
+        margin-left: 6px;
+    }
+    th.sort-asc::before { content: ' ⬆'; color: #0066ff; font-weight: bold; }
+    th.sort-desc::before { content: ' ⬇'; color: #0066ff; font-weight: bold; }
 </style>
 
-<button id="floating-save" onclick="saveAll()">Save All Changes</button>
+<button id="floating-save" onclick="saveAll(false)">Save</button>
+<button id="dup-toggle-btn" onclick="toggleDupRows()">Show</button>
+<form id="data-file-form" method="get" action="/triage_email_dashboard">
+    <input 
+        type="text" 
+        id="timestamp-filter" 
+        placeholder="Filter by timestamp (e.g., 20sep)" 
+        onkeyup="filterByTimestamp()">
+    <select id="data-file-select" name="data_file" onchange="this.form.submit()">
+        {% for filename in data_files %}
+        <option value="{{ filename }}" {% if filename == selected_data_file %}selected{% endif %}>{{ filename | replace('triage_email_', '') }}</option>
+        {% endfor %}
+    </select>
+</form>
 
 {% for section_name, section in data.items() %}
 <div class="section-container" id="sec-{{ loop.index }}">
@@ -60,74 +146,283 @@
         <p>RFC: <a href="{{ section.rfc }}">{{ section.rfc }}</a></p>
         <p>Dashboard: <a href="{{ section.dashboard }}">{{ section.dashboard }}</a></p>
         <p>Notes: 
-    <textarea class="common-note" data-section="{{ section_name }}">{{ section.notes }}</textarea>
-</p>
+            <textarea class="common-note" data-section="{{ section_name }}">{{ section.notes }}</textarea>
+        </p>
     </div>
 
     <table>
-        {% for item_id, item in section.ind_dats.items() %}
-        <tr data-item-id="{{ item_id }}" data-section="{{ section_name }}" 
-    data-server="{{ item.server | striptags | trim }}" 
-    class="{% if item.status and item.status != '' %}status-processed{% endif %}">
-    
-    <td>{{ item.percent }}</td>
-    <td>{{ item.server | safe }}</td>
-    <td>{{ item.path }}</td>
-    <td>
-        <select class="status-select" onchange="markChanged(this)">
-            <option value="" {% if item.status == '' %}selected{% endif %}>new</option>
-            <option value="ITS" {% if item.status == 'ITS' %}selected{% endif %}>ITS</option>
-            <option value="email" {% if item.status == 'email' %}selected{% endif %}>email</option>
-        </select>
-    </td>
-    <td style="text-align: center;">
-    <a href="{{ item.link }}" title="Open Email" style="text-decoration: none; font-size: 1.2rem;">&#9993;</a>
-    </td>
-    <td><textarea class="item-note" onchange="markChanged(this)">{{ item.notes }}</textarea></td>
-</tr>
-        {% endfor %}
+        <thead>
+            <tr>
+                <th class="resizable sortable">#</th>
+                <th class="resizable sortable">Timestamp</th>
+                <th class="resizable sortable">Info1</th>
+                <th class="resizable sortable">Info2</th>
+                <th class="resizable sortable">Path</th>
+                <th class="resizable sortable">Status</th>
+                <th class="sortable">Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item_id, item in section.ind_dats.items() %}
+            <tr data-item-id="{{ item_id }}" data-section="{{ section_name }}" 
+                data-server="{{ item.server | striptags | trim }}" 
+                class="{% if item.status and item.status != '' %}status-processed{% endif %}">
+                
+                <td class="row-index"><a href="{{ item.link }}" title="Open Email" style="text-decoration: none;">1</a></td>
+                <td>{{ item.datetime }}</td>
+                <td>{{ item.info1 | safe }}</td>
+                <td>{{ item.info2 | safe }}</td>
+                <td>{{ item.path | safe }}</td>
+                <td>
+                    <select class="status-select" onchange="markChanged(this)">
+                        <option value="" {% if item.status == '' %}selected{% endif %}>new</option>
+                        <option value="ITS" {% if item.status == 'ITS' %}selected{% endif %}>ITS</option>
+                        <option value="email" {% if item.status == 'email' %}selected{% endif %}>email</option>
+                        <option value="NA" {% if item.status == 'NA' %}selected{% endif %}>NA</option>
+                        <option value="Dup" {% if item.status == 'Dup' %}selected{% endif %}>Dup</option>
+                    </select>
+                </td>
+                <td><textarea class="item-note" onchange="markChanged(this)">{{ item.notes|safe }}</textarea></td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
 </div>
 {% endfor %}
 
 <script>
-// SORTING: Run this when the page loads
+const selectedDataFile = {{ selected_data_file | tojson }};
+
+// Keep direct selection working, but refresh should return to default route.
+if (window.location.search.includes('data_file=')) {
+    window.history.replaceState({}, document.title, '/triage_email_dashboard');
+}
+
+// Apply dup-row class to rows whose status is Dup
+function applyDupClass() {
+    document.querySelectorAll('tr[data-item-id]').forEach(tr => {
+        const sel = tr.querySelector('.status-select');
+        if (sel && sel.value === 'Dup') {
+            tr.classList.add('dup-row');
+        } else {
+            tr.classList.remove('dup-row');
+        }
+    });
+}
+
+let showDupRows = false;
+
+function updateDupToggleButton() {
+    const btn = document.getElementById('dup-toggle-btn');
+    if (!btn) return;
+    btn.textContent = showDupRows ? 'Hide' : 'Show';
+    btn.style.background = showDupRows ? '#d1242f' : '#1f6feb';
+}
+
+function toggleDupRows(forceShow = null) {
+    showDupRows = forceShow === null ? !showDupRows : forceShow;
+    document.querySelectorAll('tr.dup-row').forEach(tr => {
+        tr.style.display = showDupRows ? 'table-row' : 'none';
+    });
+    updateDupToggleButton();
+}
+
+// SORTING & INDEXING: Run this when the page loads
 document.querySelectorAll('table').forEach(table => {
-    let rows = Array.from(table.querySelectorAll('tr'));
+    let tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    
+    let rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // 1. Sort elements alphabetically based on server name
     rows.sort((a, b) => a.dataset.server.localeCompare(b.dataset.server));
-    rows.forEach(row => table.appendChild(row));
+    
+    // 2. Append sorted rows back and calculate reset index sequence
+    rows.forEach((row, index) => {
+        tbody.appendChild(row);
+        let indexCell = row.querySelector('.row-index');
+        if (indexCell) {
+            const link = indexCell.querySelector('a');
+            if (link) {
+                link.textContent = index + 1;
+            } else {
+                indexCell.textContent = index + 1;
+            }
+        }
+    });
+    
+    // 3. Setup column sorting
+    const headers = table.querySelectorAll('th.sortable');
+    headers.forEach((header, colIndex) => {
+        let sortState = {}; // Track sort state per column
+        
+        header.addEventListener('click', () => {
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr[data-item-id]'));
+            
+            // Determine sort direction
+            let isAsc = sortState.dir !== 'asc';
+            sortState.dir = isAsc ? 'asc' : 'desc';
+            
+            // Clear sort indicators from all headers
+            headers.forEach(h => {
+                h.classList.remove('sort-asc', 'sort-desc');
+            });
+            
+            // Add indicator to current header
+            header.classList.add(isAsc ? 'sort-asc' : 'sort-desc');
+            
+            // Sort rows based on column content
+            rows.sort((rowA, rowB) => {
+                let cellA = rowA.cells[colIndex];
+                let cellB = rowB.cells[colIndex];
+                
+                let valueA = cellA ? cellA.textContent.trim() : '';
+                let valueB = cellB ? cellB.textContent.trim() : '';
+                
+                // Try to parse as number
+                let numA = parseFloat(valueA);
+                let numB = parseFloat(valueB);
+                
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return isAsc ? numA - numB : numB - numA;
+                }
+                
+                // Try to parse as date (DDMMMHH:MM:SS format)
+                if (colIndex === 1) { // Timestamp column
+                    let dateA = parseCustomDate(valueA);
+                    let dateB = parseCustomDate(valueB);
+                    if (dateA && dateB) {
+                        return isAsc ? dateA - dateB : dateB - dateA;
+                    }
+                }
+                
+                // Default: string comparison
+                return isAsc ? 
+                    valueA.localeCompare(valueB) : 
+                    valueB.localeCompare(valueA);
+            });
+            
+            // Reorder rows in DOM
+            rows.forEach((row, idx) => {
+                tbody.appendChild(row);
+                // Update index numbers
+                let indexCell = row.querySelector('.row-index a');
+                if (indexCell) indexCell.textContent = idx + 1;
+            });
+        });
+    });
 });
+
+// Helper function to parse "DDMMMHH:MM:SS" format dates
+function parseCustomDate(dateStr) {
+    const match = dateStr.match(/(\d{2})(\w{3})\s+(\d{2}):(\d{2}):(\d{2})/);
+    if (!match) return null;
+    
+    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    const [, day, month, hour, min, sec] = match;
+    const monthIdx = months.indexOf(month.toUpperCase());
+    
+    if (monthIdx === -1) return null;
+    
+    // Create a comparable timestamp (ignoring year since we don't have it)
+    return new Date(2000, monthIdx, parseInt(day), parseInt(hour), parseInt(min), parseInt(sec)).getTime();
+}
 
 function markChanged(el) {
     let tr = el.closest('tr');
     tr.classList.add('changed');
+    tr.classList.remove('saved-confirm');
     tr.classList.remove('status-processed'); // Remove green if they start editing again
+    // Re-apply dup visibility if status changed
+    if (el.classList.contains('status-select')) {
+        if (el.value === 'Dup') {
+            tr.classList.add('dup-row');
+            tr.style.display = showDupRows ? '' : 'none';
+            // Auto-save when Dup is selected (without reloading)
+            saveAll(false);
+        } else {
+            tr.classList.remove('dup-row');
+            tr.style.display = '';
+        }
+    }
 }
 
-function saveAll() {
-    let updates = { items: [], common_notes: {} };
+function saveAll(shouldReload = true) {
+    let updates = { items: [], common_notes: {}, data_file: selectedDataFile };
 
-    // 1. Collect Table Changes (Now captures multiline from textarea)
+    // 1. Collect Table Changes
     document.querySelectorAll('.changed').forEach(tr => {
         updates.items.push({
             section: tr.dataset.section,
             item_id: tr.dataset.itemId,
             status: tr.querySelector('.status-select').value,
-            notes: tr.querySelector('.item-note').value // Captures multiline
+            notes: tr.querySelector('.item-note').value
         });
     });
 
-    // 2. Collect Common Notes (Now captures multiline from textarea)
+    // 2. Collect Common Notes
     document.querySelectorAll('.common-note').forEach(textarea => {
-        updates.common_notes[textarea.dataset.section] = textarea.value; // Captures multiline
+        updates.common_notes[textarea.dataset.section] = textarea.value;
     });
 
     fetch('/triage_email_api/update_batch', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(updates)
-    }).then(r => r.json()).then(() => location.reload());
+    }).then(r => r.json()).then(() => {
+        // When saving without reload, mark edited rows as saved for visual confirmation.
+        document.querySelectorAll('tr.changed').forEach(tr => {
+            tr.classList.remove('changed');
+            tr.classList.add('saved-confirm');
+            tr.classList.add('status-processed');
+        });
+        if (shouldReload) location.reload();
+    });
 }
+
+// Filter by timestamp in 2nd column
+function filterByTimestamp() {
+    const filterText = document.getElementById('timestamp-filter').value.toLowerCase();
+    
+    // Get all rows across all tables
+    const allRows = document.querySelectorAll('tr[data-item-id]');
+    
+    allRows.forEach(row => {
+        // Get the 2nd column (Timestamp) - it's the cell at index 1
+        const timestampCell = row.cells[1];
+        const timestampText = timestampCell ? timestampCell.textContent.toLowerCase() : '';
+        
+        if (filterText === '') {
+            // Show all rows if filter is empty
+            row.style.display = '';
+        } else if (timestampText.includes(filterText)) {
+            // Show rows that match the filter
+            row.style.display = '';
+        } else {
+            // Hide rows that don't match
+            row.style.display = 'none';
+        }
+    });
+    
+    // Hide sections with no visible rows
+    document.querySelectorAll('.section-container').forEach(section => {
+        const visibleRows = section.querySelectorAll('tr[data-item-id]').length;
+        const hiddenRows = section.querySelectorAll('tr[data-item-id][style*="display: none"]').length;
+        
+        // If all rows are hidden in this section, hide the entire section
+        if (visibleRows > 0 && hiddenRows === visibleRows) {
+            section.style.display = 'none';
+        } else {
+            section.style.display = '';
+        }
+    });
+}
+
+// On page load: mark dup rows and keep them hidden by default
+applyDupClass();
+toggleDupRows(false);
+
 function setupHoverPreview() {
     const tooltip = document.createElement('div');
     tooltip.className = 'preview-tooltip';
@@ -144,4 +439,19 @@ function setupHoverPreview() {
         link.addEventListener('mouseleave', () => tooltip.style.display = 'none');
     });
 }
+
+document.querySelectorAll('th.resizable').forEach(th => {
+    let isResizing = false;
+    let startX, startWidth;
+    th.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startX = e.pageX;
+        startWidth = th.offsetWidth;
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        th.style.width = (startWidth + (e.pageX - startX)) + 'px';
+    });
+    document.addEventListener('mouseup', () => { isResizing = false; });
+});
 </script>

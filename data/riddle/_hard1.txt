@@ -1,0 +1,14 @@
+you and your friend will be thrown to a dungeon in turns. 
+There are lot of door locked with 3 digit number. 
+Clue will be given only once as loud as you can hear. 
+As your friend is smarter he goes first. 
+Your friend select a door to unlock. 
+First Clue: Multiplication of 3 number is 36. And the number is small to large. 123 possible but 132 not possible. 
+Next Clue: your door number is the SUM of the 3 numbers in your lock.
+He still couldnt open the door waited for next clue. 
+Last clue: largest number is unique. then he escape
+Now your turn but no more clue. Unfortunately you dont know which door your friend choosen. 
+***
+229
+***
+without last clue your friend couldnt escape. Why? 

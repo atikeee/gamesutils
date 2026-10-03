@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Market Watchlist</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --paper:    #f5f0e8;
+    --paper2:   #ede8de;
+    --ink:      #1a1814;
+    --ink-mid:  #4a4540;
+    --ink-soft: #8a8278;
+    --rule:     #d8d0c4;
+    --up:       #1a7a4a;
+    --up-bg:    #e8f5ee;
+    --dn:       #c0392b;
+    --dn-bg:    #fdecea;
+    --amber:    #c87800;
+    --amber-bg: #fff4e0;
+    --teal:     #0e6b7c;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .site-header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    gap: 1.5rem;
+  }
+
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    letter-spacing: .02em;
+    white-space: nowrap;
+  }
+
+  .logo span { color: #f0c040; }
+
+  .header-nav { display: flex; gap: .5rem; }
+
+  .nav-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem;
+    letter-spacing: .08em;
+    padding: .4rem .9rem;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,.2);
+    color: rgba(255,255,255,.75);
+    background: transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all .15s;
+  }
+
+  .nav-btn:hover,
+  .nav-btn.active { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.4); }
+
+  .refresh-badge {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-family: 'DM Mono', monospace;
+    font-size: .65rem;
+    color: rgba(255,255,255,.45);
+    white-space: nowrap;
+  }
+
+  .pulse-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #4cdb8a;
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+  /* ── SUBHEADER ── */
+  .sub-header {
+    background: var(--paper2);
+    border-bottom: 1px solid var(--rule);
+    padding: .65rem 2rem;
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  .sub-header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.05rem;
+    font-weight: 400;
+    color: var(--ink);
+  }
+
+  .count-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: .65rem;
+    background: var(--amber-bg);
+    color: var(--amber);
+    border: 1px solid #f0d080;
+    border-radius: 100px;
+    padding: .15rem .5rem;
+  }
+
+  .sub-header-right { margin-left: auto; font-size: .8rem; color: var(--ink-soft); }
+
+  .period-selector { display: flex; gap: .3rem; margin-left: auto; }
+  .period-selector button { font-family: 'DM Mono', monospace; font-size: .65rem; padding: .3rem .6rem; border: 1px solid var(--rule); border-radius: 3px; background: transparent; color: var(--ink-soft); cursor: pointer; }
+  .period-selector button:hover, .period-selector button.active { background: var(--teal); border-color: var(--teal); color: #fff; }
+
+  /* ── GRID ── */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border-top: 1px solid var(--rule);
+  }
+
+  /* ── STOCK CARD ── */
+  .stock-card {
+    background: var(--paper);
+    padding: 1.4rem 1.6rem 1.2rem;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+    transition: background .15s;
+    position: relative;
+  }
+
+  .stock-card:hover { background: #faf6ef; }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .card-sym {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--teal);
+    line-height: 1;
+  }
+
+  .card-name {
+    font-size: .78rem;
+    color: var(--ink-soft);
+    margin-top: .2rem;
+    line-height: 1.3;
+  }
+
+  .card-price-block { display: flex; align-items: center; justify-content: flex-end; gap: .55rem; white-space: nowrap; }
+
+  .card-price {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.25rem;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--ink);
+  }
+
+  .card-change {
+    font-family: 'DM Mono', monospace;
+    font-size: .75rem;
+    margin-top: 0;
+    display: inline-block;
+    padding: .15rem .45rem;
+    border-radius: 3px;
+  }
+
+  .card-change.up { background: var(--up-bg); color: var(--up); }
+  .card-change.dn { background: var(--dn-bg); color: var(--dn); }
+
+  /* sparkline */
+  .spark-wrap {
+    height: 64px;
+    position: relative;
+  }
+
+  .spark-wrap canvas { width: 100% !important; height: 100% !important; }
+
+  .spark-label { position: absolute; right: 0; z-index: 1; font-family: 'DM Mono', monospace; font-size: .55rem; color: var(--ink-soft); background: rgba(245,240,232,.8); padding: 0 .2rem; }
+  .spark-label.max { top: 0; }.spark-label.min { bottom: 0; }
+
+  .holding-summary { border-top: 1px solid var(--rule); padding-top: .4rem; color: var(--ink-soft); font-family: 'DM Mono', monospace; font-size: .63rem; }
+  .holding-summary .profit { color: var(--up); font-weight: 500; }.holding-summary .loss { color: var(--dn); font-weight: 500; }
+
+  /* card loading / error */
+  .card-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 130px;
+    color: var(--ink-soft);
+    font-size: .78rem;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: .05em;
+  }
+
+  .card-error {
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem;
+    color: var(--dn);
+    padding: .5rem 0;
+  }
+
+  /* shimmer placeholder */
+  .shimmer-block {
+    background: linear-gradient(90deg, var(--paper2) 25%, var(--rule) 50%, var(--paper2) 75%);
+    background-size: 300% 100%;
+    animation: shimmer 1.6s infinite;
+    border-radius: 3px;
+  }
+
+  @keyframes shimmer { to { background-position: -300% 0; } }
+
+  /* empty state */
+  .empty-state {
+    grid-column: 1 / -1;
+    padding: 5rem 2rem;
+    text-align: center;
+  }
+
+  .empty-state h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: var(--ink-mid);
+    margin-bottom: .75rem;
+  }
+
+  .empty-state p { color: var(--ink-soft); font-size: .9rem; margin-bottom: 1.5rem; }
+
+  .empty-state a {
+    display: inline-block;
+    background: var(--ink);
+    color: var(--paper);
+    padding: .65rem 1.5rem;
+    border-radius: 4px;
+    font-size: .85rem;
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity .15s;
+  }
+
+  .empty-state a:hover { opacity: .8; }
+
+  /* timestamp strip */
+  .timestamp-strip {
+    border-top: 1px solid var(--rule);
+    padding: .6rem 2rem;
+    font-family: 'DM Mono', monospace;
+    font-size: .65rem;
+    color: var(--ink-soft);
+  }
+
+  @media (max-width: 680px) { .sub-header { flex-wrap: wrap; }.period-selector { order: 3; flex-basis: 100%; margin-left: 0; }.sub-header-right { margin-left: 0; } }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo">Market<span>·</span>Desk</div>
+  <nav class="header-nav">
+    <a class="nav-btn active" href="/stocks">Watchlist</a>
+    <a class="nav-btn" href="/stocks/select">Manage</a>
+  </nav>
+  <div class="refresh-badge">
+    <div class="pulse-dot"></div>
+    <span id="refresh-label">refreshing in 60s</span>
+  </div>
+</header>
+
+<div class="sub-header">
+  <h1>My Watchlist</h1>
+  <span class="count-badge" id="count-badge">{{ watchlist|length }} stocks</span>
+  <div class="period-selector" role="group" aria-label="Chart duration">
+    <button type="button" class="period-choice active" data-period="1wk">1 Week</button>
+    <button type="button" class="period-choice" data-period="1mo">1 Month</button>
+    <button type="button" class="period-choice" data-period="6mo">6 Months</button>
+  </div>
+  <span class="sub-header-right" id="updated-at"></span>
+</div>
+
+<div class="cards-grid" id="cards-grid">
+  {% if watchlist %}
+    {% for s in watchlist %}
+    <a class="stock-card" href="/stocks/detail/{{ s.symbol }}" id="card-{{ s.symbol }}" data-symbol="{{ s.symbol }}">
+      <div class="card-loading shimmer-block" style="height:120px;border-radius:4px;"></div>
+    </a>
+    {% endfor %}
+  {% else %}
+  <div class="empty-state">
+    <h2>Your watchlist is empty</h2>
+    <p>Add stocks to track them here.</p>
+    <a href="/stocks/select">Add Stocks →</a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="timestamp-strip" id="ts-strip"></div>
+
+<script>
+const watchlist = {{ watchlist | tojson }};
+const charts    = {};
+let selectedPeriod = '1wk';
+
+function fmtPrice(n, dec=2) {
+  return n == null ? '—' : Number(n).toLocaleString(undefined, {minimumFractionDigits: dec, maximumFractionDigits: dec});
+}
+
+function fmtHoldingPrice(n) {
+  return n == null ? '—' : Number(n).toLocaleString(undefined, {maximumFractionDigits: 2});
+}
+
+function renderCard(sym, d) {
+  const card = document.getElementById(`card-${sym}`);
+  if (!card) return;
+  const holding = watchlist.find(item => item.symbol === sym) || {};
+  const quantity = Number(holding.quantity || 0);
+  const purchasePrice = Number(holding.price || 0);
+  const profitLoss = quantity && purchasePrice ? (d.price - purchasePrice) * quantity : null;
+  const validCloses = (d.closes || []).filter(value => value != null).map(Number);
+  const minPrice = validCloses.length ? Math.min(...validCloses) : null;
+  const maxPrice = validCloses.length ? Math.max(...validCloses) : null;
+  const pnlClass = profitLoss == null ? '' : profitLoss >= 0 ? 'profit' : 'loss';
+
+  const isUp = d.change >= 0;
+  const arrow = isUp ? '▲' : '▼';
+  const chgText = `${arrow} ${fmtPrice(Math.abs(d.change))} (${fmtPrice(Math.abs(d.pct))}%)`;
+
+  card.innerHTML = `
+    <div class="card-top">
+      <div>
+        <div class="card-sym" title="${d.name}">${d.symbol}</div>
+      </div>
+      <div class="card-price-block">
+        <div class="card-price">${fmtPrice(d.price)}</div>
+        <div class="card-change ${isUp ? 'up' : 'dn'}">${chgText}</div>
+      </div>
+    </div>
+    <div class="spark-wrap"><span class="spark-label max">MAX ${fmtPrice(maxPrice)}</span><span class="spark-label min">MIN ${fmtPrice(minPrice)}</span><canvas id="spark-${sym}"></canvas></div>
+    <div class="holding-summary" aria-label="${sym} holding">Cost: ${purchasePrice ? fmtHoldingPrice(purchasePrice) : '—'} x ${quantity ? quantity.toLocaleString() : '—'} &nbsp; Profit: <span class="${pnlClass}">${profitLoss == null ? '—' : `${profitLoss >= 0 ? '+' : ''}${fmtHoldingPrice(profitLoss)}`}</span></div>
+  `;
+
+  // draw sparkline
+  const ctx = document.getElementById(`spark-${sym}`);
+  const color = isUp ? '#1a7a4a' : '#c0392b';
+  const fillColor = isUp ? 'rgba(26,122,74,.08)' : 'rgba(192,57,43,.08)';
+
+  if (charts[sym]) charts[sym].destroy();
+  charts[sym] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: d.dates,
+      datasets: [{
+        data: d.closes,
+        borderColor: color,
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: .4,
+        fill: true,
+        backgroundColor: fillColor,
+      }, {
+        data: Array(d.closes.length).fill(minPrice),
+        borderColor: '#c87800', borderWidth: 1, borderDash: [4, 3], pointRadius: 0, fill: false,
+      }, {
+        data: Array(d.closes.length).fill(maxPrice),
+        borderColor: '#0e6b7c', borderWidth: 1, borderDash: [4, 3], pointRadius: 0, fill: false,
+      }]
+    },
+    options: {
+      responsive: false,
+      animation: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: {
+        x: { display: true, ticks: { display: false }, grid: { display: true, drawBorder: false, color: 'rgba(216,208,196,.7)', lineWidth: 1 } },
+        y: { display: false }
+      },
+      layout: { padding: 0 }
+    }
+  });
+}
+
+function renderCardError(sym, msg) {
+  const card = document.getElementById(`card-${sym}`);
+  if (!card) return;
+  card.innerHTML = `
+    <div class="card-top">
+      <div>
+        <div class="card-sym">${sym}</div>
+        <div class="card-name">—</div>
+      </div>
+    </div>
+    <div class="card-error">⚠ ${msg}</div>
+  `;
+}
+
+async function fetchSpark(sym) {
+  try {
+    const res  = await fetch(`/stocks/api/spark?symbol=${sym}&period=${selectedPeriod}`);
+    const json = await res.json();
+    if (json.status === 'success') renderCard(sym, json.data);
+    else renderCardError(sym, json.message || 'Failed to load');
+  } catch(e) {
+    renderCardError(sym, 'Network error');
+  }
+}
+
+async function refreshAll() {
+  const now = new Date();
+  document.getElementById('updated-at').textContent =
+    `Last updated ${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+  document.getElementById('ts-strip').textContent =
+    `Data fetched at ${now.toLocaleString()}`;
+  await Promise.all(watchlist.map(s => fetchSpark(s.symbol)));
+}
+
+document.querySelectorAll('.period-choice').forEach(button => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('.period-choice').forEach(item => item.classList.remove('active'));
+    button.classList.add('active');
+    selectedPeriod = button.dataset.period;
+    refreshAll();
+  });
+});
+
+// countdown
+let secs = 60;
+const label = document.getElementById('refresh-label');
+setInterval(() => {
+  secs--;
+  label.textContent = `refreshing in ${secs}s`;
+  if (secs <= 0) {
+    secs = 60;
+    refreshAll();
+  }
+}, 1000);
+
+// initial load
+if (watchlist.length) refreshAll();
+</script>
+</body>
+</html>

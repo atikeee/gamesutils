@@ -1574,7 +1574,7 @@ body.catan-setup-page {
         height: auto;
         min-height: 100vh;
         margin: 0 !important;
-        padding: 12px !important;
+        padding: 2px !important;
         overflow-x: hidden;
     }
 
@@ -1582,7 +1582,7 @@ body.catan-setup-page {
         width: 100% !important;
         min-height: 0;
         margin: 0;
-        padding: 12px;
+        padding: 2px;
         align-items: stretch;
         gap: 12px;
     }
@@ -1706,6 +1706,9 @@ body.catan-setup-page {
         max-width: 100%;
         height: auto;
         margin: 0;
+        box-sizing: border-box;
+        border-width: 1px;
+        border-radius: 4px;
         flex-shrink: 1;
         overflow: hidden;
         order: 5;
@@ -1721,7 +1724,10 @@ body.catan-setup-page {
         width: 100% !important;
         max-width: 100% !important;
         height: auto !important;
-        aspect-ratio: 1.2 / 1;
+        box-sizing: border-box;
+        border: 0;
+        border-radius: 0;
+        aspect-ratio: 0.95 / 1;
     }
 
     .catan-player-page .message-box {

@@ -1,0 +1,7 @@
+What letter(s) not needed to write all numbers from one to hundred? 
+***
+J Q Z
+***
+Z in zero but not anymore. 
+
+

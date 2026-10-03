@@ -1,0 +1,9 @@
+Find what is true or false. answer all at once. example answer: TF--F
+A) south africa has 2 capitals.
+B) Canada has longest coastline on earth. 
+C) world tallest monument is statue of liberty. 
+D) National animal of scotland is unicorn. 
+E) Delaware is the samllest US state.
+***
+FTFTF
+***

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>🎧 Play Media</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 2rem; }
+    #videoBox {
+      width: 600px;
+      height: 340px;
+      background-color: #ccc;
+      margin: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    #videoBox video {
+      width: 100%;
+      height: 100%;
+      display: none;
+    }
+    .controls {
+      margin-top: 1rem;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 0 10px;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+    #filename {
+      margin-top: 20px;
+      font-weight: bold;
+      font-size: 1.2rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🎧 Play Media (Audio Only Mode)</h2>
+
+  <div id="videoBox">
+    <video id="mediaPlayer" controls>
+      <source id="mediaSource" src="" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+    <div id="grayPlaceholder">Audio Playing...</div>
+  </div>
+
+  <div class="controls">
+    <button onclick="prev()">⬅️ Prev</button>
+    <button id="playPauseBtn" onclick="togglePlay()">▶️ Play</button>
+    <button onclick="next()">Next ➡️</button>
+  </div>
+
+  <div style="margin-top: 2rem;">
+    <button onclick="showSolution()" style="padding: 10px 30px;">🎬 Show Solution</button>
+  </div>
+
+  <div id="filename"></div>
+
+  <script>
+    const mediaFiles = {{ media_files|tojson }};
+    let currentIndex = 0;
+    let isSolution = false;
+
+    const player = document.getElementById('mediaPlayer');
+    const source = document.getElementById('mediaSource');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const filenameLabel = document.getElementById('filename');
+    const grayBox = document.getElementById('grayPlaceholder');
+
+    function loadMedia(index, reveal = false) {
+      isSolution = reveal;
+      const filename = mediaFiles[index];
+      const url = "/vdo/" + filename;
+
+      source.src = url;
+      player.load();
+
+      // Default: play audio only
+      if (!reveal) {
+        player.style.display = "none";
+        grayBox.style.display = "flex";
+        filenameLabel.style.display = "none";
+      } else {
+        player.style.display = "block";
+        grayBox.style.display = "none";
+        filenameLabel.innerText =  filename;
+        filenameLabel.style.display = "block";
+      }
+
+      playPauseBtn.textContent = "▶️ Play";
+    }
+
+    function togglePlay() {
+      if (player.paused) {
+        player.play();
+        playPauseBtn.textContent = "⏸️ Pause";
+      } else {
+        player.pause();
+        playPauseBtn.textContent = "▶️ Play";
+      }
+    }
+
+    function next() {
+      if (currentIndex < mediaFiles.length - 1) {
+        currentIndex++;
+        loadMedia(currentIndex);
+      }
+    }
+
+    function prev() {
+      if (currentIndex > 0) {
+        currentIndex--;
+        loadMedia(currentIndex);
+      }
+    }
+
+    function showSolution() {
+      loadMedia(currentIndex, true);
+    }
+
+    // Auto-load first item
+    window.onload = () => loadMedia(currentIndex);
+  </script>
+
+</body>
+</html>

@@ -5,20 +5,24 @@ from lxml import html
 import re
 import sys
 import os
-# test of commit
+#************************************************#
+# NOTE: THIS IS BEING USED BY routes_ppp_tool.py #
+# ***********************************************#
+
 # Define the output file path globally or pass it as an argument
 OUTPUT_FILE = "zzz.m3u"
-ERROR_FILE = "error.txt"
-INPUT_FILE = "_input.txt"
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+ERROR_FILE = os.path.join(DATA_DIR, "error.txt")
+INPUT_FILE = os.path.join(DATA_DIR, "_input.txt")
 
 def process_links(beg, end):
     """
-    Processes links from '_input.txt', extracts video information,
+    Processes links from 'data/_input.txt', extracts video information,
     writes the formatted output to 'zzz.m3u', and returns a status message.
 
     Args:
-        beg (int): The starting line number (1-indexed) to process from _input.txt.
-        end (int): The ending line number (1-indexed) to process from _input.txt.
+        beg (int): The starting line number (1-indexed) to process from data/_input.txt.
+        end (int): The ending line number (1-indexed) to process from data/_input.txt.
 
     Returns:
         str: A status message indicating success or failure, including file path if successful.

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Review Saved Words</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 2rem;
+            background-color: #f9f9f9;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            font-size: 1.8rem;
+        }
+
+        .word-section {
+            max-width: 600px;
+            margin: 2rem auto;
+            background-color: #fff;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .word-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .word-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background-color: #fdfdfd;
+            font-size: 1.5rem; /* increased font size for words */
+        }
+
+        .word-item form {
+            margin: 0;
+        }
+
+        .word-item button {
+            padding: 8px 14px;
+            font-size: 1.5rem; /* increased font size for icon buttons */
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .word-item button.plus {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .word-item button.cross {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .ok-btn-container {
+            text-align: center;
+            margin-top: 2.5rem;
+        }
+
+        .ok-btn-container button {
+            padding: 12px 28px;
+            font-size: 1.3rem;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="word-section">
+        <h2>Saved Words for: {{ player }}</h2>
+        <div class="word-list">
+            {% for word in pf_cur_savedwords %}
+            <div class="word-item">
+                {{ word }}
+                <form method="post">
+                    <input type="hidden" name="savedwords" value="{{ word }}">
+                    <button type="submit" class="plus">✖</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="word-section">
+        <h2>Skipped Words for: {{ player }}</h2>
+        <div class="word-list">
+            {% for word in pf_cur_skippedwords %}
+            <div class="word-item">
+                {{ word }}
+                <form method="post">
+                    <input type="hidden" name="skippedwords" value="{{ word }}">
+                    <button type="submit" class="cross">➕</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="ok-btn-container">
+        <form method="post" action="/panchforon/next_player_confirm">
+            <input type="hidden" name="confirmed" value="yes">
+            <button type="submit">OK</button>
+        </form>
+    </div>
+</body>
+</html>
