@@ -4,18 +4,16 @@ import random
 from flask import jsonify, redirect, render_template, request, url_for
 from dashboard import PROJECT_ROOT, dashboard_tile
 
-from storage import (
-    pf_cards,
-    pf_cur_savedwords,
-    pf_cur_skippedwords,
-    pf_deck,
-    pf_level,
-    pf_player_idx,
-    pf_players,
-    pf_score,
-    pf_timer,
-    pf_word_idx,
-)
+pf_players = []
+pf_cards = {}
+pf_deck = []
+pf_timer = [5, 5, 5]
+pf_level = 1
+pf_player_idx = 0
+pf_word_idx = 0
+pf_score = {}
+pf_cur_savedwords = []
+pf_cur_skippedwords = []
 
 
 def configure_routes_panchforon(app, socketio):

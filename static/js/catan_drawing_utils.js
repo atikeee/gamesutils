@@ -310,6 +310,105 @@ function drawCity(ctx, junction, color, offsetX, offsetY) {
     ctx.fillRect(x + size / 5, y - size / 2 - 5, size / 5, 5);
 }
 
+function drawCityWall(ctx, junction, color, offsetX, offsetY) {
+    const x = junction.x + offsetX;
+    const y = junction.y + offsetY;
+    const left = x - CITY_SIZE * 0.78;
+    const right = x + CITY_SIZE * 0.78;
+    const top = y - CITY_SIZE * 1.34;
+    const bottom = y + CITY_SIZE * 0.68;
+    const battlementHeight = CITY_SIZE * 0.22;
+    const merlonWidth = CITY_SIZE * 0.24;
+    const merlonStep = CITY_SIZE * 0.53;
+
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'square';
+    ctx.beginPath();
+    ctx.moveTo(left, bottom);
+    ctx.lineTo(left, top + battlementHeight);
+    for (let merlon = 0; merlon < 3; merlon++) {
+        const merlonX = left + merlon * merlonStep;
+        ctx.lineTo(merlonX, top + battlementHeight);
+        ctx.lineTo(merlonX, top);
+        ctx.lineTo(merlonX + merlonWidth, top);
+        ctx.lineTo(merlonX + merlonWidth, top + battlementHeight);
+    }
+    ctx.lineTo(right, top + battlementHeight);
+    ctx.lineTo(right, bottom);
+    ctx.closePath();
+
+    ctx.strokeStyle = '#18242b';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.restore();
+}
+
+function drawKnight(ctx, junction, color, offsetX, offsetY, level = 1, active = false) {
+    const x = junction.x + offsetX;
+    const y = junction.y + offsetY;
+    const knightLevel = Math.max(1, Math.min(3, Number(level) || 1));
+    const radius = 11 + (knightLevel - 1) * 4;
+
+    ctx.save();
+    if (active) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius + 3, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ffe34d';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#ffe34d';
+        ctx.shadowBlur = 8;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    }
+
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = '#18242b';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    for (let ring = 1; ring < knightLevel; ring++) {
+        const ringRadius = radius * (ring === 1 ? 0.62 : 0.28);
+        ctx.beginPath();
+        ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = '#fff8df';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawMerchant(ctx, tile, color, offsetX, offsetY) {
+    const pixel = hexToPixel(tile.q, tile.r, offsetX, offsetY);
+    const x = pixel.x + TILE_RADIUS * 0.42;
+    const y = pixel.y;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x, y - 15);
+    ctx.lineTo(x - 10, y + 7);
+    ctx.quadraticCurveTo(x - 11, y + 15, x, y + 15);
+    ctx.quadraticCurveTo(x + 11, y + 15, x + 10, y + 7);
+    ctx.closePath();
+    ctx.fillStyle = color || '#333';
+    ctx.strokeStyle = '#172027';
+    ctx.lineWidth = 2;
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.ellipse(x, y + 7, 7, 2.5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.fill();
+    ctx.restore();
+}
+
 function drawRobber(ctx, tile, offsetX, offsetY) {
     const pixel = hexToPixel(tile.q, tile.r, offsetX, offsetY);
     const x = pixel.x;

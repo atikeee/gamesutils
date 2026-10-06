@@ -4,7 +4,8 @@ from random import shuffle
 from flask import make_response, redirect, render_template, request
 from dashboard import dashboard_tile
 
-from storage import buzzer_entries, name_locks
+buzzer_entries = []
+name_locks = {}
 
 
 def configure_routes_buzzer(app, socketio):

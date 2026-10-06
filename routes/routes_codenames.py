@@ -5,7 +5,14 @@ import re
 from flask import jsonify, redirect, render_template, request, session, url_for
 from dashboard import PROJECT_ROOT, dashboard_tile
 
-from storage import codenames_spy_password, current_game, hint_log
+hint_log = []
+codenames_spy_password = 'xxx'
+current_game = {
+    'words': [],
+    'colors': [],
+    'revealed': set(),
+    'team': 'red',
+}
 
 
 def configure_routes_codenames(app, socketio):

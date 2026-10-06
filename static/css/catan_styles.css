@@ -589,9 +589,10 @@ body.catan-player-page.has-player-color {
 }
 
 body.catan-setup-page {
+    width: 100%;
     min-height: 100vh;
-    margin: 0;
-    padding: 28px 20px;
+    margin: 0 !important;
+    padding: 28px 20px !important;
     background: #f2f6f4;
     color: #263d38;
     font-family: Inter, sans-serif;
@@ -733,7 +734,8 @@ body.catan-setup-page {
 
 @media (max-width: 600px) {
     body.catan-setup-page {
-        padding: 20px 16px;
+        display: block;
+        padding: 20px 16px !important;
     }
 
     .catan-join-form {
@@ -747,29 +749,32 @@ body.catan-setup-page {
 }
 
 .catan-player-page .player-action-toolbar {
-    display: grid;
-    grid-template-columns: repeat(6, 44px);
+    display: flex;
+    flex-wrap: nowrap;
     justify-content: center;
-    gap: 8px;
-    width: 100%;
-    margin: 8px 0;
+    align-items: center;
+    gap: 6px;
+    width: max-content;
+    max-width: 100%;
+    margin: 8px auto;
+    white-space: nowrap;
 }
 
 .catan-player-page .player-action-toolbar .btn-tool {
     display: grid;
     place-items: center;
-    width: 44px;
-    min-width: 44px;
-    height: 44px;
-    min-height: 44px;
-    flex: none;
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+    flex: 0 0 38px;
     padding: 0;
     border: 1px solid #c9d7d3;
     border-radius: 7px;
     background-color: #f3f7f6;
     color: #29453e;
     box-shadow: none;
-    font-size: 1.05rem;
+    font-size: 0.95rem;
 }
 
 .catan-player-page .player-action-toolbar .btn-tool:hover {
@@ -1110,6 +1115,21 @@ body.catan-setup-page {
     justify-content: center;
     font-weight: bold;
 }
+
+#progressCardButton {
+    background-image: url('/static/images/catan/dev_card.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+    min-width: 92px;
+    min-height: 110px;
+    padding: 0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    font-size: 0;
+    text-indent: -9999px;
+}
 .resource-card-group {
     display: flex;
     flex-wrap: nowrap; /* Forces cards into a single row */
@@ -1174,8 +1194,29 @@ body.catan-setup-page {
 .resource-card[data-resource-type="rock"] {
     background-image: url('/static/images/catan/rock.jpg');
 }
+.catan2-player-page .resource-card[data-resource-type="coin"] {
+    background-image: url('/static/images/catan/coin.jpg');
+}
+.catan2-player-page .resource-card[data-resource-type="paper"] {
+    background-image: url('/static/images/catan/paper.jpg');
+}
+.catan2-player-page .resource-card[data-resource-type="cloth"] {
+    background-image: url('/static/images/catan/cloth.jpg');
+}
+.c2-progress-card,
 .dev-card[data-resource-type="development"] { /* This was for the button, now for the actual card */
     background-image: url('/static/images/catan/dev_card.jpg');
+}
+.c2-progress-card {
+    width: 80px;
+    height: 110px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    background-size: cover;
+    background-position: center;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    flex-shrink: 0;
+    position: relative;
 }
 .dev-card[data-card-type="knight"] {
     background-image: url('/static/images/catan/Knight.jpg');
@@ -1300,6 +1341,44 @@ body.catan-setup-page {
     animation: roll-animation 0.5s ease-in-out infinite alternate; /* Initial animation */
 }
 
+.dice-face.dice-red {
+    background-color: #b6423e;
+    color: #ffffff;
+}
+
+.dice-face.dice-yellow {
+    background-color: #f2cf4a;
+    color: #313b32;
+}
+
+.dice-face.dice-red .die-pip {
+    background: #ffffff;
+}
+
+.dice-face.dice-yellow .die-pip {
+    background: #313b32;
+}
+
+.catan2-event-die-face {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 46px;
+    height: 46px;
+    border: 1px solid #263238;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
+    background: transparent;
+}
+
+.catan2-event-die-face img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
 /* Keyframes for a simple rolling animation */
 @keyframes roll-animation {
     0% { transform: rotateY(0deg); opacity: 1; }
@@ -1373,7 +1452,7 @@ body.catan-setup-page {
     font: 600 1rem Inter, sans-serif;
 }
 
-.dice-overlay-pair {
+.dice-overlay-dice {
     display: flex;
     min-height: 84px;
     align-items: center;
@@ -1395,6 +1474,26 @@ body.catan-setup-page {
     box-sizing: border-box;
 }
 
+.dice-roll-overlay .dice-face.dice-red {
+    background: #b6423e;
+    border-color: #8e302d;
+}
+
+.dice-roll-overlay .dice-face.dice-yellow {
+    background: #f2cf4a;
+    border-color: #c1a532;
+}
+
+.dice-roll-overlay .dice-face.dice-red .die-pip { background: #ffffff; }
+.dice-roll-overlay .dice-face.dice-yellow .die-pip { background: #313b32; }
+
+.dice-roll-overlay .catan2-event-die-face {
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
+    font-size: 38px;
+}
+
 .dice-roll-overlay .die-pip {
     width: 11px;
     height: 11px;
@@ -1408,7 +1507,16 @@ body.catan-setup-page {
     animation-delay: 70ms;
 }
 
+.dice-roll-overlay.is-rolling .catan2-event-die-face {
+    animation: dice-overlay-tumble 330ms ease-in-out infinite alternate;
+    animation-delay: 140ms;
+}
+
 .dice-roll-overlay.is-result .dice-face {
+    animation: dice-result-land 260ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+
+.dice-roll-overlay.is-result .catan2-event-die-face {
     animation: dice-result-land 260ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
 }
 
@@ -1424,7 +1532,9 @@ body.catan-setup-page {
 
 @media (prefers-reduced-motion: reduce) {
     .dice-roll-overlay.is-rolling .dice-face,
-    .dice-roll-overlay.is-result .dice-face {
+    .dice-roll-overlay.is-result .dice-face,
+    .dice-roll-overlay.is-rolling .catan2-event-die-face,
+    .dice-roll-overlay.is-result .catan2-event-die-face {
         animation: none;
     }
 }
@@ -1451,6 +1561,19 @@ body.catan-setup-page {
     animation: none;
     box-sizing: border-box;
 }
+
+.catan-game-page #diceroll .dice-face.dice-red {
+    background: #b6423e;
+    border-color: #8e302d;
+}
+
+.catan-game-page #diceroll .dice-face.dice-yellow {
+    background: #f2cf4a;
+    border-color: #c1a532;
+}
+
+.catan-game-page #diceroll .dice-face.dice-red .die-pip { background: #ffffff; }
+.catan-game-page #diceroll .dice-face.dice-yellow .die-pip { background: #313b32; }
 
 .catan-player-page .die-pip,
 .catan-game-page .die-pip {
@@ -1655,19 +1778,21 @@ body.catan-setup-page {
     }
 
     .catan-player-page .player-action-toolbar {
-        display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
-        width: 100%;
+        display: flex;
+        flex-wrap: nowrap;
+        width: max-content;
+        max-width: 100%;
         gap: 4px;
-        margin: 0;
+        margin: 0 auto;
         order: 4;
+        overflow-x: auto;
     }
 
     .catan-player-page .player-action-toolbar .btn-tool {
-        width: min(100%, 44px);
-        min-width: 0;
-        min-height: 44px;
-        justify-self: center;
+        width: 38px;
+        min-width: 38px;
+        min-height: 38px;
+        flex: 0 0 38px;
     }
 
     .catan-player-page .player-action-toolbar .map-zoom-toggle {

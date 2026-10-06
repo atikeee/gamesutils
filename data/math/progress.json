@@ -16,5 +16,23 @@
       },
       "completed": true
     }
+  },
+  "4b3f4c3e-e26b-47c5-8e82-dce197ee04b1": {
+    "exponents/exponents-moderate": {
+      "answers": {
+        "q1": "128",
+        "q2": "",
+        "q3": "o",
+        "q4": "7",
+        "q5": "",
+        "q6": "",
+        "q7": "0.25",
+        "q8": "",
+        "q9": "",
+        "q10": "a"
+      },
+      "score": null,
+      "completed": false
+    }
   }
 }

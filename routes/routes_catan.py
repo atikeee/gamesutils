@@ -1,5 +1,4 @@
-from storage import *
-from dashboard import dashboard_tile
+from dashboard import PROJECT_ROOT, dashboard_tile
 from flask import abort, jsonify, redirect, render_template, request, session, url_for
 import hashlib
 import hmac
@@ -9,9 +8,10 @@ import secrets
 import string
 import random
 
-JSON_BOARD_STATE_FILE = "data/catan_board_state.json"
-JSON_PLAY_STATE_FILE = "data/catan_play_state.json"
-PLAYER_REGISTRY_FILE = "data/catan_player_registry.json"
+CATAN_DATA_DIR = os.path.join(PROJECT_ROOT, "data", "catan")
+JSON_BOARD_STATE_FILE = os.path.join(CATAN_DATA_DIR, "catan_board_state.json")
+JSON_PLAY_STATE_FILE = os.path.join(CATAN_DATA_DIR, "catan_play_state.json")
+PLAYER_REGISTRY_FILE = os.path.join(CATAN_DATA_DIR, "catan_player_registry.json")
 PLAYER_COLOR_OPTIONS = [
     {"name": "Red", "value": "#D64545"},
     {"name": "Black", "value": "#000000"},
@@ -160,7 +160,7 @@ def configure_routes_catan(app,socketio):
             return False
 
     # --- Catan Board Routes ---
-    @app.route('/catan_board')
+    @app.route('/catan/board')
     @dashboard_tile(section="board", title="Catan Board", description="Build and randomize a Catan hex board.", icon="map", order=10)
     def catan_board():
         """Renders the Catan board builder page using a template file."""
@@ -170,7 +170,7 @@ def configure_routes_catan(app,socketio):
             player_colors=get_catan_player_colors(),
         )
 
-    @app.route('/save_board', methods=['POST'])
+    @app.route('/catan/save_board', methods=['POST'])
     def save_board():
         """API endpoint to save the Catan board state."""
         if not board_editing_allowed():
@@ -185,7 +185,7 @@ def configure_routes_catan(app,socketio):
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    @app.route('/load_board', methods=['GET'])
+    @app.route('/catan/load_board', methods=['GET'])
     def load_board():
         """API endpoint to load the latest Catan board state."""
         try:
@@ -196,14 +196,14 @@ def configure_routes_catan(app,socketio):
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    @app.route("/catan_game")
+    @app.route("/catan/game")
     @dashboard_tile(section="board", title="Catan Game", description="Open the shared Catan game view.", icon="island", order=20)
     def catan_game():
         #board_json = load_latest_catan_board_state_from_json()
 
         return render_template("catan/catan_game.html", player_colors=get_catan_player_colors())
 
-    @app.route('/catan_player/', methods=['GET', 'POST'], strict_slashes=False)
+    @app.route('/catan/player/', methods=['GET', 'POST'], strict_slashes=False)
     @dashboard_tile(section="board", title="Catan Player", description="Register a player or open an existing player seat.", icon="players", order=30)
     def catan_player_lobby():
         error = None
@@ -301,7 +301,7 @@ def configure_routes_catan(app,socketio):
             error=error,
         )
 
-    @app.route('/catan_player/<player_code>', methods=['GET', 'POST'])
+    @app.route('/catan/player/<player_code>', methods=['GET', 'POST'])
     def catan_player(player_code):
         if len(player_code) != 5 or any(character not in string.ascii_uppercase + string.digits for character in player_code):
             abort(404)
@@ -370,7 +370,7 @@ def configure_routes_catan(app,socketio):
             error=error,
         )
 
-    @app.route('/save_play_state', methods=['POST'])
+    @app.route('/catan/save_play_state', methods=['POST'])
     def save_play_state():
         """API endpoint to save a specific player's state."""
         try:
@@ -384,7 +384,7 @@ def configure_routes_catan(app,socketio):
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    @app.route('/load_play_state', methods=['GET'])
+    @app.route('/catan/load_play_state', methods=['GET'])
     def load_play_state():
         """API endpoint to load a specific player's state."""
         try:
@@ -402,7 +402,7 @@ def configure_routes_catan(app,socketio):
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    @app.route('/catan_reset_game')
+    @app.route('/catan/reset_game')
     def reset_game():
         reset_state = {
             f"player{player_number}": {

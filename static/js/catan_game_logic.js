@@ -2,8 +2,8 @@ const canvas = document.getElementById('catanBoard');
 const ctx = canvas.getContext('2d');
 const messageBox = document.getElementById('messageBox');
 
-const isGamePage = window.location.pathname === '/catan_game';
-const isPlayerPage = window.location.pathname.startsWith('/catan_player/');
+const isGamePage = window.location.pathname === '/catan/game';
+const isPlayerPage = window.location.pathname.startsWith('/catan/player/');
 
 const PLAYER_ID = isPlayerPage && window.PLAYER_ID ? 'player' + window.PLAYER_ID : null;
 
@@ -501,7 +501,7 @@ async function saveBoardTilesToBackend() {
                 number: tile.number
             })),
         };
-        const response = await fetch('/save_board', {
+        const response = await fetch('/catan/save_board', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -529,7 +529,7 @@ async function saveBoardTilesToBackend() {
 
 async function loadBoardTilesFromBackend() {
     try {
-        const response = await fetch('/load_board');
+        const response = await fetch('/catan/load_board');
         const result = await response.json();
         boardEditingAllowed = result.editable === true;
         updateBoardEditingUI();
@@ -604,7 +604,7 @@ async function loadBoardTilesFromBackend() {
 async function saveAllPlayerStatesToBackend(forceSave = false) {
     if (!isGamePage || forceSave) {
         try {
-            const response = await fetch('/save_play_state', {
+            const response = await fetch('/catan/save_play_state', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -636,7 +636,7 @@ async function saveAllPlayerStatesToBackend(forceSave = false) {
 
 async function loadAllPlayerStatesFromBackend() {
     try {
-        const response = await fetch('/load_play_state');
+        const response = await fetch('/catan/load_play_state');
         
         const result = await response.json();
         if (result.status === 'success' && result.play_state) {
@@ -693,7 +693,7 @@ async function loadAllStatesFromBackend() {
 async function resetgame()
 {
     try {
-            const response = await fetch('/catan_reset_game', {
+            const response = await fetch('/catan/reset_game', {
 
             });
             const result = await response.json();

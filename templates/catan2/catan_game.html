@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cities &amp; Knights Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css') }}">
+    <style>
+        body.catan2-game-page { height: 100dvh; min-height: 0; overflow: hidden; }
+        .catan2-game-page .main-container {
+            display: grid;
+            grid-template-columns: minmax(0, 44fr) minmax(0, 36fr) minmax(0, 20fr);
+            height: 100%;
+            min-height: 0;
+            padding: 0;
+        }
+        .catan2-game-page .left-column,
+        .catan2-game-page .middle-column,
+        .catan2-game-page .right-column {
+            width: auto;
+            height: 100%;
+            min-width: 0;
+            min-height: 0;
+            max-width: none;
+            overflow: hidden;
+        }
+        .catan2-game-page .middle-column,
+        .catan2-game-page .right-column { gap: 8px; }
+        .catan2-game-page .right-column:not(:has([id$="log"] *)) { display: flex; }
+        .catan2-game-page .middle-section { flex: none; min-width: 0; margin: 0; padding: 10px; overflow: visible; }
+        .catan2-game-page #assignpoint { width: 100%; overflow: visible; }
+        .catan2-game-page #assignpoint table { width: 100%; table-layout: fixed; }
+        .catan2-game-page #assignpoint th,
+        .catan2-game-page #assignpoint td { padding: 6px 2px; font-size: 0.72rem; line-height: 1.2; overflow-wrap: anywhere; }
+        .catan2-game-page .c2-game-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+        .catan2-game-page .c2-game-heading h1 { min-width: 0; margin: 0; }
+        .catan2-game-page .dice-roll-section { flex: 0 0 auto; width: min(100%, 142px); }
+        .catan2-game-page #diceroll { width: 100%; min-height: 62px; }
+        .catan2-game-page #diceroll .dice-result { min-height: 52px; gap: 11px; }
+        .catan2-game-page #diceroll .dice-face,
+        .catan2-game-page #diceroll .catan2-event-die-face { width: 37px; height: 37px; }
+        .catan2-game-page #diceroll .dice-face { padding: 6px; }
+        .catan2-game-page #diceroll .die-pip { width: 6px; height: 6px; }
+        .catan2-game-page .c2-barbarian-track-section { order: 2; flex: 1 1 auto; min-height: 0; margin: 0; align-content: start; overflow: hidden; }
+        .catan2-game-page .c2-barbarian-track { width: min(100%, 390px, 44vh, calc(90dvh - 260px)); }
+        .catan2-game-page .c2-vp-footer {
+            display: flex;
+            flex: 0 0 auto;
+            flex-direction: column;
+            width: 100%;
+            min-height: 0;
+            max-width: none;
+            margin: 0;
+            padding: 12px;
+            overflow: hidden;
+        }
+        .catan2-game-page .c2-vp-award { display: grid; grid-template-columns: 1fr; gap: 6px; }
+        .catan2-game-page .c2-vp-award-button { width: 100%; min-height: 36px; padding: 6px 8px; }
+        .catan2-game-page .c2-vp-footer h2 { margin: 10px 0 6px; }
+        .catan2-game-page .c2-vp-log { flex: none; min-height: 0; max-height: 90px; overflow-y: auto; }
+        .catan2-game-page .c2-activity-section {
+            display: flex;
+            flex: 1 1 auto;
+            flex-direction: column;
+            min-height: 0;
+            padding: 8px 12px;
+            background: #fff;
+        }
+        .catan2-game-page .c2-activity-section h2 { margin: 0 0 6px; color: #29453e; font-size: 1.05rem; font-weight: 700; }
+        .catan2-game-page .c2-activity-log { flex: 1 1 auto; min-height: 0; margin: 0; padding: 0; list-style: none; overflow-y: auto; }
+        .catan2-game-page .c2-activity-log li {
+            padding: 4px 2px;
+            border-bottom: 1px solid #e7efeb;
+            color: #29453e;
+            font-size: 0.78rem;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+        .c2-game-mobile-tabs { display: none; }
+        .c2-barbarian-track-section {
+            display: grid;
+            justify-items: center;
+            gap: 8px;
+            margin: 12px 0;
+        }
+        .catan2-game-page #diceroll:empty {
+            border: 1px dashed #c9d7d3;
+            border-radius: 6px;
+            background: #f7faf9;
+        }
+        .c2-barbarian-track-section h2 {
+            margin: 0;
+            color: #29453e;
+            font-size: 1rem;
+        }
+        .c2-barbarian-track {
+            position: relative;
+            width: min(100%, 330px);
+            aspect-ratio: 557 / 618;
+            overflow: hidden;
+        }
+        .c2-barbarian-track-image {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+        }
+        .c2-barbarian-ship {
+            position: absolute;
+            z-index: 1;
+            display: grid;
+            place-items: center;
+            width: 48px;
+            aspect-ratio: 1;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: #111;
+            cursor: pointer;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            transition: left 180ms ease, top 180ms ease;
+            filter: drop-shadow(0 1px 1px #fff);
+        }
+        .c2-barbarian-ship i { font-size: 36px; }
+        .c2-barbarian-ship:focus-visible { outline: 3px solid #f1c40f; outline-offset: 2px; }
+        .c2-barbarian-track-control {
+            position: absolute;
+            z-index: 2;
+            width: min(24%, 80px);
+            aspect-ratio: 1;
+            padding: 0;
+            border: 0;
+            border-radius: 50%;
+            background: transparent;
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+        }
+        .c2-barbarian-track-control:focus-visible {
+            outline: 3px solid #f1c40f;
+        }
+        .c2-barbarian-track-forward { left: 14.4%; top: 86.1%; }
+        .c2-barbarian-track-backward { left: 84.7%; top: 13.4%; }
+        .c2-vp-footer {
+            max-width: 900px;
+            margin: 22px auto 10px;
+            padding: 20px 24px;
+            border-top: 3px solid #176b5b;
+            background: #fff;
+        }
+        .c2-vp-footer h2 { margin: 20px 0 10px; font-size: 1.05rem; font-weight: 700; color: #29453e; }
+        .c2-vp-award { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+        .c2-vp-award-button,
+        .c2-vp-choice {
+            min-height: 40px;
+            padding: 8px 12px;
+            border: 1px solid #176b5b;
+            border-radius: 6px;
+            background: #176b5b;
+            color: #fff;
+            cursor: pointer;
+        }
+        .c2-vp-choices {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .c2-vp-cancel { border-color: #c9d7d3; background: #f7faf9; color: #29453e; }
+        .c2-vp-choice[data-metropolis-player]:disabled { opacity: 0.38; cursor: not-allowed; }
+        .c2-metropolis-trade { border-color: #b39410; background: #d2b51d; color: #28281a; }
+        .c2-metropolis-politics { border-color: #205c9d; background: #3275bc; }
+        .c2-metropolis-science { border-color: #28723e; background: #37844a; }
+        .catan-game-page #assignpoint .c2-progress-level-heading { font-size: 0.72rem; line-height: 1.1; }
+        .catan-game-page #assignpoint .c2-progress-levels { white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .catan-game-page #assignpoint tr.c2-score-leader { background: #e1f1df; color: #244b39; font-weight: 700; }
+        .catan-game-page #assignpoint tr.c2-score-leader td:first-child { box-shadow: inset 4px 0 #c49c26; }
+        .catan-game-page #assignpoint tr.c2-score-inactive { opacity: 0.45; filter: grayscale(1); color: #8a9590; }
+        .catan2-game-page .canvas-wrapper.map-zoom-viewport { position: relative; }
+        .c2-start-game-button {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            z-index: 3;
+            min-width: 72px;
+            min-height: 40px;
+            padding: 6px 14px;
+            border: 2px solid #fff;
+            border-radius: 20px;
+            background: #1f9d55;
+            color: #fff;
+            font: 700 0.95rem Inter, sans-serif;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            cursor: pointer;
+        }
+        .c2-start-game-button:disabled { background: #b8c4bf; color: #eef3f1; cursor: not-allowed; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); }
+        .catan-game-page #assignpoint tr.c2-score-active { color: #c62828; font-weight: 700; }
+        .c2-progress-card-popup {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px;
+            background: rgba(20, 35, 31, 0.82);
+            color: #fff;
+            text-align: center;
+            cursor: pointer;
+        }
+        .c2-progress-card-popup[hidden] { display: none; }
+        .c2-progress-card-popup img { max-width: 60%; max-height: 65%; object-fit: contain; border-radius: 6px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5); }
+        .c2-progress-card-popup-player { font-size: 1.1rem; font-weight: 700; }
+        .c2-progress-card-popup-name { font-size: 1rem; font-weight: 600; }
+        .c2-vp-log { max-height: 320px; margin: 0; padding: 0 0 0 16px; overflow-y: auto; list-style: none; }
+        .c2-vp-log li { position: relative; padding: 4px 8px; border-left: 2px solid #c9d7d3; color: #29453e; font-size: 0.78rem; line-height: 1.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .c2-vp-log li::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: -6px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #d1a343;
+        }
+        .c2-vp-log .c2-vp-log-empty { color: #657972; }
+        .c2-vp-log .c2-vp-log-empty::before { background: #c9d7d3; }
+        @media (max-width: 900px) {
+            body.catan2-game-page { padding: 8px !important; }
+            .c2-game-mobile-tabs { display: flex; height: 40px; gap: 4px; margin-bottom: 8px; }
+            .c2-game-mobile-tabs button {
+                flex: 1;
+                border: 1px solid #c9d7d3;
+                border-radius: 4px;
+                background: #f7faf9;
+                color: #29453e;
+            }
+            .c2-game-mobile-tabs button[aria-pressed="true"] { border-color: #176b5b; background: #176b5b; color: #fff; }
+            .catan2-game-page .main-container { display: block; height: calc(100dvh - 64px); }
+            .catan2-game-page .main-container > .left-column,
+            .catan2-game-page .main-container > .middle-column,
+            .catan2-game-page .main-container > .right-column { display: none; width: 100%; height: 100%; }
+            .catan2-game-page[data-game-view="map"] .left-column,
+            .catan2-game-page[data-game-view="score"] .middle-column,
+            .catan2-game-page[data-game-view="log"] .right-column { display: flex; }
+            .catan2-game-page .c2-barbarian-track { width: min(100%, 286px, 42vh, calc(90dvh - 310px)); }
+            .catan2-game-page .c2-game-heading h1 { margin: 0; font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 catan-game-page catan2-game-page" data-game-view="map">
+    <nav class="c2-game-mobile-tabs" aria-label="Game views">
+        <button type="button" data-game-view="map" aria-controls="gameMapPanel" aria-pressed="true">Map</button>
+        <button type="button" data-game-view="score" aria-controls="gameScorePanel" aria-pressed="false">Score</button>
+        <button type="button" data-game-view="log" aria-controls="gameLogPanel" aria-pressed="false">Log</button>
+    </nav>
+    <div class="main-container">
+        <div class="left-column" id="gameMapPanel">
+            <div class="c2-game-heading">
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">Cities &amp; Knights Game</h1>
+                <div class="dice-roll-section">
+                    <div id="diceroll" aria-label="Last dice roll"></div>
+                </div>
+            </div>
+            <div class="map-zoom-controls">
+                <button type="button" class="map-zoom-toggle" id="mapZoomToggle" aria-pressed="false" title="Zoom map to 2x">2×</button>
+            </div>
+            <div class="canvas-wrapper map-zoom-viewport">
+                <button type="button" class="c2-start-game-button" id="startGameButton" disabled>Start</button>
+                <canvas id="catanBoard"></canvas>
+            </div>
+            <div id="messageBox" class="message-box"></div>
+        </div>
+        <div class="middle-column" id="gameScorePanel">
+            <section class="c2-barbarian-track-section" aria-labelledby="barbarianTrackTitle">
+                <h2 id="barbarianTrackTitle">Barbarian Ship Track</h2>
+                <div class="c2-barbarian-track" id="barbarianTrack">
+                    <img class="c2-barbarian-track-image" src="{{ url_for('static', filename='images/catan/barbarian_track.jpg') }}" alt="Cities &amp; Knights barbarian track">
+                    <span class="c2-barbarian-ship" id="barbarianShip" aria-hidden="true"><i class="fas fa-ship" aria-hidden="true"></i></span>
+                    <button type="button" class="c2-barbarian-track-control c2-barbarian-track-forward" id="advanceBarbarianShip" aria-label="Move barbarian ship forward" title="Move ship forward"></button>
+                    <button type="button" class="c2-barbarian-track-control c2-barbarian-track-backward" id="retreatBarbarianShip" aria-label="Move barbarian ship backward" title="Move ship backward"></button>
+                    <div class="c2-progress-card-popup" id="progressCardPopup" role="status" aria-live="polite" hidden>
+                        <div class="c2-progress-card-popup-player" id="progressCardPopupPlayer"></div>
+                        <img id="progressCardPopupImage" alt="">
+                        <div class="c2-progress-card-popup-name" id="progressCardPopupName"></div>
+                    </div>
+                </div>
+            </section>
+            <div class="middle-section">
+                <div class="assign-point-section mt-6">
+                    <div id="assignpoint">
+                    <!-- add couple of button-->
+                     <table class="w-full text-left table-auto border-collapse">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-700 uppercase text-sm leading-normal">
+                            <!-- Table Headers -->
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300 rounded-tl-lg">Name</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300">Score</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Resource and commodity cards - Progress cards">Cards</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Active knight strength">Knt</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Victory Points">VP</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Metropolises (2 points each)">Metro</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300 c2-progress-level-heading" title="Trade - Politics - Science">Prog Lvl</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-600 text-sm font-light">
+                        <!-- Row 1 -->
+                        <tr class="border-b border-gray-200 hover:bg-gray-100" data-player-id="player1">
+                            <td class="result" id="cell-0-0">Player 1</td>
+                            <td class="result" id="cell-0-1">0</td>
+                            <td class="result" id="cell-0-2">0-0</td>
+                            <td class="result" id="cell-0-3">0</td>
+                            <td class="result" id="cell-0-4">0</td>
+                            <td class="result" id="cell-0-5">0</td>
+                            <td class="result c2-progress-levels" id="cell-0-6">1-1-1</td>
+                        </tr>
+                        <!-- Row 2 -->
+                        <tr class="border-b border-gray-200 hover:bg-gray-100" data-player-id="player2">
+                            <td class="result" id="cell-1-0">Player 2</td>
+                            <td class="result" id="cell-1-1">0</td>
+                            <td class="result" id="cell-1-2">0-0</td>
+                            <td class="result" id="cell-1-3">0</td>
+                            <td class="result" id="cell-1-4">0</td>
+                            <td class="result" id="cell-1-5">0</td>
+                            <td class="result c2-progress-levels" id="cell-1-6">1-1-1</td>
+                        </tr>
+                        <!-- Row 3 -->
+                        <tr class="border-b border-gray-200 hover:bg-gray-100" data-player-id="player3">
+                            <td class="result" id="cell-2-0">Player 3</td>
+                            <td class="result" id="cell-2-1">0</td>
+                            <td class="result" id="cell-2-2">0-0</td>
+                            <td class="result" id="cell-2-3">0</td>
+                            <td class="result" id="cell-2-4">0</td>
+                            <td class="result" id="cell-2-5">0</td>
+                            <td class="result c2-progress-levels" id="cell-2-6">1-1-1</td>
+                        </tr>
+                        <!-- Row 4 -->
+                        <tr class="hover:bg-gray-100" data-player-id="player4">
+                            <td class="result" id="cell-3-0">Player 4</td>
+                            <td class="result" id="cell-3-1">0</td>
+                            <td class="result" id="cell-3-2">0-0</td>
+                            <td class="result" id="cell-3-3">0</td>
+                            <td class="result" id="cell-3-4">0</td>
+                            <td class="result" id="cell-3-5">0</td>
+                            <td class="result c2-progress-levels" id="cell-3-6">1-1-1</td>
+                        </tr>
+                    </tbody>
+                </table>
+                </div>
+                </div>
+            </div>
+        </div>
+        <div class="right-column" id="gameLogPanel">
+            <section class="c2-vp-footer" aria-labelledby="vpAwardLogTitle">
+                <div class="c2-vp-award">
+                    <button type="button" class="c2-vp-award-button" id="awardVpButton" aria-haspopup="dialog" aria-controls="awardVpModal">Victory Point</button>
+                    <button type="button" class="c2-vp-award-button" id="awardMetropolisButton">Metropolis</button>
+                    <button type="button" class="c2-vp-award-button" id="awardTitleButton">Longest Road</button>
+                </div>
+                <h2 id="vpAwardLogTitle">Awards</h2>
+                <ol class="c2-vp-log" id="vpAwardLog" aria-live="polite"></ol>
+            </section>
+            <section class="c2-activity-section" aria-labelledby="activityLogTitle">
+                <h2 id="activityLogTitle">Activity</h2>
+                <ol class="c2-activity-log" id="activityLog" aria-live="polite"></ol>
+            </section>
+        </div>
+        
+        
+    </div>
+    <div class="modal-overlay hidden" id="awardVpModal" role="dialog" aria-modal="true" aria-labelledby="awardVpTitle">
+        <div class="modal-content">
+            <h2 id="awardVpTitle">Victory Point</h2>
+            <div class="c2-vp-choices" id="awardVpChoices">
+                <button type="button" class="c2-vp-choice" data-award-vp="player1">Player 1</button>
+                <button type="button" class="c2-vp-choice" data-award-vp="player2">Player 2</button>
+                <button type="button" class="c2-vp-choice" data-award-vp="player3">Player 3</button>
+                <button type="button" class="c2-vp-choice" data-award-vp="player4">Player 4</button>
+                <button type="button" class="c2-vp-choice c2-vp-cancel" id="cancelAwardVp">Cancel</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay hidden" id="metropolisTrackModal" role="dialog" aria-modal="true" aria-labelledby="metropolisTrackTitle">
+        <div class="modal-content">
+            <h2 id="metropolisTrackTitle">Choose Metropolis</h2>
+            <div class="c2-vp-choices">
+                <button type="button" class="c2-vp-choice c2-metropolis-trade" data-metropolis-track="trade">Trade</button>
+                <button type="button" class="c2-vp-choice c2-metropolis-politics" data-metropolis-track="politics">Politics</button>
+                <button type="button" class="c2-vp-choice c2-metropolis-science" data-metropolis-track="science">Science</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay hidden" id="metropolisPlayerModal" role="dialog" aria-modal="true" aria-labelledby="metropolisPlayerTitle">
+        <div class="modal-content">
+            <h2 id="metropolisPlayerTitle">Choose Player</h2>
+            <div class="c2-vp-choices">
+                <button type="button" class="c2-vp-choice" data-metropolis-player="player1">Player 1</button>
+                <button type="button" class="c2-vp-choice" data-metropolis-player="player2">Player 2</button>
+                <button type="button" class="c2-vp-choice" data-metropolis-player="player3">Player 3</button>
+                <button type="button" class="c2-vp-choice" data-metropolis-player="player4">Player 4</button>
+                <button type="button" class="c2-vp-choice c2-vp-cancel" id="cancelMetropolisPlayer">Cancel</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay hidden" id="titlePlayerModal" role="dialog" aria-modal="true" aria-labelledby="titlePlayerTitle">
+        <div class="modal-content">
+            <h2 id="titlePlayerTitle">Longest Road</h2>
+            <div class="c2-vp-choices">
+                <button type="button" class="c2-vp-choice" data-title-player="player1">Player 1</button>
+                <button type="button" class="c2-vp-choice" data-title-player="player2">Player 2</button>
+                <button type="button" class="c2-vp-choice" data-title-player="player3">Player 3</button>
+                <button type="button" class="c2-vp-choice" data-title-player="player4">Player 4</button>
+                <button type="button" class="c2-vp-choice c2-vp-cancel" id="cancelTitlePlayer">Cancel</button>
+            </div>
+        </div>
+    </div>
+    <script>window.CATAN_PLAYER_COLORS = {{ player_colors|tojson }};</script>
+    <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan2_game_logic.js') }}"></script>
+</body>
+</html>

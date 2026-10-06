@@ -6,6 +6,7 @@ from routes.routes_delta import configure_routes_delta
 from routes.routes_ppp_tool import configure_routes_ppp_tool
 from routes.routes_panchforon import configure_routes_panchforon
 from routes.routes_catan import configure_routes_catan
+from routes.routes_catan2 import configure_routes_catan2
 from routes.routes_bridge import configure_routes_bridge
 from routes.routes_bridge_v2 import configure_routes_bridge_v2
 from routes.routes_links import configure_routes_links
@@ -32,6 +33,7 @@ configure_routes_ppp_tool(app)
 configure_routes_panchforon(app, socketio)
 configure_routes_links(app, socketio)
 configure_routes_catan(app,socketio)
+configure_routes_catan2(app, socketio)
 configure_routes_bridge(app, socketio) 
 configure_routes_launcher(app, socketio) 
 # Add the new Bridge V2 configuration

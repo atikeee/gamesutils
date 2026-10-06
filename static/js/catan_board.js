@@ -2,8 +2,8 @@
         const ctx = canvas.getContext('2d');
         const messageBox = document.getElementById('messageBox');
 
-        const isGamePage = window.location.pathname === '/catan_game';
-        const isPlayerPage = window.location.pathname.startsWith('/catan_player/');
+        const isGamePage = window.location.pathname === '/catan/game';
+        const isPlayerPage = window.location.pathname.startsWith('/catan/player/');
 
         const PLAYER_ID = isPlayerPage ? 'player' + window.PLAYER_ID : null;
 
@@ -719,7 +719,7 @@
                     portData: PORT_DATA,
                     robberTile: robberTile ? { q: robberTile.q, r: robberTile.r } : null
                 };
-                const response = await fetch('/save_board', {
+                const response = await fetch('/catan/save_board', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -740,7 +740,7 @@
 
         async function loadBoardFromBackend() {
             try {
-                const response = await fetch('/load_board');
+                const response = await fetch('/catan/load_board');
                 const result = await response.json();
                 if (result.status === 'success' && result.board_state) {
                     boardTiles = result.board_state.boardTiles;
