@@ -839,10 +839,15 @@
                         Selected: <span id="selectedCardCount">0</span> cards
                 </div>
                 <div id="transferDropButtons" class="button-group transfer-buttons">
-                        <!-- Buttons will be dynamically generated here by JavaScript -->
+			 <button type="button" class="btn btn-tool transfer-btn" data-transfer-slot="0" disabled>&nbsp;</button>
+                    <button type="button" class="btn btn-tool transfer-btn" data-transfer-slot="1" disabled>&nbsp;</button>
+                    <button type="button" class="btn btn-tool transfer-btn" data-transfer-slot="2" disabled>&nbsp;</button>
+                    <button type="button" class="btn btn-tool hand-selection-btn hand-selection-drop" data-hand-action="drop" disabled>Drop</button>
+                    <button type="button" class="btn btn-tool hand-selection-btn hand-selection-clear" data-hand-action="clear" disabled>Clear</button>
                 </div>
             </div>
         </div>
+	 <div aria-hidden="true" style="height: 120px; flex-shrink: 0; order: 8;"></div>
     </div>
 
     <div class="resource-selection-tray" id="resourceSelectionTray" hidden aria-live="polite">

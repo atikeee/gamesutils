@@ -2836,37 +2836,21 @@ function checkAndDeductCards(playerId, actionType, recordUndo = false) {
 }
 
 function renderTransferDropButtons() {
-    const transferDropButtonsDiv = document.getElementById('transferDropButtons');
-    if (!transferDropButtonsDiv) return; // Exit if the container doesn't exist
+	  const slots = document.querySelectorAll('#transferDropButtons [data-transfer-slot]');
+    if (!slots.length) return;
 
-    transferDropButtonsDiv.innerHTML = ''; // Clear existing buttons
-
-    // Get player IDs for other players
-    const otherPlayerIds = Object.keys(allPlayersData).filter(pId => pId !== PLAYER_ID && pId.startsWith('player'));
-
-    // Create buttons for other players
-    otherPlayerIds.forEach(pId => {
-        const button = document.createElement('button');
-        button.classList.add('btn', 'btn-tool', 'transfer-btn');
-        button.dataset.targetPlayer = pId;
-        button.textContent = `${allPlayersData[pId].playerName}`;
-        if (/^player/i.test(String(allPlayersData[pId].playerName || '').trim())) {
-            button.disabled = true;
-            button.title = 'Inactive seat';
-        }
-        transferDropButtonsDiv.appendChild(button);
-    });
-
-    [{ action: 'drop', label: 'Drop' }, { action: 'clear', label: 'Clear' }].forEach(({ action, label }) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.classList.add('btn', 'btn-tool', 'hand-selection-btn', `hand-selection-${action}`);
-        button.dataset.handAction = action;
-        button.textContent = label;
-        transferDropButtonsDiv.appendChild(button);
+    const otherPlayerIds = ['player1', 'player2', 'player3', 'player4'].filter(pId => pId !== PLAYER_ID && allPlayersData[pId]);
+    slots.forEach((button, index) => {
+        const pId = otherPlayerIds[index];
+        const name = pId ? String(allPlayersData[pId].playerName || pId) : '';
+        const inactive = !pId || /^player/i.test(name.trim());
+        button.dataset.targetPlayer = pId || '';
+        button.textContent = name || '\u00a0';
+        button.disabled = inactive;
+        button.title = inactive ? 'Inactive seat' : `Give selected cards to ${name}, or steal from ${name} when none are selected`;
     });
     updateHandSelectionButtons();
-}
+    }
 
 function updateHandSelectionButtons() {
     const count = selectedHandCards.length;
