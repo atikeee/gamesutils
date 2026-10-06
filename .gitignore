@@ -2,3 +2,5 @@
 /.gitignore
 bkp*
 /templates/triagemails/
+data/catan2/catan_play_state.json
+data/catan2/catan_player_registry.json
