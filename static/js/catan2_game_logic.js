@@ -2754,7 +2754,16 @@ if (isPlayerPage) {
         discardProgressCardModal.classList.add('hidden');
     });
     document.querySelector('.player-decks-section').addEventListener('click', async (event) => {
-        const target = event.target;
+        const target = event.target.closest('button');
+        if (!target || target.disabled) return;
+        if (target.dataset.handAction === 'drop') {
+            await transferOrDropSelectedCards(PLAYER_ID, 'NA');
+            return;
+        }
+        if (target.dataset.handAction === 'clear') {
+            clearResourceSelection('drop');
+            return;
+        }
         if (target.classList.contains('transfer-btn')) {
             const targetPlayerId = target.dataset.targetPlayer;
             if (selectedHandCards.length === 0) {
@@ -2848,6 +2857,28 @@ function renderTransferDropButtons() {
         transferDropButtonsDiv.appendChild(button);
     });
 
+    [{ action: 'drop', label: 'Drop' }, { action: 'clear', label: 'Clear' }].forEach(({ action, label }) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.classList.add('btn', 'btn-tool', 'hand-selection-btn', `hand-selection-${action}`);
+        button.dataset.handAction = action;
+        button.textContent = label;
+        transferDropButtonsDiv.appendChild(button);
+    });
+    updateHandSelectionButtons();
+}
+
+function updateHandSelectionButtons() {
+    const count = selectedHandCards.length;
+    const handCount = allPlayersData[PLAYER_ID]?.hand?.length || 0;
+    document.querySelectorAll('[data-hand-action]').forEach(button => {
+        button.disabled = count === 0;
+        button.title = button.dataset.handAction === 'drop'
+            ? (count ? `Drop ${count}/${handCount} selected card${count === 1 ? '' : 's'}` : 'Select hand cards to drop')
+            : 'Clear hand selection';
+    });
+    const dropButton = document.querySelector('[data-hand-action="drop"]');
+    if (dropButton) dropButton.textContent = count ? `Drop ${count}` : 'Drop';
 }
 function resizeCanvas() {
     if (isGamePage && canvas.parentElement.clientWidth === 0) return;
@@ -3138,7 +3169,9 @@ function updateResourceSelectionTray(mode = 'take') {
     }, {});
 
     tray.dataset.mode = mode;
-    tray.hidden = selectedResources.length === 0;
+    // Hand (drop) selections use the Drop/Clear buttons beside the transfer buttons instead of the tray.
+    tray.hidden = mode === 'drop' || selectedResources.length === 0;
+    updateHandSelectionButtons();
     total.textContent = mode === 'drop'
         ? `${selectedResources.length}/${allPlayersData[PLAYER_ID].hand.length} card${selectedResources.length === 1 ? '' : 's'} staged to drop`
         : `${selectedResources.length} card${selectedResources.length === 1 ? '' : 's'} selected`;
@@ -3164,9 +3197,9 @@ function updateResourceSelectionTray(mode = 'take') {
     });
 }
 
-function clearResourceSelection() {
+function clearResourceSelection(forcedMode) {
     const tray = document.getElementById('resourceSelectionTray');
-    const mode = tray.dataset.mode || 'take';
+    const mode = typeof forcedMode === 'string' ? forcedMode : tray.dataset.mode || 'take';
     if (mode === 'drop') {
         selectedHandCards = [];
         document.getElementById('selectedCardCount').textContent = '0';

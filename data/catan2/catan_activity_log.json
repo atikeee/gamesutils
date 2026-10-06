@@ -1,1 +1,1 @@
-[]
+[{"player": "Atiq", "message": "starts the game. Order: Atiq", "kind": "action"}, {"player": "Atiq", "message": "picked 2 Paper", "kind": "pick"}, {"player": "Atiq", "message": "upgraded science to level 1", "kind": "action"}, {"player": "Atiq", "message": "picked 1 Paper", "kind": "pick"}, {"player": "Atiq", "message": "upgraded science to level 2", "kind": "action"}]

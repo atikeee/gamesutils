@@ -10,6 +10,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css') }}">
     <style>
         .catan2-player-page .canvas-wrapper.map-zoom-viewport { position: relative; }
+        .catan2-player-page .player-action-toolbar .map-zoom-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
         .c2-awaiting-start .player-page-container > *:not(.c2-player-heading):not(.player-color-picker) {
             opacity: 0.45;
             filter: grayscale(0.6);
@@ -291,6 +297,9 @@
         }
         .c2-trade-choice { background: #31824b; }
         .catan2-player-page .transfer-btn:disabled { opacity: 0.4; filter: grayscale(1); cursor: not-allowed; }
+        .catan2-player-page .hand-selection-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .catan2-player-page .hand-selection-drop:not(:disabled) { border-color: #b3261e !important; background: #b3261e !important; color: #fff !important; }
+        .catan2-player-page .hand-selection-clear:not(:disabled) { border-color: #8a9590 !important; background: #f0f3f2 !important; color: #29453e !important; }
         .c2-deck-choice-modal.modal-content { width: auto; min-width: 0; max-width: max-content; padding: 12px; }
         .c2-deck-choices { display: flex; align-items: center; gap: 10px; }
         .c2-deck-choice {
@@ -602,7 +611,9 @@
             gap: 6px;
         }
         .catan2-player-page .player-decks-section .deck-display {
-            max-width: 420px;
+            width: 100%;
+            max-width: 950px;
+            margin-inline: auto;
             box-sizing: border-box;
         }
         .catan2-player-page #handCards .card-item {
@@ -610,9 +621,11 @@
             justify-self: center;
         }
         .c2-progress-books-section {
-            width: min(80%, 608px);
-            margin: 12px auto 18px;
+            width: 100%;
+            max-width: 950px;
+            margin: 4px auto 12px;
         }
+        .catan2-player-page .canvas-wrapper.map-zoom-viewport { margin-bottom: 0; }
         .c2-progress-books-section h2 {
             margin: 0 0 10px;
             color: #29453e;
@@ -693,7 +706,10 @@
                 font-size: 1rem;
                 box-sizing: border-box;
             }
-            .catan2-player-page .c2-progress-books-section { order: 6; width: 80%; }
+            /* Offset the container's 12px flex gap so the books sit right under the map. */
+            .catan2-player-page .c2-progress-books-section { order: 6; width: 100%; margin: -8px auto 0; }
+            .catan2-player-page #handCards,
+            .catan2-player-page #progressCards { max-width: none; }
             .catan2-player-page .player-decks-section { order: 7; }
         }
     </style>
@@ -783,8 +799,7 @@
             </div>
         </div>
 
-        <section class="c2-progress-books-section" aria-labelledby="progressBooksTitle">
-            <h2 id="progressBooksTitle">Progress</h2>
+        <section class="c2-progress-books-section" aria-label="Progress">
             <div class="c2-progress-books">
                 <button type="button" class="c2-progress-book" data-progress-book="trade">
                     <span class="c2-progress-book-title">Trade</span>
