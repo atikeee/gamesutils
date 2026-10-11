@@ -10,3 +10,5 @@ pyyaml
 gunicorn
 yfinance
 obd
+pywin32>=306; sys_platform == "win32"
+beautifulsoup4>=4.12.0

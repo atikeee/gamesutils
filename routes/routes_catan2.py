@@ -448,6 +448,11 @@ def configure_routes_catan2(app, socketio):
         except (OSError, ValueError, json.JSONDecodeError) as exception:
             return f"Could not load player slots: {exception}", 500
 
+        try:
+            game_started = json.loads(load_play_state_from_json() or '{}').get('_gameStarted') is True
+        except (OSError, ValueError, json.JSONDecodeError) as exception:
+            return f"Could not load game state: {exception}", 500
+
         if request.method == 'POST':
             name = (request.form.get('name') or '').strip()
             passphrase = request.form.get('passphrase') or ''
@@ -465,6 +470,8 @@ def configure_routes_catan2(app, socketio):
                         session['catan2_player_access'] = list(authorized_codes)
                         return redirect(url_for('catan2_player', player_code=existing_player['code']))
                     error = 'That name is already registered. Enter its passphrase to open the player link.'
+                elif game_started:
+                    error = 'The game has already started. New players cannot join.'
                 elif len(registry['players']) >= 4:
                     error = 'All four player seats are filled. Use your registered name and passphrase to open your link.'
                 else:
@@ -531,12 +538,13 @@ def configure_routes_catan2(app, socketio):
 
         players_by_seat = {player['seat']: player for player in registry['players']}
         seats = [
-            {'seat': seat, 'name': players_by_seat.get(seat, {}).get('name')}
+            {'seat': seat, 'name': players_by_seat.get(seat, {}).get('name'), 'code': players_by_seat.get(seat, {}).get('code')}
             for seat in range(1, 5)
         ]
         return render_template(
             'catan2/catan_player_lobby.html',
             seats=seats,
+            game_started=game_started,
             error=error,
         )
 
@@ -554,6 +562,19 @@ def configure_routes_catan2(app, socketio):
 
         authorized_codes = set(session.get('catan2_player_access', []))
         error = None
+        if request.args.get('verify') == '1':
+            if request.method == 'POST':
+                passphrase = request.form.get('passphrase') or ''
+                if verify_player_passphrase(passphrase, player['passphrase_salt'], player['passphrase_hash']):
+                    authorized_codes.add(player_code)
+                    session['catan2_player_access'] = list(authorized_codes)
+                    if request.accept_mimetypes.best == 'application/json':
+                        return jsonify({'url': url_for('catan2_player', player_code=player_code)})
+                    return redirect(url_for('catan2_player', player_code=player_code))
+                error = 'Incorrect passphrase.'
+                if request.accept_mimetypes.best == 'application/json':
+                    return jsonify({'error': error}), 401
+            return render_template('catan2/catan_player_access.html', player_name=player['name'], error=error), 401 if error else 200
         if request.method == 'POST':
             if player_code not in authorized_codes:
                 passphrase = request.form.get('passphrase') or ''
