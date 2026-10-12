@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ player_name }}</title>
+    <title>Catan Player {{ player_name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -23,7 +23,7 @@
                 <label class="player-color-option{% if not option.available %} unavailable{% endif %}">
                     <input type="radio" name="color" value="{{ option.value }}" {% if not option.available %}disabled{% endif %} required>
                     <span class="player-color-swatch" style="--player-color: {{ option.value }}"></span>
-                    <span>{{ option.name }}<span class="player-color-status">{% if not option.available %} (taken){% endif %}</span></span>
+                    <span>{{ option.name }}{% if not option.available %} (taken){% endif %}</span>
                 </label>
                 {% endfor %}
                 <button type="submit">Save color</button>
@@ -35,7 +35,7 @@
         <div class="canvas-wrapper map-zoom-viewport">
             <canvas id="catanBoard"></canvas>
         </div>
-        <div class="map-overlay map-top-left"><button type="button" class="btn-tool" id="turnButton" data-state="waiting" title="Not your turn" aria-label="Not your turn" disabled><i class="fas fa-xmark" aria-hidden="true"></i></button></div>
+        <div class="map-overlay map-top-left"><button type="button" class="btn-tool" id="turnButton" data-state="waiting" title="Not your turn" aria-label="Not your turn" disabled><i class="fas fa-circle" aria-hidden="true"></i></button></div>
         <div class="map-overlay map-top-right"><button type="button" class="map-zoom-toggle" id="mapZoomToggle" aria-pressed="false" title="Zoom in" aria-label="Zoom in">+</button></div>
         <div class="player-action-toolbar map-overlay map-bottom-left" id="player-tool-select" role="toolbar" aria-label="Game actions">
             <button type="button" class="btn-tool" data-tool="city" title="City" aria-label="City"><i class="fas fa-city" aria-hidden="true"></i></button>
@@ -48,7 +48,8 @@
         <div id="messageBox" class="message-box"></div>
 
         <div class="controls player-controls">
-            <div class="card-buttons">
+            <div class="card-buttons mt-4">
+                <h3 class="text-xl font-semibold text-gray-700 mb-2">Take Resources:</h3>
                 <div class="resource-card-group">
                     <!-- Resource Cards -->
                     <div class="resource-card" data-resource-type="wood">
@@ -72,6 +73,18 @@
                     </div>
                     
                 </div>
+                <div id="resourceSelectionSlot">
+                    <div class="resource-selection-tray" id="resourceSelectionTray" hidden aria-live="polite">
+                        <div class="resource-selection-summary">
+                            <strong id="resourceSelectionTotal">0 cards selected</strong>
+                            <span id="resourceSelectionDetails"></span>
+                        </div>
+                        <div class="resource-selection-actions">
+                            <button type="button" class="resource-tray-confirm" id="confirmResourceSelection" disabled>Take cards</button>
+                            <button type="button" class="resource-tray-clear" id="clearResourceSelection">Clear Selection</button>
+                        </div>
+                    </div>
+                </div>
                 <!-- The original dev card button is removed as it's now a div within the group -->
             </div>
         </div>
@@ -83,19 +96,21 @@
                 <div id="devCards" class="card-list concealed"></div>
             </div>
         </div>
-    </div>
-
-    <div class="resource-selection-tray" id="resourceSelectionTray" hidden aria-live="polite">
-        <div class="resource-selection-summary">
-            <strong id="resourceSelectionTotal">0 cards selected</strong>
-            <span id="resourceSelectionDetails"></span>
+        <div id="handSelectionSlot">
+            <div class="resource-selection-tray hand-selection-panel" id="handSelectionPanel" hidden aria-live="polite">
+                <div class="resource-selection-summary">
+                    <strong id="handSelectionTotal">0 cards selected</strong>
+                    <span id="handSelectionDetails"></span>
+                </div>
+                <div class="resource-selection-actions">
+                    <button type="button" class="resource-tray-confirm resource-tray-drop" id="dropSelectedCards" disabled>Drop Cards</button>
+                    <button type="button" class="resource-tray-clear" id="clearHandSelection">Clear Selection</button>
+                    <div id="transferDropButtons" class="button-group transfer-buttons"></div>
+                </div>
+            </div>
         </div>
-        <div class="resource-selection-actions">
-            <button type="button" class="resource-tray-confirm" id="confirmResourceSelection" disabled>Take cards</button>
-            <button type="button" class="resource-tray-clear" id="clearResourceSelection">Clear Selection</button>
-            <div id="transferDropButtons" class="button-group transfer-buttons"></div>
-        </div>
     </div>
+    <div class="player-content-spacer" aria-hidden="true"></div>
 
     <!-- Custom Confirmation Modal -->
     <div id="confirmationModal" class="modal-overlay hidden">
@@ -123,3 +138,4 @@
     <script src="{{ url_for('static', filename='js/catan_game_logic.js') }}"></script>
 </body>
 </html>
+

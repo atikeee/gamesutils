@@ -2095,7 +2095,8 @@ body.catan-setup-page {
 .catan-player-page .map-top-left { top: 8px; left: 8px; align-items: center; }
 .catan-player-page .map-top-right { top: 8px; right: 8px; }
 .catan-player-page .map-bottom-left { bottom: 8px; left: 8px; }
-.catan-player-page .player-action-toolbar.map-bottom-left { display: grid; grid-template-columns: repeat(2, 38px); width: auto; max-width: none; margin: 0; overflow: visible; }
+.catan-player-page .player-action-toolbar.map-bottom-left { display: grid; grid-template-columns: repeat(2, 38px); width: auto; max-width: none; margin: 0; padding: 0; overflow: visible; background: transparent; pointer-events: none; }
+.catan-player-page .map-bottom-left .btn-tool { pointer-events: auto; }
 .catan-player-page .map-bottom-left [data-tool="city"] { grid-column: 1; grid-row: 1; }
 .catan-player-page .map-bottom-left [data-tool="house"] { grid-column: 1; grid-row: 2; }
 .catan-player-page .map-bottom-left [data-tool="road"] { grid-column: 2; grid-row: 2; }
@@ -2126,8 +2127,11 @@ body.catan-setup-page {
 .catan-player-page .player-decks-section .deck-display { border-radius: 6px; padding: 6px; }
 .catan-player-page .player-decks-section .card-list { min-height: 0; padding: 3px; }
 .catan-player-page .player-decks-section .card-list:empty { display: none; }
-.catan-player-page .resource-selection-tray { width: min(720px, calc(100% - 24px)); flex-direction: column; align-items: stretch; gap: 6px; }
+.catan-player-page .player-content-spacer { display: block; flex: none; width: 100%; height: 165px; min-height: 165px; }
+.catan-player-page #resourceSelectionSlot, .catan-player-page #handSelectionSlot { width: 100%; }
+.catan-player-page .resource-selection-tray { position: static !important; inset: auto; z-index: auto; flex: 0 0 100%; width: 100%; max-width: 950px; margin: 6px auto 0; flex-direction: column; align-items: stretch; gap: 6px; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12); }
 .catan-player-page .resource-selection-actions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; width: 100%; }
+.catan-player-page #resourceSelectionTray .resource-selection-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .catan-player-page .resource-selection-actions #transferDropButtons { display: contents; }
 .catan-player-page .resource-selection-actions #transferDropButtons[hidden] { display: none; }
 .catan-player-page .resource-selection-actions button { min-width: 0; min-height: 34px; padding: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.68rem; line-height: 1.2; }
@@ -2152,11 +2156,14 @@ body.catan-setup-page {
 .catan-game-page #roadChoices { position: absolute; z-index: 10; }
 .catan-game-page #roadChoices[hidden] { display: none; }
 @media (max-width: 768px) {
+    .catan-player-page .player-content-spacer { height: 165px; min-height: 165px; }
     .catan-player-page .player-page-container { display: flex; flex-direction: column; }
     .catan-player-page .player-page-container > h1 { order: 0; }
     .catan-player-page .player-color-picker { order: 1; }
     .catan-player-page .player-map-shell { order: 2; width: 100%; }
     .catan-player-page .player-controls { order: 3; }
     .catan-player-page .player-decks-section { order: 4; }
+    .catan-player-page #handSelectionSlot { order: 5; }
+    .catan-player-page .player-content-spacer { order: 6; }
 }
 

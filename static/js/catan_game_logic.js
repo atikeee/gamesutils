@@ -1299,7 +1299,8 @@ if (isPlayerPage) {
         });
     });
 
-    document.getElementById('clearResourceSelection').addEventListener('click', clearResourceSelection);
+    document.getElementById('clearResourceSelection').addEventListener('click', () => clearResourceSelection('take'));
+    document.getElementById('clearHandSelection').addEventListener('click', () => clearResourceSelection('drop'));
     document.getElementById('toggleDevCards').addEventListener('click', event => {
         const cards = document.getElementById('devCards');
         const button = event.currentTarget;
@@ -1323,11 +1324,11 @@ if (isPlayerPage) {
     document.querySelector('.player-map-shell .map-undo').addEventListener('click', undoPlayerLastAction);
 
     document.getElementById('confirmResourceSelection').addEventListener('click', () => {
-        if (document.getElementById('resourceSelectionTray').dataset.mode === 'drop') {
-            transferOrDropSelectedCards(PLAYER_ID, 'NA');
-        } else {
-            commitPendingResourceCards();
-        }
+        commitPendingResourceCards();
+    });
+
+    document.getElementById('dropSelectedCards').addEventListener('click', () => {
+        transferOrDropSelectedCards(PLAYER_ID, 'NA');
     });
 
     document.getElementById('transferDropButtons').addEventListener('click', async event => {
@@ -1594,11 +1595,12 @@ function updatePlayerUI() {
         
 }
 function updateResourceSelectionTray(mode = 'take') {
-    const tray = document.getElementById('resourceSelectionTray');
-    const total = document.getElementById('resourceSelectionTotal');
-    const details = document.getElementById('resourceSelectionDetails');
-    const confirmButton = document.getElementById('confirmResourceSelection');
-    const selectedResources = mode === 'drop' ? selectedHandCards : pendingResourceCards;
+    const handMode = mode === 'drop';
+    const tray = document.getElementById(handMode ? 'handSelectionPanel' : 'resourceSelectionTray');
+    const total = document.getElementById(handMode ? 'handSelectionTotal' : 'resourceSelectionTotal');
+    const details = document.getElementById(handMode ? 'handSelectionDetails' : 'resourceSelectionDetails');
+    const confirmButton = document.getElementById(handMode ? 'dropSelectedCards' : 'confirmResourceSelection');
+    const selectedResources = handMode ? selectedHandCards : pendingResourceCards;
     const counts = selectedResources.reduce((result, resourceType) => {
         result[resourceType] = (result[resourceType] || 0) + 1;
         return result;
@@ -1606,16 +1608,14 @@ function updateResourceSelectionTray(mode = 'take') {
 
     tray.dataset.mode = mode;
     tray.hidden = selectedResources.length === 0;
-    document.getElementById('transferDropButtons').hidden = mode !== 'drop';
-    total.textContent = mode === 'drop'
+    if (handMode) document.getElementById('transferDropButtons').hidden = false;
+    total.textContent = handMode
         ? `${selectedResources.length} card${selectedResources.length === 1 ? '' : 's'} staged to drop`
         : `${selectedResources.length} card${selectedResources.length === 1 ? '' : 's'} selected`;
     details.textContent = Object.entries(counts)
         .sort(([first], [second]) => ['wood', 'brick', 'rock', 'sheep', 'hay'].indexOf(first) - ['wood', 'brick', 'rock', 'sheep', 'hay'].indexOf(second))
         .map(([resourceType, count]) => `${count}${({ wood: 'W', brick: 'B', rock: 'R', sheep: 'S', hay: 'H' })[resourceType] || resourceType[0].toUpperCase()}`)
         .join(' ');
-    confirmButton.textContent = mode === 'drop' ? 'Drop Cards' : 'Take cards';
-    confirmButton.classList.toggle('resource-tray-drop', mode === 'drop');
     confirmButton.disabled = selectedResources.length === 0;
     document.querySelectorAll('.player-controls .resource-card').forEach(card => {
         const count = mode === 'take' ? counts[card.dataset.resourceType] || 0 : 0;
@@ -1632,9 +1632,8 @@ function updateResourceSelectionTray(mode = 'take') {
     });
 }
 
-function clearResourceSelection() {
-    const tray = document.getElementById('resourceSelectionTray');
-    const mode = tray.dataset.mode || 'take';
+function clearResourceSelection(forcedMode) {
+    const mode = forcedMode || document.querySelector('.resource-selection-tray:not([hidden])')?.dataset.mode || 'take';
     if (mode === 'drop') {
         selectedHandCards = [];
         document.getElementById('selectedCardCount').textContent = '0';
@@ -2208,3 +2207,4 @@ window.addEventListener('load', async () => {
     }
 });
 window.addEventListener('resize', resizeCanvas);
+
