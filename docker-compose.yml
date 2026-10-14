@@ -1,0 +1,24 @@
+services:
+  gamesutils:
+    image: python:3.11-slim
+    container_name: gamesutils
+    working_dir: /app
+    command:
+      - bash
+      - -c
+      - pip install -r requirements.txt && python app.py
+    ports:
+      - "5000:5000"
+    volumes:
+      - /volume1/docker/gamesutils:/app:rw
+      - /volume1/photos1:/photos1:rw
+      - /volume2/Media:/Media:rw
+      - /volume2/Photos-temp:/Photo-temp:rw
+    restart: unless-stopped
+    networks:
+      - default
+
+networks:
+  default:
+    name: gamesutils_default
+    external: true

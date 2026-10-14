@@ -34,8 +34,8 @@ def catan_registry_locked(handler):
         with CATAN_REGISTRY_LOCK:
             return handler(*args, **kwargs)
     return locked_handler
-#DEV_CARD_COUNTS = {'knight': 14, 'victory_point': 5, 'road_building': 2, 'year_of_plenty': 2, 'monopoly': 2}
-DEV_CARD_COUNTS = {'knight': 1, 'victory_point': 1, 'road_building': 1, 'year_of_plenty': 2, 'monopoly': 2}
+DEV_CARD_COUNTS = {'knight': 14, 'victory_point': 5, 'road_building': 2, 'year_of_plenty': 2, 'monopoly': 2}
+#DEV_CARD_COUNTS = {'knight': 1, 'victory_point': 1, 'road_building': 1, 'year_of_plenty': 2, 'monopoly': 2}
 
 
 def ensure_catan_dev_deck(state):
