@@ -16,7 +16,7 @@
             justify-content: center;
             line-height: 1;
         }
-        .c2-awaiting-start .player-page-container > *:not(.c2-player-heading):not(.player-color-picker) {
+        .c2-awaiting-start .player-page-container > *:not(.c2-player-heading):not(.player-color-picker):not(.c2-player-start-button) {
             opacity: 0.45;
             filter: grayscale(0.6);
             pointer-events: none;
@@ -37,6 +37,28 @@
             pointer-events: none;
         }
         .c2-awaiting-start-banner[hidden] { display: none; }
+        .c2-player-start-button {
+            position: fixed;
+            z-index: 1301;
+            left: 50%;
+            bottom: calc(max(16px, env(safe-area-inset-bottom)) + 52px);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 46px;
+            padding: 10px 22px;
+            border: 2px solid #fff;
+            border-radius: 999px;
+            background: #1f9d55;
+            color: #fff;
+            font: 700 1rem Inter, sans-serif;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+            transform: translateX(-50%);
+            cursor: pointer;
+        }
+        .c2-player-start-button:hover:not(:disabled) { background: #18834a; }
+        .c2-player-start-button:disabled { background: #8fa59b; cursor: wait; }
+        .c2-player-start-button[hidden] { display: none; }
         #boardPieceActionModal.c2-compact-action-modal .modal-content { width: auto; min-width: 0; max-width: max-content; padding: 10px; gap: 6px; }
         .c2-compact-action-text { font-size: 0.85rem; font-weight: 600; text-align: center; color: #29453e; }
         .c2-compact-action-modal .c2-board-piece-action-choices { margin: 0; }
@@ -736,6 +758,7 @@
         </section>
         {% endif %}
         <div class="c2-awaiting-start-banner" id="awaitingStartBanner" role="status" hidden>Waiting for the game to start…</div>
+        <button type="button" class="c2-player-start-button" id="startGameButton" title="Randomize the player order and start the game" hidden><i class="fas fa-play" aria-hidden="true"></i> Start game</button>
 
         <div class="controls player-controls">
             <div class="card-buttons mt-4">

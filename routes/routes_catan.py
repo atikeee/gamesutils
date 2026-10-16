@@ -1,5 +1,5 @@
 from dashboard import PROJECT_ROOT, dashboard_tile
-from flask import abort, jsonify, redirect, render_template, request, session, url_for
+from flask import abort, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from collections import Counter
 from functools import wraps
 import hashlib
@@ -21,7 +21,7 @@ PLAYER_COLOR_OPTIONS = [
     {"name": "Green", "value": "#218C63"},
     {"name": "Yellow", "value": "#F1C40F"},
     {"name": "Purple", "value": "#8B5FBF"},
-    {"name": "Teal", "value": "#168E9A"},
+    {"name": "Blue", "value": "#2563EB"},
 ]
 DEFAULT_PLAYER_COLORS = [option["value"] for option in PLAYER_COLOR_OPTIONS[:4]]
 STARTING_HAND = []
@@ -67,6 +67,9 @@ def load_catan_player_registry():
         registry = json.load(registry_file)
     if not isinstance(registry, dict) or not isinstance(registry.get('players'), list):
         raise ValueError('Invalid Catan player registry.')
+    for player in registry['players']:
+        if player.get('color') == '#168E9A':
+            player['color'] = '#2563EB'
     return registry
 
 
@@ -256,15 +259,11 @@ def configure_routes_catan(app,socketio):
             return False
 
     # --- Catan Board Routes ---
-    @app.route('/catan/board')
-    @dashboard_tile(section="board", title="Catan Board", description="Build and randomize a Catan hex board.", icon="map", order=10)
-    def catan_board():
-        """Renders the Catan board builder page using a template file."""
-        return render_template(
-            'catan/catan.html',
-            board_editable=board_editing_allowed(),
-            player_colors=get_catan_player_colors(),
-        )
+    @app.route('/catan/audio/<filename>')
+    def catan_audio(filename):
+        if filename not in ('rolldice.mp3', 'dice7.mp3', 'yourturn.mp3', 'victorypoint.mp3'):
+            abort(404)
+        return send_from_directory(CATAN_DATA_DIR, filename)
 
     @app.route('/catan/save_board', methods=['POST'])
     def save_board():
@@ -275,6 +274,9 @@ def configure_routes_catan(app,socketio):
             board_state = request.json
             if board_state:
                 if save_catan_board_state_to_json(json.dumps(board_state)): # Save as JSON string
+                    state = json.loads(load_play_state_from_json() or '{}')
+                    state['robber'] = catan_desert_position()
+                    save_play_state_to_json(json.dumps(state))
                     return jsonify({"status": "success", "message": "Board state saved successfully!"}), 200
                 return jsonify({"status": "error", "message": "Failed to save board state to file."}), 500
             return jsonify({"status": "error", "message": "No board state provided."}), 400
@@ -295,8 +297,29 @@ def configure_routes_catan(app,socketio):
     @app.route("/catan/game")
     @dashboard_tile(section="board", title="Catan Game", description="Open the shared Catan game view.", icon="island", order=20)
     def catan_game():
+        return render_template("catan/catan_game.html", player_colors=get_catan_player_colors())
+
+    @app.route('/catan/move_robber', methods=['POST'])
+    def move_catan_robber():
         state = json.loads(load_play_state_from_json() or '{}')
-        return render_template("catan/catan_game.html", player_colors=get_catan_player_colors(), game_started=state.get('_started', False))
+        if not state.get('_started'):
+            return jsonify({'status': 'error', 'message': 'Start the game before moving the robber.'}), 409
+        position = request.get_json(silent=True) or {}
+        try:
+            board = json.loads(load_latest_catan_board_state_from_json() or '{}')
+        except (TypeError, ValueError):
+            board = {}
+        if not any(tile.get('q') == position.get('q') and tile.get('r') == position.get('r')
+                   and type(position.get('q')) is int and type(position.get('r')) is int
+                   for tile in board.get('boardTiles', [])):
+            return jsonify({'status': 'error', 'message': 'Select a tile on the board.'}), 400
+        if state.get('robber', {}).get('q') == position['q'] and state.get('robber', {}).get('r') == position['r']:
+            return jsonify({'status': 'error', 'message': 'Select a different tile.'}), 409
+        state['robber'] = {'q': position['q'], 'r': position['r']}
+        if not save_play_state_to_json(json.dumps(state)):
+            return jsonify({'status': 'error', 'message': 'Could not move the robber.'}), 500
+        socketio.emit('catan_update')
+        return jsonify({'status': 'success'})
 
     @app.route('/catan/start_game', methods=['POST'])
     @catan_registry_locked
@@ -498,6 +521,7 @@ def configure_routes_catan(app,socketio):
             ],
             player_colors=get_catan_player_colors(),
             error=error,
+            game_started=json.loads(load_play_state_from_json() or '{}').get('_started', False),
         )
 
     @app.route('/catan/card_action', methods=['POST'])
@@ -543,6 +567,14 @@ def configure_routes_catan(app,socketio):
         if not save_play_state_to_json(json.dumps(state)):
             return jsonify({'status': 'error', 'message': 'Could not save cards.'}), 500
         socketio.emit('catan_update')
+        if target_id is not None:
+            socketio.emit('catan_card_transfer', {
+                'sender': player_id,
+                'senderName': state[player_id].get('playerName') or player_id,
+                'recipient': target_id,
+                'recipientName': state[target_id].get('playerName') or target_id,
+                'cards': dict(Counter(cards)),
+            })
         return jsonify({'status': 'success', 'hand_count': len(hand)})
 
     @app.route('/catan/buy_dev_card', methods=['POST'])
@@ -557,8 +589,9 @@ def configure_routes_catan(app,socketio):
         if not state['_devDeck']:
             return jsonify({'status': 'error', 'message': 'No Development Cards remain.'}), 409
         player = state[player_id]
-        if any(Counter(player['hand'])[resource] < 1 for resource in ('rock', 'sheep', 'hay')):
-            return jsonify({'status': 'error', 'message': 'A Development Card costs one rock, one sheep, and one hay.'}), 409
+        missing = [resource for resource in ('rock', 'sheep', 'hay') if Counter(player['hand'])[resource] < 1]
+        if missing:
+            return jsonify({'status': 'error', 'code': 'missing_resources', 'message': f"Missing {', '.join(missing)} for Development Card."}), 409
         card = state['_devDeck'].pop()
         for resource in ('rock', 'sheep', 'hay'):
             player['hand'].remove(resource)
@@ -577,6 +610,8 @@ def configure_routes_catan(app,socketio):
             return jsonify({'status': 'error', 'message': 'Could not save the Development Card purchase.'}), 500
         socketio.emit('undo_history_reset')
         socketio.emit('catan_update')
+        if card == 'victory_point':
+            socketio.emit('dev_card_played_broadcast', {'cardType': card, 'playerName': player.get('playerName', player_id)})
         return jsonify({'status': 'success', 'cardType': card, 'remaining': len(state['_devDeck'])})
 
     @app.route('/catan/save_play_state', methods=['POST'])

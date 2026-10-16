@@ -396,16 +396,6 @@ def configure_routes_catan2(app, socketio):
             return False
 
     # --- Catan Board Routes ---
-    @app.route('/catan2/board')
-    @dashboard_tile(section="board", title="Cities & Knights Board", description="Build and randomize the Cities & Knights board.", icon="map", order=40)
-    def catan2_board():
-        """Renders the Catan board builder page using a template file."""
-        return render_template(
-            'catan2/catan.html',
-            board_editable=board_editing_allowed(),
-            player_colors=get_catan_player_colors(),
-        )
-
     @app.route('/catan2/save_board', methods=['POST'])
     def catan2_save_board():
         """API endpoint to save the Catan board state."""
@@ -950,6 +940,7 @@ def configure_routes_catan2(app, socketio):
                     "status": "success",
                     "play_state": play_state,
                     "colors_ready": all_active_players_have_colors(registry['players']),
+                    "player_colors": get_catan_player_colors(),
                 }), 200
             return jsonify({"status": "info", "message": f"No saved state found for player ."}), 200
         except Exception as e:
@@ -1092,6 +1083,9 @@ def configure_routes_catan2(app, socketio):
             state = json.loads(load_play_state_from_json() or '{}')
         except (OSError, ValueError, json.JSONDecodeError):
             return jsonify({"status": "error", "message": "Could not load the game."}), 500
+        authorized_codes = set(session.get('catan2_player_access', []))
+        if not any(player['code'] in authorized_codes for player in registry['players']):
+            return jsonify({"status": "error", "message": "Sign in as a player to start the game."}), 403
         if state.get('_gameStarted') is not False:
             return jsonify({"status": "error", "message": "The game has already started."}), 409
         turn_order = get_catan_turn_order(registry['players'])

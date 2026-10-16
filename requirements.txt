@@ -3,6 +3,7 @@ flask
 flask-socketio
 pandas
 Pillow
+piexif
 requests
 python-engineio # Likely a dependency of flask-socketio
 python-socketio # Likely a dependency of flask-socketio

@@ -751,7 +751,7 @@
                     }
                     showMessage('Board state loaded successfully!');
                 } else {
-                    showMessage((result.message || "No saved board state found.") + ' Displaying default board.', 'info');
+                    //showMessage((result.message || "No saved board state found.") + ' Displaying default board.', 'info');
                     boardTiles = [
                         { q: 0, r: -2, type: 'ore', number: 10 },
                         { q: 1, r: -2, type: 'sheep', number: 2 },
@@ -800,7 +800,7 @@
                 allEdges = getAllEdges();
                 resizeCanvas();
             } catch (e) {
-                showMessage('Network error loading board state: ' + e.message + '. Displaying default board.', 'error');
+                //showMessage('Network error loading board state: ' + e.message + '. Displaying default board.', 'error');
                 console.error('Error loading board state from backend:', e);
                 boardTiles = [
                     { q: 0, r: -2, type: 'ore', number: 10 },

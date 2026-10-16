@@ -41,8 +41,10 @@ import json
 import re
 import shutil
 import threading
+import tempfile
 import time
 import uuid
+import piexif
 
 try:
     from PIL import Image, ImageOps
@@ -55,9 +57,10 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 # ── CONFIG — add as many root paths as needed ─────────────────────────────────
 PHOTO_ROOTS = [
     os.path.abspath(os.path.join(PROJECT_ROOT, "..", "Photos-temp")),
+    '/Photos-temp',
+    '/photos1',
     # os.path.join(PROJECT_ROOT, "photos"),
     # "/mnt/nas/pictures",
-    '/Photo-temp',
 ]
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".tif"}
@@ -78,6 +81,7 @@ PASSTHROUGH_BYTES = 1_500_000   # non-raw files smaller than this are sent as-is
 
 _tags_lock    = threading.Lock()
 _preview_lock = threading.Lock()
+_rotation_lock = threading.Lock()
 _preview_cache: "OrderedDict[tuple, bytes]" = OrderedDict()
 PREVIEW_CACHE_MAX = 200
 
@@ -602,6 +606,64 @@ def configure_routes_phototag(app, socketio=None):
             resp = Response(data, mimetype="image/jpeg")
         resp.headers["Cache-Control"] = "private, max-age=3600"
         return resp
+
+    # ── API: lossless JPEG rotation ───────────────────────────────
+    @app.route("/phototag/api/rotate", methods=["POST"])
+    def phototag_api_rotate():
+        data       = request.json or {}
+        root_name  = (data.get("root") or "").strip()
+        folder_rel = (data.get("folder") or "").strip()
+        rel_path   = (data.get("path") or "").strip()
+
+        if not root_name or not folder_rel or not rel_path:
+            return jsonify({"status": "error",
+                            "message": "root, folder and path required"}), 400
+        if _ext(rel_path) not in (".jpg", ".jpeg"):
+            return jsonify({"status": "error",
+                            "message": "Lossless rotation is supported for JPEG files only"}), 415
+
+        try:
+            _, folder_abs = _resolve_folder(photo_roots, root_name, folder_rel)
+        except ValueError as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+
+        full = os.path.realpath(os.path.join(folder_abs, rel_path))
+        if not _is_within(full, folder_abs):
+            return jsonify({"status": "error", "message": "Path outside selected folder"}), 403
+        if not os.path.isfile(full):
+            return jsonify({"status": "error", "message": "Image not found"}), 404
+
+        temp_path = None
+        try:
+            with _rotation_lock:
+                exif = piexif.load(full)
+                current = exif["0th"].get(piexif.ImageIFD.Orientation, 1)
+                counterclockwise = {1: 8, 8: 3, 3: 6, 6: 1,
+                                    2: 5, 5: 2, 4: 7, 7: 4}
+                exif["0th"][piexif.ImageIFD.Orientation] = counterclockwise.get(current, 8)
+                descriptor, temp_path = tempfile.mkstemp(
+                    prefix=".phototag-rotate-", suffix=_ext(full),
+                    dir=os.path.dirname(full),
+                )
+                os.close(descriptor)
+                piexif.insert(piexif.dump(exif), full, temp_path)
+                os.chmod(temp_path, os.stat(full).st_mode)
+                os.replace(temp_path, full)
+                temp_path = None
+
+                with _preview_lock:
+                    for key in list(_preview_cache):
+                        if key[0] == full:
+                            del _preview_cache[key]
+
+            return jsonify({"status": "success", "version": uuid.uuid4().hex})
+        except Exception as e:
+            print(f"[phototag] Cannot rotate {full}: {e}")
+            return jsonify({"status": "error",
+                            "message": "Could not update JPEG orientation metadata"}), 500
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                os.remove(temp_path)
 
     # ── API: save / remove tag ────────────────────────────────────
     @app.route("/phototag/api/tag", methods=["POST"])

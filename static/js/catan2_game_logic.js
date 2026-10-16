@@ -491,7 +491,8 @@ let boardScale = 1;
 let boardCenterRawX = 0;
 let boardCenterRawY = 0;
 
-let selectedTool = 'swap';
+let selectedTool = null;
+let boardControlsEnabled = false;
 let selectedSwapItem1 = null;
 let selectedSwapItem2 = null;
 let builderHistoryStack = [];
@@ -514,16 +515,39 @@ const modalCancelBtn = document.getElementById('modalCancelBtn');
 let modalResolve;
 
 const mapZoomToggle = document.getElementById('mapZoomToggle');
-if (mapZoomToggle) {
-    mapZoomToggle.addEventListener('click', () => {
-        mapZoomLevel = mapZoomLevel === 1 ? 2 : 1;
-        const zoomViewport = document.querySelector('.map-zoom-viewport');
-        zoomViewport.classList.toggle('map-zoomed', mapZoomLevel === 2);
-        mapZoomToggle.setAttribute('aria-pressed', String(mapZoomLevel === 2));
+function setMapZoom(level) {
+    mapZoomLevel = level;
+    const zoomViewport = document.querySelector('.map-zoom-viewport');
+    zoomViewport.classList.toggle('map-zoomed', mapZoomLevel === 2);
+    mapZoomToggle.setAttribute('aria-pressed', String(mapZoomLevel === 2));
+    const icon = mapZoomToggle.querySelector('i');
+    if (icon) {
+        icon.className = `fas ${mapZoomLevel === 2 ? 'fa-magnifying-glass-minus' : 'fa-magnifying-glass-plus'}`;
+        mapZoomToggle.title = mapZoomLevel === 2 ? 'Zoom out' : 'Zoom in';
+        mapZoomToggle.setAttribute('aria-label', mapZoomToggle.title);
+    } else {
         mapZoomToggle.textContent = mapZoomLevel === 2 ? 'Fit' : '2×';
         mapZoomToggle.title = mapZoomLevel === 2 ? 'Return map to fit' : 'Zoom map to 2x';
-        resizeCanvas();
-        zoomViewport.scrollLeft = 0;
+    }
+    resizeCanvas();
+    zoomViewport.scrollLeft = 0;
+    zoomViewport.scrollTop = 0;
+}
+if (mapZoomToggle) {
+    mapZoomToggle.addEventListener('click', () => setMapZoom(mapZoomLevel === 1 ? 2 : 1));
+}
+
+const boardControlsToggle = document.getElementById('boardControlsToggle');
+if (boardControlsToggle) {
+    boardControlsToggle.addEventListener('click', () => {
+        boardControlsEnabled = !boardControlsEnabled;
+        boardControlsToggle.setAttribute('aria-pressed', String(boardControlsEnabled));
+        boardControlsToggle.querySelector('i').className = `fas ${boardControlsEnabled ? 'fa-eye' : 'fa-eye-slash'}`;
+        boardControlsToggle.title = boardControlsEnabled ? 'Disable map controls' : 'Enable map controls';
+        boardControlsToggle.setAttribute('aria-label', boardControlsToggle.title);
+        if (!boardControlsEnabled && mapZoomLevel !== 1) setMapZoom(1);
+        updateBoardEditingUI();
+        drawBoard();
     });
 }
 function normalizeCitiesAndKnightsState(source = {}) {
@@ -1097,7 +1121,7 @@ function drawBoard() {
         }
     });
 
-    if (!isGamePage && !isPlayerPage) {
+    if (isGamePage) {
         if (selectedTool === 'swap') {
             if (selectedSwapItem1) {
                 const pixel = hexToPixel(selectedSwapItem1.tile.q, selectedSwapItem1.tile.r, offsetX, offsetY);
@@ -1145,7 +1169,7 @@ function drawBoard() {
 }
 
 function saveBuilderState() {
-    if (isGamePage || isPlayerPage || !boardEditingAllowed) return;
+    if (!isGamePage || !boardEditingAllowed) return;
 
     builderHistoryStack.push({
         tileStates: JSON.parse(JSON.stringify(boardTiles.map(tile => ({ q: tile.q, r: tile.r, type: tile.type, number: tile.number })))),
@@ -1154,22 +1178,37 @@ function saveBuilderState() {
 }
 
 function updateBoardEditingUI() {
-    if (isGamePage || isPlayerPage) return;
-    const status = document.getElementById('boardEditStatus');
-    if (status) {
-        status.textContent = boardEditingAllowed
-            ? 'Board editing is available.'
-            : 'Game in progress. Reset the game to edit the board.';
+    if (!isGamePage) return;
+    if (!boardControlsEnabled || !boardEditingAllowed) {
+        selectedTool = null;
+        selectedSwapItem1 = null;
+        selectedSwapItem2 = null;
     }
-    document.querySelectorAll('#tool-select .btn-tool').forEach(button => {
-        const canAlwaysReset = button.dataset.tool === 'reset-game';
-        button.disabled = !boardEditingAllowed && !canAlwaysReset;
-        button.setAttribute('aria-disabled', String(button.disabled));
+    document.querySelectorAll('#boardTools .map-tool').forEach(button => {
+        const editsBoard = ['swap', 'shuffle-cells', 'shuffle-numbers', 'undo'].includes(button.dataset.tool);
+        button.disabled = !boardControlsEnabled || (editsBoard && !boardEditingAllowed);
+        if (editsBoard && !boardEditingAllowed) button.title = 'Reset the game to edit the board';
+        else if (button.dataset.label) button.title = button.dataset.label;
+    });
+    const swapButton = document.querySelector('#boardTools [data-tool="swap"]');
+    if (swapButton) {
+        swapButton.classList.toggle('selected', selectedTool === 'swap');
+        swapButton.setAttribute('aria-pressed', String(selectedTool === 'swap'));
+    }
+}
+
+function confirmReset() {
+    const dialog = document.getElementById('resetDialog');
+    return new Promise(resolve => {
+        dialog.returnValue = '';
+        dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
+        dialog.onclick = event => { if (event.target === dialog) dialog.close(); };
+        dialog.showModal();
     });
 }
 
 function undoBuilderLastAction() {
-    if (isGamePage || isPlayerPage) return;
+    if (!isGamePage) return;
     if (!boardEditingAllowed) {
         showMessage('Reset the game before editing the board.', 'error');
         return;
@@ -1231,9 +1270,16 @@ function updateGameStartUI() {
     }
     const startButton = document.getElementById('startGameButton');
     if (startButton) {
-        startButton.disabled = gameStarted;
-        startButton.textContent = gameStarted ? 'Started' : 'Start';
-        startButton.title = gameStarted ? 'Game already started. Reset the game from the board page to start again.' : 'Randomize the player order and start the game';
+        startButton.hidden = gameStarted || !document.body.classList.contains('has-player-color');
+    }
+    if (isPlayerPage && gameStarted && !document.body.classList.contains('has-player-color')) {
+        const assignedColor = PLAYER_COLORS[PLAYER_ID];
+        if (assignedColor) {
+            document.body.classList.add('has-player-color');
+            document.body.style.setProperty('--player-color', assignedColor);
+            document.body.style.setProperty('--player-color-text', assignedColor === '#F1C40F' ? '#1a1a1a' : '#ffffff');
+            document.querySelector('.player-color-picker')?.remove();
+        }
     }
 }
 
@@ -1248,6 +1294,8 @@ document.getElementById('startGameButton')?.addEventListener('click', async () =
         showMessage(`Game started. Order: ${result.order.join(' > ')}`);
     } catch (error) {
         showMessage(error.message, 'error');
+    } finally {
+        startButton.disabled = false;
         updateGameStartUI();
     }
 });
@@ -1411,7 +1459,7 @@ function shuffleArray(array) {
 }
 
 function shuffleCells() {
-    if (isGamePage || isPlayerPage) return;
+    if (!isGamePage) return;
     if (!boardEditingAllowed) {
         showMessage('Reset the game before editing the board.', 'error');
         return;
@@ -1425,10 +1473,10 @@ function shuffleCells() {
         return;
     }
 
-    saveBuilderState();
     nonDesertTiles.forEach((tile, index) => {
         tile.type = assignments[index];
     });
+    saveBuilderState();
 
     showMessage('Cells shuffled with adjacent matches avoided.');
     drawBoard();
@@ -1495,7 +1543,7 @@ function assignBoardValues(tiles, values, valuesConflict) {
 }
 
 function shuffleNumbers() {
-    if (isGamePage || isPlayerPage) return;
+    if (!isGamePage) return;
     if (!boardEditingAllowed) {
         showMessage('Reset the game before editing the board.', 'error');
         return;
@@ -1509,17 +1557,17 @@ function shuffleNumbers() {
         return;
     }
 
-    saveBuilderState();
     nonDesertTiles.forEach((tile, index) => {
         tile.number = assignments[index];
     });
+    saveBuilderState();
     showMessage('Numbers shuffled with adjacent repeats avoided.');
     drawBoard();
     saveBoardTilesToBackend();
 }
 
 async function saveBoardTilesToBackend() {
-    if (isGamePage || isPlayerPage || !boardEditingAllowed) {
+    if (!isGamePage || !boardEditingAllowed) {
         showMessage('Reset the game before editing the board.', 'error');
         return false;
     }
@@ -1567,9 +1615,7 @@ async function loadBoardTilesFromBackend() {
         updateBoardEditingUI();
         if (result.status === 'success' && result.board_state) {
             boardTiles = result.board_state.boardTiles;
-            if (!isGamePage && !isPlayerPage) {
-                saveBuilderState();
-            }
+            if (builderHistoryStack.length === 0) saveBuilderState();
             if (!isGamePage) showMessage('Board tiles loaded successfully!');
         } else {
             showMessage((result.message || "No saved board tiles found.") + ' Displaying default board tiles.', 'info');
@@ -1594,9 +1640,7 @@ async function loadBoardTilesFromBackend() {
                 { q: -1, r: 2, type: 'sheep', number: 6 },
                 { q: 0, r: 2, type: 'hay', number: 11 }
             ];
-            if (!isGamePage && !isPlayerPage) {
-                saveBuilderState();
-            }
+            if (builderHistoryStack.length === 0) saveBuilderState();
         }
         allJunctions = getAllJunctions();
         allEdges = getAllEdges();
@@ -1673,6 +1717,7 @@ async function loadAllPlayerStatesFromBackend() {
         const result = await response.json();
         if (result.status === 'success' && result.play_state) {
             const loadedStates = result.play_state;
+            if (result.player_colors) Object.assign(PLAYER_COLORS, result.player_colors);
             for (const pId in loadedStates) {
                 if (pId.startsWith('player') && allPlayersData[pId]) {
                     allPlayersData[pId].playerName = loadedStates[pId].playerName || `Player ${pId.replace('player', '')}`;
@@ -2002,7 +2047,7 @@ function getClosestEdge(px, py, threshold = 20, middleOnly = false) {
 canvas.addEventListener('click', async (event) => {
     // Robber moves clear selectedPlayerTool mid-handler, so remember the tool for logging.
     const toolAtClick = selectedPlayerTool;
-    if (!isGamePage && !isPlayerPage && !boardEditingAllowed) {
+    if (isGamePage && selectedTool === 'swap' && !boardEditingAllowed) {
         showMessage('Reset the game before editing the board.', 'error');
         return;
     }
@@ -2199,7 +2244,7 @@ canvas.addEventListener('click', async (event) => {
 
     let actionSuccessful = false;
 
-    if (!isGamePage && !isPlayerPage) {
+    if (isGamePage) {
         if (selectedTool === 'swap') {
             const clickedHex = pixelToHex(mouseX, mouseY, offsetX, offsetY);
             const clickedTile = boardTiles.find(t => t.q === clickedHex.q && t.r === clickedHex.r);
@@ -2477,40 +2522,37 @@ canvas.addEventListener('click', async (event) => {
             //await saveAllPlayerStatesToBackend();
             saveAllPlayerStatesToBackend();  
             //fix : add code to show in game play. 
-        } else if (!isGamePage) {
+        } else if (isGamePage) {
+            saveBuilderState();
             await saveBoardTilesToBackend();
         }
     }
     drawBoard();
 });
 
-if (!isGamePage && !isPlayerPage) {
-    document.getElementById('tool-select').addEventListener('click', (event) => {
-        const target = event.target;
-        if (target.classList.contains('btn-tool')) {
-            if (!boardEditingAllowed && target.dataset.tool !== 'reset-game') {
-                showMessage('Reset the game before editing the board.', 'error');
-                return;
-            }
-            document.querySelectorAll('.btn-tool').forEach(btn => btn.classList.remove('selected'));
-            target.classList.add('selected');
+if (isGamePage) {
+    document.querySelectorAll('#boardTools .map-tool').forEach(button => { button.dataset.label = button.title; });
+    document.getElementById('boardTools').addEventListener('click', async (event) => {
+        const target = event.target.closest('.map-tool[data-tool]');
+        if (!target || target.disabled || !boardControlsEnabled) return;
+        const tool = target.dataset.tool;
 
-            selectedTool = target.dataset.tool;
-
-            if (selectedTool === 'undo') {
-                undoBuilderLastAction();
-            } else if (selectedTool === 'shuffle-cells') {
-                shuffleCells();
-            } else if (selectedTool === 'shuffle-numbers') {
-                shuffleNumbers();
-            } else if (selectedTool === 'reset-game') {
-                resetgame();
-            }
-            
-            
-            showMessage(`Selected tool: ${selectedTool}`);
-            drawBoard();
+        if (tool === 'swap') {
+            selectedTool = selectedTool === 'swap' ? null : 'swap';
+            selectedSwapItem1 = null;
+            selectedSwapItem2 = null;
+            showMessage(selectedTool === 'swap' ? 'Swap mode: select two tiles or two numbers.' : 'Swap mode off.');
+        } else if (tool === 'undo') {
+            undoBuilderLastAction();
+        } else if (tool === 'shuffle-cells') {
+            shuffleCells();
+        } else if (tool === 'shuffle-numbers') {
+            shuffleNumbers();
+        } else if (tool === 'reset-game') {
+            if (await confirmReset()) await resetgame();
         }
+        updateBoardEditingUI();
+        drawBoard();
     });
 }
 
@@ -2864,7 +2906,15 @@ function updateHandSelectionButtons() {
     const dropButton = document.querySelector('[data-hand-action="drop"]');
     if (dropButton) dropButton.textContent = count ? `Drop ${count}` : 'Drop';
 }
+function fitGameMap() {
+    const map = isGamePage && document.querySelector('.game-map');
+    if (!map || map.offsetParent === null) return;
+    const available = window.innerHeight - (map.getBoundingClientRect().top + window.scrollY) - 12;
+    map.style.maxWidth = `${Math.max(240, available * 1.2)}px`;
+}
+
 function resizeCanvas() {
+    fitGameMap();
     if (isGamePage && canvas.parentElement.clientWidth === 0) return;
     const containerWidth = canvas.parentElement.clientWidth;
     const containerHeight = canvas.parentElement.clientHeight;
@@ -3967,11 +4017,9 @@ socket.on('catan2_activity_log_broadcast', data => {
 });
 
 window.addEventListener('load', async () => {
-    if (!isGamePage && !isPlayerPage) updateBoardEditingUI();
+    updateBoardEditingUI();
     await preloadImages();
-    if (!isGamePage && !isPlayerPage) {
-        saveBuilderState();
-    } else if (isPlayerPage) {
+    if (isPlayerPage) {
         onCatanPlayerPageLoad();
     }
 });

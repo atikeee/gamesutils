@@ -1,7 +1,11 @@
 const canvas = document.getElementById('catanBoard');
 const ctx = canvas.getContext('2d');
 const messageBox = document.getElementById('messageBox');
-messageBox?.addEventListener('click', () => { messageBox.textContent = ''; });
+let messageTimeout = null;
+messageBox?.addEventListener('click', () => {
+    window.clearTimeout(messageTimeout);
+    messageBox.textContent = '';
+});
 
 const isGamePage = window.location.pathname === '/catan/game';
 const isPlayerPage = window.location.pathname.startsWith('/catan/player/');
@@ -12,6 +16,8 @@ const PLAYER_ID = isPlayerPage && window.PLAYER_ID ? 'player' + window.PLAYER_ID
 let loadedResourceImages = {};
 let boardTiles = [];
 let boardEditingAllowed = document.body.dataset.boardEditable === 'true';
+let gameRobberMoveSelected = false;
+let gameRobberMoveSaving = false;
 let mapZoomLevel = 1;
 let selectedHandCards  = [];
 let cardActionPending = false;
@@ -19,6 +25,13 @@ let pendingResourceCards = [];
 let diceAnimationInterval = null;
 let diceAnimationTimeout = null;
 let diceOverlayHideTimeout = null;
+let wasMyTurn = false;
+const playerSounds = isPlayerPage ? {
+    roll: new Audio('/catan/audio/rolldice.mp3'),
+    //danger: new Audio('/catan/audio/dice7.mp3'),
+    turn: new Audio('/catan/audio/yourturn.mp3'),
+    victory: new Audio('/catan/audio/victorypoint.mp3')
+} : null;
 
 const socket = io();
 let init_player_data = {
@@ -48,7 +61,8 @@ let boardScale = 1;
 let boardCenterRawX = 0;
 let boardCenterRawY = 0;
 
-let selectedTool = 'swap';
+let selectedTool = null;
+let boardControlsEnabled = false;
 let selectedSwapItem1 = null;
 let selectedSwapItem2 = null;
 let builderHistoryStack = [];
@@ -71,17 +85,35 @@ const modalCancelBtn = document.getElementById('modalCancelBtn');
 let modalResolve;
 
 const mapZoomToggle = document.getElementById('mapZoomToggle');
+function setMapZoom(level) {
+    mapZoomLevel = level;
+    const zoomViewport = document.querySelector('.map-zoom-viewport');
+    zoomViewport.classList.toggle('map-zoomed', mapZoomLevel === 2);
+    mapZoomToggle.setAttribute('aria-pressed', String(mapZoomLevel === 2));
+    const icon = mapZoomToggle.querySelector('i');
+    if (icon) icon.className = `fas ${mapZoomLevel === 2 ? 'fa-magnifying-glass-minus' : 'fa-magnifying-glass-plus'}`;
+    else mapZoomToggle.textContent = mapZoomLevel === 2 ? '\u2212' : '+';
+    mapZoomToggle.title = mapZoomLevel === 2 ? 'Zoom out' : 'Zoom in';
+    mapZoomToggle.setAttribute('aria-label', mapZoomToggle.title);
+    resizeCanvas();
+    zoomViewport.scrollLeft = 0;
+    zoomViewport.scrollTop = 0;
+}
 if (mapZoomToggle) {
-    mapZoomToggle.addEventListener('click', () => {
-        mapZoomLevel = mapZoomLevel === 1 ? 2 : 1;
-        const zoomViewport = document.querySelector('.map-zoom-viewport');
-        zoomViewport.classList.toggle('map-zoomed', mapZoomLevel === 2);
-        mapZoomToggle.setAttribute('aria-pressed', String(mapZoomLevel === 2));
-        mapZoomToggle.textContent = isPlayerPage ? (mapZoomLevel === 2 ? '\u2212' : '+') : (mapZoomLevel === 2 ? 'Fit' : '2×');
-        mapZoomToggle.title = mapZoomLevel === 2 ? 'Zoom out' : 'Zoom in';
-        mapZoomToggle.setAttribute('aria-label', mapZoomToggle.title);
-        resizeCanvas();
-        zoomViewport.scrollLeft = 0;
+    mapZoomToggle.addEventListener('click', () => setMapZoom(mapZoomLevel === 1 ? 2 : 1));
+}
+
+const boardControlsToggle = document.getElementById('boardControlsToggle');
+if (boardControlsToggle) {
+    boardControlsToggle.addEventListener('click', () => {
+        boardControlsEnabled = !boardControlsEnabled;
+        boardControlsToggle.setAttribute('aria-pressed', String(boardControlsEnabled));
+        boardControlsToggle.querySelector('i').className = `fas ${boardControlsEnabled ? 'fa-eye' : 'fa-eye-slash'}`;
+        boardControlsToggle.title = boardControlsEnabled ? 'Disable map controls' : 'Enable map controls';
+        boardControlsToggle.setAttribute('aria-label', boardControlsToggle.title);
+        if (!boardControlsEnabled && mapZoomLevel !== 1) setMapZoom(1);
+        updateBoardEditingUI();
+        drawBoard();
     });
 }
 
@@ -93,7 +125,8 @@ if (startGameButton) {
             const response = await fetch('/catan/start_game', { method: 'POST' });
             const result = await response.json();
             if (!response.ok) throw new Error(result.message || 'Could not start the game.');
-            startGameButton.textContent = 'Started';
+            if (isPlayerPage) startGameButton.hidden = true;
+            else startGameButton.textContent = 'Started';
         } catch (error) {
             startGameButton.disabled = false;
             startGameButton.title = error.message;
@@ -104,10 +137,33 @@ if (startGameButton) {
 
 function showMessage(message, type = 'info') {
     if (message === 'Game state updated by another player!' || message === 'All player states loaded successfully!') return;
-    if (isGamePage) return;
+    if (isGamePage) {
+        if (!boardControlsEnabled || !messageBox) return;
+        const toast = document.createElement('div');
+        toast.className = `game-toast${type === 'error' ? ' game-toast-error' : ''}`;
+        toast.textContent = message;
+        messageBox.replaceChildren(toast);
+        window.clearTimeout(messageTimeout);
+        messageTimeout = window.setTimeout(() => messageBox.replaceChildren(), 3000);
+        return;
+    }
 
     messageBox.textContent = message;
     messageBox.className = `message-box ${type === 'error' ? 'bg-red-100 text-red-800 border-red-300' : 'bg-yellow-100 text-yellow-800 border-orange-300'}`;
+    if (isPlayerPage) {
+        window.clearTimeout(messageTimeout);
+        messageTimeout = window.setTimeout(() => {
+            messageBox.textContent = '';
+            messageTimeout = null;
+        }, 3000);
+    }
+}
+
+function playPlayerSound(kind) {
+    const sound = playerSounds?.[kind];
+    if (!sound) return;
+    sound.currentTime = 0;
+    void sound.play().catch(() => {});
 }
 
 function showConfirmation(message) {
@@ -120,6 +176,16 @@ function showConfirmation(message) {
 
 function hideConfirmation() {
     confirmationModal.classList.add('hidden');
+}
+
+function confirmReset() {
+    const dialog = document.getElementById('resetDialog');
+    return new Promise(resolve => {
+        dialog.returnValue = '';
+        dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
+        dialog.onclick = event => { if (event.target === dialog) dialog.close(); };
+        dialog.showModal();
+    });
 }
 
 function chooseOption(title, options) {
@@ -218,7 +284,7 @@ function drawBoard() {
 
     if (allPlayersData['robber'] && allPlayersData['robber'].q !== 100) {
         drawRobber(ctx, allPlayersData['robber'], offsetX, offsetY);
-        if (allPlayersData._robberPending && isPlayerPage && allPlayersData._currentTurnPlayerId === PLAYER_ID) {
+        if (gameRobberMoveSelected || (allPlayersData._robberPending && isPlayerPage && allPlayersData._currentTurnPlayerId === PLAYER_ID)) {
             const pixel = hexToPixel(allPlayersData.robber.q, allPlayersData.robber.r, offsetX, offsetY);
             ctx.strokeStyle = '#facc15';
             ctx.lineWidth = 5;
@@ -255,7 +321,7 @@ function drawBoard() {
         }
     });
 
-    if (!isGamePage && !isPlayerPage) {
+    if (isGamePage) {
         if (selectedTool === 'swap') {
             if (selectedSwapItem1) {
                 const pixel = hexToPixel(selectedSwapItem1.tile.q, selectedSwapItem1.tile.r, offsetX, offsetY);
@@ -303,7 +369,7 @@ function drawBoard() {
 }
 
 function saveBuilderState() {
-    if (isGamePage || isPlayerPage || !boardEditingAllowed) return;
+    if (!isGamePage || !boardEditingAllowed) return;
 
     builderHistoryStack.push({
         tileStates: JSON.parse(JSON.stringify(boardTiles.map(tile => ({ q: tile.q, r: tile.r, type: tile.type, number: tile.number })))),
@@ -312,22 +378,27 @@ function saveBuilderState() {
 }
 
 function updateBoardEditingUI() {
-    if (isGamePage || isPlayerPage) return;
-    const status = document.getElementById('boardEditStatus');
-    if (status) {
-        status.textContent = boardEditingAllowed
-            ? 'Board editing is available.'
-            : 'Game in progress. Reset the game to edit the board.';
+    if (!isGamePage) return;
+    if (!boardControlsEnabled || !boardEditingAllowed) {
+        selectedTool = null;
+        selectedSwapItem1 = null;
+        selectedSwapItem2 = null;
     }
-    document.querySelectorAll('#tool-select .btn-tool').forEach(button => {
-        const canAlwaysReset = button.dataset.tool === 'reset-game';
-        button.disabled = !boardEditingAllowed && !canAlwaysReset;
-        button.setAttribute('aria-disabled', String(button.disabled));
+    document.querySelectorAll('#boardTools .map-tool').forEach(button => {
+        const editsBoard = ['swap', 'shuffle-cells', 'shuffle-numbers', 'undo'].includes(button.dataset.tool);
+        button.disabled = !boardControlsEnabled || (editsBoard && !boardEditingAllowed);
+        if (editsBoard && !boardEditingAllowed) button.title = 'Reset the game to edit the board';
+        else if (button.dataset.label) button.title = button.dataset.label;
     });
+    const swapButton = document.querySelector('#boardTools [data-tool="swap"]');
+    if (swapButton) {
+        swapButton.classList.toggle('selected', selectedTool === 'swap');
+        swapButton.setAttribute('aria-pressed', String(selectedTool === 'swap'));
+    }
 }
 
 function undoBuilderLastAction() {
-    if (isGamePage || isPlayerPage) return;
+    if (!isGamePage) return;
     if (!boardEditingAllowed) {
         showMessage('Reset the game before editing the board.', 'error');
         return;
@@ -382,6 +453,16 @@ function updateRollButton() {
     const button = document.getElementById('turnButton');
     if (!button) return;
 
+    const lastRollTotal = document.getElementById('lastRollTotal');
+    if (lastRollTotal) {
+        const dice = allPlayersData._lastRoll?.dice;
+        const total = Array.isArray(dice) && dice.length === 2 && dice.every(value => Number.isInteger(value) && value >= 1 && value <= 6)
+            ? dice[0] + dice[1] : null;
+        lastRollTotal.hidden = total === null;
+        lastRollTotal.textContent = total === null ? '' : String(total);
+        lastRollTotal.setAttribute('aria-label', total === null ? 'No roll yet' : `Last roll total: ${total}`);
+    }
+
     const currentPlayerId = allPlayersData._currentTurnPlayerId;
     const currentPlayerName = allPlayersData[currentPlayerId]?.playerName || 'the next player';
     const isMyTurn = isPlayerPage && currentPlayerId === PLAYER_ID;
@@ -399,7 +480,6 @@ function updateRollButton() {
 async function undoPlayerLastAction() {
     const undoStack = Array.isArray(allPlayersData._undoStack) ? allPlayersData._undoStack : [];
     if (!isPlayerPage || undoStack.length === 0) {
-        showMessage('No actions to undo since the last dice roll.', 'error');
         updateUndoButton();
         return;
     }
@@ -415,7 +495,6 @@ async function undoPlayerLastAction() {
     if (selectedCardCount) selectedCardCount.textContent = '0';
     updateLargestArmyHolder();
     updateLongestRoadHolder();
-    showMessage('Last action undone.');
     drawBoard();
     updatePlayerUI();
     await saveAllPlayerStatesToBackend();
@@ -429,7 +508,7 @@ function shuffleArray(array) {
 }
 
 function shuffleCells() {
-    if (isGamePage || isPlayerPage) return;
+    if (!isGamePage) return;
     if (!boardEditingAllowed) {
         showMessage('Reset the game before editing the board.', 'error');
         return;
@@ -443,10 +522,10 @@ function shuffleCells() {
         return;
     }
 
-    saveBuilderState();
     nonDesertTiles.forEach((tile, index) => {
         tile.type = assignments[index];
     });
+    saveBuilderState();
 
     showMessage('Cells shuffled with adjacent matches avoided.');
     drawBoard();
@@ -513,7 +592,7 @@ function assignBoardValues(tiles, values, valuesConflict) {
 }
 
 function shuffleNumbers() {
-    if (isGamePage || isPlayerPage) return;
+    if (!isGamePage) return;
     if (!boardEditingAllowed) {
         showMessage('Reset the game before editing the board.', 'error');
         return;
@@ -527,17 +606,17 @@ function shuffleNumbers() {
         return;
     }
 
-    saveBuilderState();
     nonDesertTiles.forEach((tile, index) => {
         tile.number = assignments[index];
     });
+    saveBuilderState();
     showMessage('Numbers shuffled with adjacent repeats avoided.');
     drawBoard();
     saveBoardTilesToBackend();
 }
 
 async function saveBoardTilesToBackend() {
-    if (isGamePage || isPlayerPage || !boardEditingAllowed) {
+    if (!isGamePage || !boardEditingAllowed) {
         showMessage('Reset the game before editing the board.', 'error');
         return false;
     }
@@ -585,12 +664,9 @@ async function loadBoardTilesFromBackend() {
         updateBoardEditingUI();
         if (result.status === 'success' && result.board_state) {
             boardTiles = result.board_state.boardTiles;
-            if (!isGamePage && !isPlayerPage) {
-                saveBuilderState();
-            }
-            if (!isGamePage && !isPlayerPage) showMessage('Board tiles loaded successfully!');
+            if (builderHistoryStack.length === 0) saveBuilderState();
         } else {
-            showMessage((result.message || "No saved board tiles found.") + ' Displaying default board tiles.', 'info');
+            if (!isPlayerPage) showMessage((result.message || "No saved board tiles found.") + ' Displaying default board tiles.', 'info');
             boardTiles = [
                 { q: 0, r: -2, type: 'rock', number: 10 },
                 { q: 1, r: -2, type: 'sheep', number: 2 },
@@ -612,9 +688,7 @@ async function loadBoardTilesFromBackend() {
                 { q: -1, r: 2, type: 'sheep', number: 6 },
                 { q: 0, r: 2, type: 'hay', number: 11 }
             ];
-            if (!isGamePage && !isPlayerPage) {
-                saveBuilderState();
-            }
+            if (builderHistoryStack.length === 0) saveBuilderState();
         }
         allJunctions = getAllJunctions();
         allEdges = getAllEdges();
@@ -622,7 +696,7 @@ async function loadBoardTilesFromBackend() {
     } catch (e) {
         boardEditingAllowed = false;
         updateBoardEditingUI();
-        showMessage('Network error loading board tiles: ' + e.message + '. Displaying default board tiles.', 'error');
+        if (!isPlayerPage) showMessage('Network error loading board tiles: ' + e.message + '. Displaying default board tiles.', 'error');
         console.error('Error loading board tiles from backend:', e);
         boardTiles = [
             { q: 0, r: -2, type: 'rock', number: 10 },
@@ -666,14 +740,14 @@ async function saveAllPlayerStatesToBackend(forceSave = false) {
                 return true;
             } else {
                 console.error('Error saving all player states:', result.message);
-                showMessage('Error saving all player states: ' + result.message, 'error');
+                if (!isPlayerPage) showMessage('Error saving all player states: ' + result.message, 'error');
                 await loadAllPlayerStatesFromBackend();
                 updatePlayerUI();
                 return false;
             }
         } catch (e) {
             console.error('Network error saving all player states:', e);
-            showMessage('Network error saving all player states: ' + e.message, 'error');
+            if (!isPlayerPage) showMessage('Network error saving all player states: ' + e.message, 'error');
             await loadAllPlayerStatesFromBackend();
             updatePlayerUI();
             return false;
@@ -706,7 +780,8 @@ async function loadAllPlayerStatesFromBackend() {
             }
             if (startGameButton) {
                 startGameButton.disabled = Boolean(loadedStates._started);
-                startGameButton.textContent = loadedStates._started ? 'Started' : 'Start game';
+                if (isPlayerPage) startGameButton.hidden = allPlayersData._started || !document.body.classList.contains('has-player-color');
+                else startGameButton.textContent = loadedStates._started ? 'Started' : 'Start game';
             }
             if (isPlayerPage && loadedStates._started && !document.body.classList.contains('has-player-color')) {
                 const assignedColor = result.player_colors?.[PLAYER_ID];
@@ -756,12 +831,14 @@ async function loadAllPlayerStatesFromBackend() {
             allPlayersData._turnOrder = Array.isArray(loadedStates._turnOrder) ? loadedStates._turnOrder : [];
             allPlayersData._currentTurnPlayerId = loadedStates._currentTurnPlayerId || allPlayersData._turnOrder[0] || null;
             if (isPlayerPage && allPlayersData._currentTurnPlayerId !== PLAYER_ID) clearSelectedPlayerTool();
+            const isMyTurn = isPlayerPage && allPlayersData._started && allPlayersData._currentTurnPlayerId === PLAYER_ID;
+            if (isMyTurn && !wasMyTurn) void playPlayerSound('turn');
+            wasMyTurn = isMyTurn;
             if (isPlayerPage && allPlayersData._started && allPlayersData._currentTurnPlayerId === PLAYER_ID) {
                 const notice = `${allPlayersData._phase}:${allPlayersData._setupIndex}:${allPlayersData._rolled}`;
                 if (notice !== lastTurnNotice && (allPlayersData._phase === 'START_PHASE' || !allPlayersData._rolled)) {
                     showMessage(allPlayersData._phase === 'START_PHASE' ? "It's your turn to place 1 free Settlement and 1 connected free Road." : "It's your turn!");
                     lastTurnNotice = notice;
-                    if (allPlayersData._phase === 'MAIN_PHASE') window.setTimeout(() => { messageBox.textContent = ''; }, 1000);
                 }
             }
             const required = allPlayersData._pendingDiscards[PLAYER_ID];
@@ -771,7 +848,7 @@ async function loadAllPlayerStatesFromBackend() {
                 chooseOption(`Drop cards: ${counts}`, [{ value: 'select', label: 'OK' }]);
             }
         } else {
-            showMessage("No saved player states found. Initializing default player states.", 'info');
+            if (!isPlayerPage) showMessage("No saved player states found. Initializing default player states.", 'info');
             allPlayersData = init_player_data;
             allPlayersData._undoStack = [];
             allPlayersData._turnOrder = [];
@@ -779,7 +856,7 @@ async function loadAllPlayerStatesFromBackend() {
         }
         drawBoard();
     } catch (e) {
-        showMessage('Network error loading player states: ' + e.message + '. Initializing default player states.', 'error');
+        if (!isPlayerPage) showMessage('Network error loading player states: ' + e.message + '. Initializing default player states.', 'error');
         console.error('Error loading player states from backend:', e);
         allPlayersData = init_player_data;
         allPlayersData._undoStack = [];
@@ -1007,7 +1084,7 @@ function getClosestEdge(px, py, threshold = 20) {
 }
 
 canvas.addEventListener('click', async (event) => {
-    if (!isGamePage && !isPlayerPage && !boardEditingAllowed) {
+    if (isGamePage && selectedTool === 'swap' && !boardEditingAllowed) {
         showMessage('Reset the game before editing the board.', 'error');
         return;
     }
@@ -1018,10 +1095,54 @@ canvas.addEventListener('click', async (event) => {
     const scaleY = canvas.height / rect.height;
     const mouseX = (event.clientX - rect.left) * scaleX / boardScale;
     const mouseY = (event.clientY - rect.top) * scaleY / boardScale;
+    const placementHitRadius = 20 * Math.max(scaleX, scaleY) / boardScale;
+
+    if (isGamePage && selectedTool !== 'swap') {
+        if (gameRobberMoveSaving) return;
+        if (!allPlayersData._started) {
+            showMessage('Start the game before moving the robber.', 'error');
+            return;
+        }
+        const robber = allPlayersData.robber;
+        if (!robber || robber.q === 100) return;
+        const robberPixel = hexToPixel(robber.q, robber.r, offsetX, offsetY);
+        if (Math.hypot(mouseX - robberPixel.x, mouseY - robberPixel.y) < TILE_RADIUS * 0.45) {
+            gameRobberMoveSelected = !gameRobberMoveSelected;
+            showMessage(gameRobberMoveSelected ? 'Select a tile to move the robber.' : 'Robber move cancelled.');
+            drawBoard();
+            return;
+        }
+        if (!gameRobberMoveSelected) return;
+        const clickedHex = pixelToHex(mouseX, mouseY, offsetX, offsetY);
+        const clickedTile = boardTiles.find(tile => tile.q === clickedHex.q && tile.r === clickedHex.r);
+        if (!clickedTile) return;
+        gameRobberMoveSaving = true;
+        try {
+            const response = await fetch('/catan/move_robber', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ q: clickedTile.q, r: clickedTile.r })
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== 'success') {
+                showMessage(result.message || 'Could not move the robber.', 'error');
+                return;
+            }
+            gameRobberMoveSelected = false;
+            await loadAllPlayerStatesFromBackend();
+            drawBoard();
+            showMessage('Robber moved.');
+        } catch (error) {
+            showMessage(`Could not move the robber: ${error.message}`, 'error');
+        } finally {
+            gameRobberMoveSaving = false;
+        }
+        return;
+    }
 
     let actionSuccessful = false;
 
-    if (!isGamePage && !isPlayerPage) {
+    if (isGamePage) {
         if (selectedTool === 'swap') {
             const clickedHex = pixelToHex(mouseX, mouseY, offsetX, offsetY);
             const clickedTile = boardTiles.find(t => t.q === clickedHex.q && t.r === clickedHex.r);
@@ -1060,6 +1181,8 @@ canvas.addEventListener('click', async (event) => {
 
                         selectedSwapItem2.tile.type = tempType;
                         selectedSwapItem2.tile.number = tempNumber;
+                        const desert = [selectedSwapItem1.tile, selectedSwapItem2.tile].find(tile => tile.type === 'desert');
+                        if (desert) allPlayersData.robber = { q: desert.q, r: desert.r };
                         showMessage('Tiles swapped successfully!');
                     }
                     actionSuccessful = true;
@@ -1102,7 +1225,7 @@ canvas.addEventListener('click', async (event) => {
                 return;
             }
             
-            const clickedJunction = getClosestJunction(mouseX, mouseY);
+            const clickedJunction = getClosestJunction(mouseX, mouseY, placementHitRadius);
             if (clickedJunction) {
                 let existingStructure = false;
                 for (const pId in allPlayersData) {
@@ -1145,7 +1268,7 @@ canvas.addEventListener('click', async (event) => {
                 showMessage('Click near a junction to place a house.', 'error');
             }
         } else if (selectedPlayerTool === 'city') {
-            const clickedJunction = getClosestJunction(mouseX, mouseY);
+            const clickedJunction = getClosestJunction(mouseX, mouseY, placementHitRadius);
             if (clickedJunction) {
                 const existingHouse = allPlayersData[PLAYER_ID].structures.find(s => s.junction.id === clickedJunction.id && s.type === 'house' && s.owner === PLAYER_ID);
                 if (existingHouse) {
@@ -1158,12 +1281,10 @@ canvas.addEventListener('click', async (event) => {
                 } else {
                     showMessage('You must have a house here to build a city.', 'error');
                 }
-            } else {
-                showMessage('Click near a junction with your house to build a city.', 'error');
             }
         } else if (selectedPlayerTool === 'road') {
             if (allPlayersData._phase === 'START_PHASE' && allPlayersData[PLAYER_ID].roads.length > (allPlayersData._setupIndex >= allPlayersData._turnOrder.length ? 1 : 0)) return;
-            const clickedEdge = getClosestEdge(mouseX, mouseY);
+            const clickedEdge = getClosestEdge(mouseX, mouseY, placementHitRadius);
             if (clickedEdge) {
                 let existingRoad = false;
                 for (const pId in allPlayersData) {
@@ -1181,7 +1302,6 @@ canvas.addEventListener('click', async (event) => {
                     if (allPlayersData._phase === 'START_PHASE') {
                         const house = allPlayersData[PLAYER_ID].structures.at(-1);
                         if (!house || ![`${Math.round(clickedEdge.x1)},${Math.round(clickedEdge.y1)}`, `${Math.round(clickedEdge.x2)},${Math.round(clickedEdge.y2)}`].includes(house.junction.id)) {
-                            showMessage('Connect the free road to your new settlement.', 'error');
                             return;
                         }
                     }
@@ -1194,8 +1314,6 @@ canvas.addEventListener('click', async (event) => {
                         actionSuccessful = true;
                     }
                 }
-            } else {
-                showMessage('Click near an edge to place a road.', 'error');
             }
         } else if (selectedPlayerTool === 'robber') {
             if (!allPlayersData._robberPending) return;
@@ -1235,40 +1353,38 @@ canvas.addEventListener('click', async (event) => {
             clearSelectedPlayerTool();
             const saved = await saveAllPlayerStatesToBackend();
             if (saved) socket.emit('game_action_log', { pid: PLAYER_ID, message: actionMessage });
-        } else if (!isGamePage) {
+        } else if (isGamePage) {
+            saveBuilderState();
             await saveBoardTilesToBackend();
         }
     }
     drawBoard();
 });
 
-if (!isGamePage && !isPlayerPage) {
-    document.getElementById('tool-select').addEventListener('click', (event) => {
-        const target = event.target;
-        if (target.classList.contains('btn-tool')) {
-            if (!boardEditingAllowed && target.dataset.tool !== 'reset-game') {
-                showMessage('Reset the game before editing the board.', 'error');
-                return;
-            }
-            document.querySelectorAll('.btn-tool').forEach(btn => btn.classList.remove('selected'));
-            target.classList.add('selected');
+if (isGamePage) {
+    document.querySelectorAll('#boardTools .map-tool').forEach(button => { button.dataset.label = button.title; });
+    document.getElementById('boardTools').addEventListener('click', async (event) => {
+        const target = event.target.closest('.map-tool[data-tool]');
+        if (!target || target.disabled || !boardControlsEnabled) return;
+        const tool = target.dataset.tool;
 
-            selectedTool = target.dataset.tool;
-
-            if (selectedTool === 'undo') {
-                undoBuilderLastAction();
-            } else if (selectedTool === 'shuffle-cells') {
-                shuffleCells();
-            } else if (selectedTool === 'shuffle-numbers') {
-                shuffleNumbers();
-            } else if (selectedTool === 'reset-game') {
-                resetgame();
-            }
-            
-            
-            showMessage(`Selected tool: ${selectedTool}`);
-            drawBoard();
+        if (tool === 'swap') {
+            selectedTool = selectedTool === 'swap' ? null : 'swap';
+            selectedSwapItem1 = null;
+            selectedSwapItem2 = null;
+            gameRobberMoveSelected = false;
+            showMessage(selectedTool === 'swap' ? 'Swap mode: select two tiles or two numbers.' : 'Swap mode off.');
+        } else if (tool === 'undo') {
+            undoBuilderLastAction();
+        } else if (tool === 'shuffle-cells') {
+            shuffleCells();
+        } else if (tool === 'shuffle-numbers') {
+            shuffleNumbers();
+        } else if (tool === 'reset-game') {
+            if (await confirmReset()) await resetgame();
         }
+        updateBoardEditingUI();
+        drawBoard();
     });
 }
 
@@ -1283,6 +1399,10 @@ if (isPlayerPage) {
         selectedPlayerTool = target.dataset.tool;
         if (selectedPlayerTool === 'undo-player') {
             undoPlayerLastAction();
+        } else if (allPlayersData._phase === 'START_PHASE' && selectedPlayerTool === 'house') {
+            showMessage('Place your free settlement at a junction.');
+        } else if (allPlayersData._phase === 'START_PHASE' && selectedPlayerTool === 'road') {
+            showMessage('Place your free road connected to your settlement.');
         }
     });
 
@@ -1342,7 +1462,6 @@ if (isPlayerPage) {
     devCardButton.addEventListener('click', async () => {
         if (devCardButton.dataset.pending) return;
         if (allPlayersData._currentTurnPlayerId !== PLAYER_ID || allPlayersData._phase !== 'MAIN_PHASE') {
-            showMessage('You can buy a Development Card on your turn.', 'error');
             return;
         }
         const confirmed = await showConfirmation('Do you want to take 1 Development card?');
@@ -1356,15 +1475,12 @@ if (isPlayerPage) {
             });
             const result = await response.json();
             if (!response.ok) {
-                showMessage(result.message || 'Could not buy a Development Card.', 'error');
+                if (result.code === 'missing_resources') showMessage(result.message, 'error');
                 return;
             }
             await loadAllPlayerStatesFromBackend();
             updatePlayerUI();
             showMessage(`You drew a ${result.cardType} Development Card!`);
-            if (result.cardType === 'victory_point') {
-                window.setTimeout(() => showMessage('Victory Point card revealed.'), 2000);
-            }
         } catch (error) {
             showMessage(`Could not buy a Development Card: ${error.message}`, 'error');
         } finally {
@@ -1437,8 +1553,9 @@ function renderTransferDropButtons() {
         button.type = 'button';
         button.classList.add('transfer-btn');
         button.dataset.targetPlayer = pId;
-        button.textContent = allPlayersData[pId].playerName;
+        button.textContent = allPlayersData[pId].playerName.slice(0, 5);
         button.title = `Give cards to ${allPlayersData[pId].playerName}`;
+        button.setAttribute('aria-label', button.title);
         transferDropButtonsDiv.appendChild(button);
     });
 
@@ -1460,7 +1577,15 @@ function initializeDevCardDeck() {
     shuffleArray(globalDevCardDeck);
 }
 
+function fitGameMap() {
+    const map = isGamePage && document.querySelector('.game-map');
+    if (!map || map.offsetParent === null) return;
+    const available = window.innerHeight - (map.getBoundingClientRect().top + window.scrollY) - 12;
+    map.style.maxWidth = `${Math.max(240, available * 1.2)}px`;
+}
+
 function resizeCanvas() {
+    fitGameMap();
     
     const containerWidth = canvas.parentElement.clientWidth;
     const containerHeight = canvas.parentElement.clientHeight;
@@ -1588,6 +1713,8 @@ function updatePlayerUI() {
             }
         );
         document.getElementById('devCardCount').textContent = allPlayersData[PLAYER_ID].devCards.length;
+        document.getElementById('victoryPointCount').textContent = Number(allPlayersData[PLAYER_ID].victory_point) || 0;
+        document.getElementById('knightPlayedCount').textContent = Number(allPlayersData[PLAYER_ID].knightplayed) || 0;
     }
         renderTransferDropButtons();
         updateUndoButton();
@@ -1597,7 +1724,6 @@ function updatePlayerUI() {
 function updateResourceSelectionTray(mode = 'take') {
     const handMode = mode === 'drop';
     const tray = document.getElementById(handMode ? 'handSelectionPanel' : 'resourceSelectionTray');
-    const total = document.getElementById(handMode ? 'handSelectionTotal' : 'resourceSelectionTotal');
     const details = document.getElementById(handMode ? 'handSelectionDetails' : 'resourceSelectionDetails');
     const confirmButton = document.getElementById(handMode ? 'dropSelectedCards' : 'confirmResourceSelection');
     const selectedResources = handMode ? selectedHandCards : pendingResourceCards;
@@ -1609,9 +1735,6 @@ function updateResourceSelectionTray(mode = 'take') {
     tray.dataset.mode = mode;
     tray.hidden = selectedResources.length === 0;
     if (handMode) document.getElementById('transferDropButtons').hidden = false;
-    total.textContent = handMode
-        ? `${selectedResources.length} card${selectedResources.length === 1 ? '' : 's'} staged to drop`
-        : `${selectedResources.length} card${selectedResources.length === 1 ? '' : 's'} selected`;
     details.textContent = Object.entries(counts)
         .sort(([first], [second]) => ['wood', 'brick', 'rock', 'sheep', 'hay'].indexOf(first) - ['wood', 'brick', 'rock', 'sheep', 'hay'].indexOf(second))
         .map(([resourceType, count]) => `${count}${({ wood: 'W', brick: 'B', rock: 'R', sheep: 'S', hay: 'H' })[resourceType] || resourceType[0].toUpperCase()}`)
@@ -1664,11 +1787,9 @@ async function commitPendingResourceCards() {
         });
         const result = await response.json();
         if (!response.ok || result.status !== 'success') {
-            showMessage(result.message || 'Could not take cards.', 'error');
             return;
         }
     } catch (error) {
-        showMessage(`Could not take cards: ${error.message}`, 'error');
         return;
     } finally {
         cardActionPending = false;
@@ -1677,12 +1798,10 @@ async function commitPendingResourceCards() {
     updateResourceSelectionTray('take');
     await loadAllPlayerStatesFromBackend();
     updatePlayerUI();
-    showMessage(`Added ${selectedResources.length} card${selectedResources.length === 1 ? '' : 's'} to your hand.`);
 }
 
 function toggleCardSelection(cardElement, resourceType) {
     if (pendingResourceCards.length > 0) {
-        showMessage('Clear the staged resource picks before selecting hand cards.');
         return;
     }
 
@@ -1706,7 +1825,6 @@ function toggleCardSelection(cardElement, resourceType) {
 }
 async function transferOrDropSelectedCards(currentPlayerId, targetPlayerId) {
     if (cardActionPending || selectedHandCards.length === 0) {
-        showMessage('No cards selected to transfer/drop.', 'error');
         return;
     }
     const transferredCards = [...selectedHandCards];
@@ -1723,11 +1841,9 @@ async function transferOrDropSelectedCards(currentPlayerId, targetPlayerId) {
         });
         const result = await response.json();
         if (!response.ok || result.status !== 'success') {
-            showMessage(result.message || 'Could not update cards.', 'error');
             return;
         }
     } catch (error) {
-        showMessage(`Could not update cards: ${error.message}`, 'error');
         return;
     } finally {
         cardActionPending = false;
@@ -1750,7 +1866,6 @@ async function transferOrDropSelectedCards(currentPlayerId, targetPlayerId) {
         ? `dropped ${cardSummary} (${transferredCards.length})`
         : `gave ${cardSummary} (${transferredCards.length}) to ${allPlayersData[targetPlayerId].playerName}`;
     socket.emit('game_action_log', { pid: currentPlayerId, message: actionMessage });
-    showMessage('Card operation completed.');
 }
 async function stealCards(currentPlayerId, targetPlayerId) {
     savePlayerStateToHistory(); // Save current state before modification
@@ -1888,8 +2003,8 @@ function getDicePipHTML(value) {
     return pips;
 }
 
-function getDiceFaceHTML(value) {
-    return `<div class="dice-face" role="img" aria-label="Die showing ${value}">${getDicePipHTML(value)}</div>`;
+function getDiceFaceHTML(value, color) {
+    return `<div class="dice-face dice-${color}" role="img" aria-label="${color} die showing ${value}">${getDicePipHTML(value)}</div>`;
 }
 
 function setDiceFaceValue(face, value) {
@@ -1900,7 +2015,7 @@ function setDiceFaceValue(face, value) {
 function renderGameDiceResult(dice, playerName = '') {
     const displayElement = document.getElementById('diceroll');
     if (!displayElement) return;
-    displayElement.innerHTML = `<div class="dice-result" aria-live="polite">${getDiceFaceHTML(dice[0])}${getDiceFaceHTML(dice[1])}</div>`;
+    displayElement.innerHTML = `<div class="dice-result" aria-live="polite">${getDiceFaceHTML(dice[0], 'red')}${getDiceFaceHTML(dice[1], 'yellow')}</div>`;
     const label = document.getElementById('lastRollPlayer');
     if (label) label.textContent = playerName;
     displayElement.classList.remove('rolling');
@@ -1913,13 +2028,13 @@ function getDiceRollOverlay() {
 
     overlay = document.createElement('div');
     overlay.id = 'diceRollOverlay';
-    overlay.className = 'dice-roll-overlay';
+    overlay.className = 'dice-roll-overlay catan-dice-roll-overlay';
     overlay.hidden = true;
     overlay.setAttribute('role', 'status');
     overlay.setAttribute('aria-live', 'polite');
+    overlay.setAttribute('aria-label', 'Rolling dice');
     overlay.setAttribute('tabindex', '0');
-    overlay.title = 'Click to dismiss the dice result';
-    overlay.innerHTML = '<div class="dice-roll-panel"><span class="dice-roll-caption">Rolling dice</span><div class="dice-overlay-pair"><div class="dice-face" role="img" aria-label="Die"></div><div class="dice-face" role="img" aria-label="Die"></div></div></div>';
+    overlay.innerHTML = '<div class="dice-roll-panel"><div class="dice-overlay-pair"><div class="dice-face dice-red" role="img" aria-label="Red die"></div><div class="dice-face dice-yellow" role="img" aria-label="Yellow die"></div></div></div>';
     overlay.addEventListener('click', dismissDiceRollOverlay);
     overlay.addEventListener('keydown', event => {
         if (event.key === 'Escape' && overlay.classList.contains('is-result')) {
@@ -1946,11 +2061,10 @@ function showSharedDiceRoll(finalDice) {
 
     const overlay = getDiceRollOverlay();
     const faces = overlay.querySelectorAll('.dice-face');
-    const caption = overlay.querySelector('.dice-roll-caption');
     overlay.hidden = false;
     overlay.classList.remove('is-result');
     overlay.classList.add('is-visible', 'is-rolling');
-    caption.textContent = 'Rolling dice';
+    overlay.setAttribute('aria-label', 'Rolling dice');
 
     const randomizeFaces = () => {
         faces.forEach(face => setDiceFaceValue(face, getRandomInt(1, 6)));
@@ -1962,7 +2076,7 @@ function showSharedDiceRoll(finalDice) {
         window.clearInterval(diceAnimationInterval);
         diceAnimationInterval = null;
         faces.forEach((face, index) => setDiceFaceValue(face, finalDice[index]));
-        caption.textContent = 'Dice result · click to dismiss';
+        overlay.setAttribute('aria-label', `Dice result: ${finalDice[0]} and ${finalDice[1]}`);
         overlay.classList.remove('is-rolling');
         overlay.classList.add('is-result');
 
@@ -2009,6 +2123,7 @@ socket.on('roll_dice_broadcast', (data) => {
         : [getRandomInt(1, 6), getRandomInt(1, 6)];
     allPlayersData._rolled = true;
     allPlayersData._lastRoll = { dice, player: data.current_player };
+    if (isPlayerPage) playPlayerSound(dice[0] + dice[1] === 7 ? 'danger' : 'roll');
     if (dice[0] + dice[1] === 7) {
         allPlayersData._robberPending = true;
         if (isPlayerPage && PLAYER_ID === data.current_player) selectedPlayerTool = 'robber';
@@ -2043,13 +2158,11 @@ function updateLargestArmyHolder() {
 async function playdevcard(currentPlayerId, item) {
     const cards = allPlayersData[currentPlayerId].devCards;
     if (!allPlayersData._started || allPlayersData._currentTurnPlayerId !== currentPlayerId || !cards.includes(item)) {
-        showMessage('This card cannot be played now.', 'error');
         return;
     }
     const confirmed = await showConfirmation(`Are you sure you want to play the ${item} card?`);
     if (confirmed) {
         if (!allPlayersData._started || allPlayersData._currentTurnPlayerId !== currentPlayerId || !allPlayersData[currentPlayerId].devCards.includes(item)) {
-            showMessage('This card cannot be played now.', 'error');
             return;
         }
         savePlayerStateToHistory(); // Save state before playing
@@ -2186,8 +2299,17 @@ socket.on('catan_update', async () => {
     
 });
 
+socket.on('catan_card_transfer', data => {
+    if (!isPlayerPage || (PLAYER_ID !== data.sender && PLAYER_ID !== data.recipient)) return;
+    const cards = Object.entries(data.cards).map(([resource, count]) => `${count} ${resource}`).join(', ');
+    showMessage(PLAYER_ID === data.sender
+        ? `Sent ${cards} to ${data.recipientName}.`
+        : `Received ${cards} from ${data.senderName}.`);
+});
+
 socket.on('dev_card_played_broadcast', (data) => {
     renderLastPlayedDevCard(data);
+    if (isPlayerPage && data?.cardType === 'victory_point') void playPlayerSound('victory');
 });
 
 socket.on('score_update_broadcast', () => {
@@ -2195,16 +2317,12 @@ socket.on('score_update_broadcast', () => {
 });
 
 window.addEventListener('load', async () => {
-    if (!isGamePage && !isPlayerPage) updateBoardEditingUI();
+    updateBoardEditingUI();
     await preloadImages();
-    if (!isGamePage && !isPlayerPage) {
-        await loadAllStatesFromBackend();
-        saveBuilderState();
-    } else if (isPlayerPage) {
+    if (isPlayerPage) {
         await onCatanPlayerPageLoad();
     } else {
         await loadAllStatesFromBackend();
     }
 });
 window.addEventListener('resize', resizeCanvas);
-

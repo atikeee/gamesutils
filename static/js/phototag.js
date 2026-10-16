@@ -27,7 +27,6 @@ const state = {
   images:     [],   // currently visible (raw filtered unless "Show raw")
   tags:       {},
   index:      0,
-  rotation:   0,
 };
 
 const RAW_EXTS = new Set(["cr2","cr3","crw","nef","nrw","arw","srf","sr2","dng",
@@ -35,6 +34,7 @@ const RAW_EXTS = new Set(["cr2","cr3","crw","nef","nrw","arw","srf","sr2","dng",
 const isRaw = p => RAW_EXTS.has(p.split(".").pop().toLowerCase());
 
 const imgCache = {};   // relPath → true (loaded)
+const imageVersions = {}; // relPath → cache-busting token after edits
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const folderInput     = document.getElementById("folder-input");
@@ -266,7 +266,6 @@ async function loadFolder(root, folder) {
   state.images   = [];
   state.tags     = {};
   state.index    = 0;
-  state.rotation = 0;
   Object.keys(imgCache).forEach(k => delete imgCache[k]);
   btnProcess.disabled = true;
 
@@ -337,8 +336,11 @@ chkRaw.addEventListener("change", () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function imgSrc(relPath, size = "view") {
-  const url = `/phototag/api/image?root=${encodeURIComponent(state.root)}&folder=${encodeURIComponent(state.folder)}&path=${encodeURIComponent(relPath)}&size=${size}`;
-  return url;
+  const params = new URLSearchParams({
+    root: state.root, folder: state.folder, path: relPath, size,
+  });
+  if (imageVersions[relPath]) params.set("v", imageVersions[relPath]);
+  return `/phototag/api/image?${params}`;
 }
 
 function preload(relPath) {
@@ -363,7 +365,6 @@ async function showImage(index) {
   if (!state.images.length) return;
   index = Math.max(0, Math.min(index, state.images.length - 1));
   state.index    = index;
-  state.rotation = 0;
   const relPath  = state.images[index];
 
   console.log(`[phototag] showImage(${index}) relPath="${relPath}"`);
@@ -423,9 +424,34 @@ btnNextNav.addEventListener("click", () => navigate(+1));
 
 btnRotate.addEventListener("click", rotateImage);
 
-function rotateImage() {
-  state.rotation = (state.rotation + 90) % 360;
-  mainImg.style.transform = state.rotation ? `rotate(${state.rotation}deg)` : "";
+async function rotateImage() {
+  if (!state.images.length || btnRotate.disabled) return;
+  const imageIndex = state.index;
+  const relPath = state.images[imageIndex];
+  btnRotate.disabled = true;
+
+  try {
+    const res = await fetch("/phototag/api/rotate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ root: state.root, folder: state.folder, path: relPath }),
+    });
+    const json = await res.json();
+    if (!res.ok || json.status !== "success") {
+      throw new Error(json.message || "Could not rotate image.");
+    }
+
+    imageVersions[relPath] = json.version;
+    delete imgCache[relPath];
+    const thumb = filmstrip.querySelector(`.filmstrip-thumb[data-index="${imageIndex}"]`);
+    if (thumb?.tagName === "IMG") thumb.src = imgSrc(relPath, "thumb");
+    if (state.images[state.index] === relPath) mainImg.src = imgSrc(relPath);
+  } catch (err) {
+    console.error("[phototag] rotate failed:", err);
+    window.alert(err.message || "Could not rotate image.");
+  } finally {
+    btnRotate.disabled = false;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

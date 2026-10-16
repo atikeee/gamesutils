@@ -181,23 +181,7 @@
         .catan-game-page #assignpoint tr.c2-score-leader td:first-child { box-shadow: inset 4px 0 #c49c26; }
         .catan-game-page #assignpoint tr.c2-score-inactive { opacity: 0.45; filter: grayscale(1); color: #8a9590; }
         .catan2-game-page .canvas-wrapper.map-zoom-viewport { position: relative; }
-        .c2-start-game-button {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            z-index: 3;
-            min-width: 72px;
-            min-height: 40px;
-            padding: 6px 14px;
-            border: 2px solid #fff;
-            border-radius: 20px;
-            background: #1f9d55;
-            color: #fff;
-            font: 700 0.95rem Inter, sans-serif;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-            cursor: pointer;
-        }
-        .c2-start-game-button:disabled { background: #b8c4bf; color: #eef3f1; cursor: not-allowed; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); }
+        .catan2-game-page .game-map { width: min(100%, 950px, calc((100svh - 96px) * 1.2)); }
         .catan-game-page #assignpoint tr.c2-score-active { color: #c62828; font-weight: 700; }
         .c2-progress-card-popup {
             position: absolute;
@@ -264,19 +248,45 @@
     <div class="main-container">
         <div class="left-column" id="gameMapPanel">
             <div class="c2-game-heading">
-                <h1 class="text-2xl font-bold text-gray-800 mb-4">Cities &amp; Knights Game</h1>
+                <div class="game-title-row">
+                    <h1 class="text-2xl font-bold text-gray-800">Cities &amp; Knights Game</h1>
+                    <button type="button" id="boardControlsToggle" class="board-controls-toggle" aria-pressed="false" aria-controls="boardTools" title="Enable map controls" aria-label="Enable map controls"><i class="fas fa-eye-slash" aria-hidden="true"></i></button>
+                </div>
                 <div class="dice-roll-section">
                     <div id="diceroll" aria-label="Last dice roll"></div>
                 </div>
             </div>
-            <div class="map-zoom-controls">
-                <button type="button" class="map-zoom-toggle" id="mapZoomToggle" aria-pressed="false" title="Zoom map to 2x">2×</button>
-            </div>
-            <div class="canvas-wrapper map-zoom-viewport">
-                <button type="button" class="c2-start-game-button" id="startGameButton" disabled>Start</button>
-                <canvas id="catanBoard"></canvas>
+            <div class="game-map" id="boardTools">
+                <div class="canvas-wrapper map-zoom-viewport">
+                    <canvas id="catanBoard"></canvas>
+                </div>
+                <div class="map-corner map-corner-top-left">
+                    <button type="button" class="map-tool" data-tool="shuffle-cells" title="Shuffle tiles" aria-label="Shuffle tiles" disabled><i class="fas fa-shuffle" aria-hidden="true"></i></button>
+                    <button type="button" class="map-tool" data-tool="shuffle-numbers" title="Shuffle numbers" aria-label="Shuffle numbers" disabled><i class="fas fa-dice" aria-hidden="true"></i></button>
+                </div>
+                <div class="map-corner map-corner-top-right">
+                    <button type="button" class="map-tool" id="mapZoomToggle" aria-pressed="false" title="Zoom in" aria-label="Zoom in" disabled><i class="fas fa-magnifying-glass-plus" aria-hidden="true"></i></button>
+                </div>
+                <div class="map-corner map-corner-bottom-left">
+                    <button type="button" class="map-tool map-tool-danger" data-tool="reset-game" title="Reset game" aria-label="Reset game" disabled><i class="fas fa-power-off" aria-hidden="true"></i></button>
+                </div>
+                <div class="map-corner map-corner-bottom-right">
+                    <button type="button" class="map-tool" data-tool="undo" title="Undo last board change" aria-label="Undo last board change" disabled><i class="fas fa-rotate-left" aria-hidden="true"></i></button>
+                    <button type="button" class="map-tool" data-tool="swap" aria-pressed="false" title="Swap tiles or numbers" aria-label="Swap tiles or numbers" disabled><i class="fas fa-right-left" aria-hidden="true"></i></button>
+                </div>
             </div>
             <div id="messageBox" class="message-box"></div>
+            <dialog id="resetDialog" class="game-dialog" aria-labelledby="resetDialogTitle" aria-describedby="resetDialogText">
+                <form method="dialog">
+                    <div class="game-dialog-icon"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i></div>
+                    <h2 id="resetDialogTitle">Reset game?</h2>
+                    <p id="resetDialogText">All player seats and progress will be cleared. The board layout is kept.</p>
+                    <div class="game-dialog-actions">
+                        <button type="submit" value="cancel" class="game-dialog-cancel" autofocus>Cancel</button>
+                        <button type="submit" value="confirm" class="game-dialog-confirm"><i class="fas fa-power-off" aria-hidden="true"></i> Reset game</button>
+                    </div>
+                </form>
+            </dialog>
         </div>
         <div class="middle-column" id="gameScorePanel">
             <section class="c2-barbarian-track-section" aria-labelledby="barbarianTrackTitle">
