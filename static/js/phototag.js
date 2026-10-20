@@ -33,6 +33,11 @@ const RAW_EXTS = new Set(["cr2","cr3","crw","nef","nrw","arw","srf","sr2","dng",
   "raf","orf","rw2","pef","srw","raw","rwl","3fr","iiq"]);
 const isRaw = p => RAW_EXTS.has(p.split(".").pop().toLowerCase());
 
+// Must match PROTECTED_DIRS in routes_phototag.py
+const PROTECTED_DIRS = new Set(["e", "edit"]);
+const isProtected = p => [state.folder, ...p.split("/").slice(0, -1)]
+  .some(s => PROTECTED_DIRS.has(s.toLowerCase()));
+
 const imgCache = {};   // relPath → true (loaded)
 const imageVersions = {}; // relPath → cache-busting token after edits
 
@@ -49,6 +54,7 @@ const viewer          = document.getElementById("viewer");
 const tagBadge        = document.getElementById("tag-badge");
 const filenameStrip   = document.getElementById("filename-strip");
 const counter         = document.getElementById("counter");
+const fileDropdown    = document.getElementById("file-dropdown");
 const filmstrip       = document.getElementById("filmstrip");
 
 const btnPrevBar  = document.getElementById("btn-prev-bar");
@@ -68,6 +74,20 @@ const processFill    = document.getElementById("process-fill");
 const processStatus  = document.getElementById("process-status");
 const processSummary = document.getElementById("process-summary");
 const processClose   = document.getElementById("process-close");
+
+const btnMark        = document.getElementById("btn-mark");
+const markBadge      = document.getElementById("mark-badge");
+const btnDownload    = document.getElementById("btn-download");
+const downloadCount  = document.getElementById("download-count");
+const downloadModal  = document.getElementById("download-modal");
+const downloadTitle  = document.getElementById("download-title");
+const downloadFill   = document.getElementById("download-fill");
+const downloadStatus = document.getElementById("download-status");
+const downloadList   = document.getElementById("download-list");
+const downloadShare  = document.getElementById("download-share");
+const downloadAll    = document.getElementById("download-all");
+const downloadClear  = document.getElementById("download-clear");
+const downloadClose  = document.getElementById("download-close");
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // FOLDER SEARCH COMBOBOX
@@ -272,8 +292,9 @@ async function loadFolder(root, folder) {
   showMessage("loading");
   setNavState();
   clearTagUI();
+  updateMarkUI();
   filmstrip.innerHTML = "";
-  counter.textContent = "—";
+  setCounterText("—");
 
   try {
     const params  = new URLSearchParams({ root, folder });
@@ -316,15 +337,62 @@ function refreshImageList(keepPath) {
     const rawCount = state.allImages.filter(isRaw).length;
     showMessage("empty", rawCount && !chkRaw.checked
       ? `${rawCount} raw file(s) hidden — tick "Show raw" to view them.` : "");
-    counter.textContent = "0 images";
+    setCounterText("0 images");
     return;
   }
 
   const idx = keepPath ? Math.max(0, state.images.indexOf(keepPath)) : 0;
   buildFilmstrip();
+  buildCounterOptions();
   hideMessage();
   showImage(idx);
 }
+
+function setCounterText(text) {
+  counter.textContent = text;
+  counter.disabled = true;
+  closeFileDropdown();
+  fileDropdown.innerHTML = "";
+}
+
+function buildCounterOptions() {
+  fileDropdown.innerHTML = state.images.map((p, i) => `
+    <div class="file-option" role="option" data-index="${i}">
+      <span class="file-option-num">${i + 1}</span>
+      <span class="file-option-name">${escHtml(p)}</span>
+    </div>`).join("");
+  counter.disabled = false;
+}
+
+function openFileDropdown() {
+  fileDropdown.querySelector(".file-option.selected")?.classList.remove("selected");
+  const cur = fileDropdown.children[state.index];
+  cur?.classList.add("selected");
+  fileDropdown.classList.add("open");
+  counter.setAttribute("aria-expanded", "true");
+  cur?.scrollIntoView({ block: "center" });
+}
+
+function closeFileDropdown() {
+  fileDropdown.classList.remove("open");
+  counter.setAttribute("aria-expanded", "false");
+}
+
+counter.addEventListener("click", () => {
+  fileDropdown.classList.contains("open") ? closeFileDropdown() : openFileDropdown();
+  counter.blur();
+});
+
+fileDropdown.addEventListener("click", e => {
+  const opt = e.target.closest(".file-option");
+  if (!opt) return;
+  closeFileDropdown();
+  showImage(Number(opt.dataset.index));
+});
+
+document.addEventListener("click", e => {
+  if (!document.getElementById("counter-wrap").contains(e.target)) closeFileDropdown();
+});
 
 chkRaw.addEventListener("change", () => {
   chkRaw.blur();   // give keyboard shortcuts back
@@ -375,6 +443,8 @@ async function showImage(index) {
   filenameStrip.textContent = relPath;
   setNavState();
   applyTagUI(state.tags[relPath] || "");
+  setTagButtonsEnabled(!isProtected(relPath));
+  updateMarkUI();
   updateFilmstripActive(index);
 
   // Spinner only if not yet cached
@@ -465,6 +535,7 @@ btnDelete.addEventListener("click", () => applyTag("delete"));
 async function applyTag(tag) {
   if (!state.images.length) return;
   const relPath    = state.images[state.index];
+  if (isProtected(relPath)) return;
   const currentTag = state.tags[relPath] || "";
   const newTag     = currentTag === tag ? "" : tag;  // toggle off if same
 
@@ -508,6 +579,13 @@ function applyTagUI(tag) {
 
 function clearTagUI() { applyTagUI(""); }
 
+function setTagButtonsEnabled(enabled) {
+  [btnBest, btnGood, btnDelete].forEach(b => {
+    b.disabled = !enabled;
+    b.title = enabled ? "" : "Protected (e/edit folder)";
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // FILMSTRIP
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -531,6 +609,7 @@ function buildFilmstrip() {
     el.dataset.index = i;
     const tag = state.tags[relPath];
     if (tag) el.classList.add(`tag-${tag}`);
+    if (marked.has(markKey(relPath))) el.classList.add("marked");
     if (i === 0) el.classList.add("active");
     el.addEventListener("click", () => showImage(i));
     filmstrip.appendChild(el);
@@ -643,6 +722,7 @@ function finishProcess(summary, error) {
       <li>★ Moved to b/: <b>${summary.moved_best}</b></li>
       <li>✓ Moved to g/: <b>${summary.moved_good}</b></li>
       <li>Already in place: <b>${summary.unchanged}</b></li>
+      <li>Protected (e/edit), skipped: <b>${summary.protected || 0}</b></li>
       <li>Not found (removed from json): <b>${summary.missing}</b></li>
       <li>Errors: <b>${errs.length}</b></li>
     </ul>
@@ -650,15 +730,263 @@ function finishProcess(summary, error) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// DOWNLOAD MARKS (memory only — cleared on reload)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const marked = new Map();   // key → {root, folder, path}; survives folder switches
+const markKey = p => `${state.root}\n${state.folder}\n${p}`;
+
+function toggleMark() {
+  if (!state.images.length) return;
+  const p = state.images[state.index];
+  const k = markKey(p);
+  if (marked.has(k)) marked.delete(k);
+  else marked.set(k, { root: state.root, folder: state.folder, path: p });
+  updateMarkUI();
+}
+
+function updateMarkUI() {
+  const p  = state.images[state.index];
+  const on = !!p && marked.has(markKey(p));
+  btnMark.classList.toggle("active", on);
+  markBadge.classList.toggle("visible", on);
+  filmstrip.querySelector(`.filmstrip-thumb[data-index="${state.index}"]`)
+    ?.classList.toggle("marked", on);
+  downloadCount.textContent = marked.size;
+  btnDownload.disabled = marked.size === 0;
+}
+
+btnMark.addEventListener("click", () => { toggleMark(); btnMark.blur(); });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DOWNLOAD (iOS: share sheet · Android: direct downloads · desktop: folder picker)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const IS_ANDROID  = /Android/i.test(navigator.userAgent);
+const SHARE_BATCH = 30;   // larger share sheets can fail on iOS
+
+let dlToken = 0;
+let dlFiles = [];
+
+function origUrl(it) {
+  const params = new URLSearchParams({ root: it.root, folder: it.folder, path: it.path, orig: "1" });
+  return `/phototag/api/image?${params}`;
+}
+
+function releaseDownloads() {
+  dlToken++;
+  dlFiles = [];
+}
+
+function openDownloadModal(items, title) {
+  downloadTitle.textContent  = title;
+  downloadFill.style.width   = "0%";
+  downloadStatus.textContent = "";
+  downloadShare.innerHTML    = "";
+  downloadAll.hidden = downloadClear.hidden = true;
+  downloadList.innerHTML = items.map(it => `
+    <div class="download-item">
+      <span class="download-item-name">${escHtml(it.path)}</span>
+      <span class="download-item-state">…</span>
+    </div>`).join("");
+  downloadModal.classList.add("open");
+}
+
+async function uniqueName(dir, name) {
+  const dot  = name.lastIndexOf(".");
+  const base = dot > 0 ? name.slice(0, dot) : name;
+  const ext  = dot > 0 ? name.slice(dot) : "";
+  for (let n = 0; ; n++) {
+    const cand = n ? `${base}_${n}${ext}` : name;
+    try {
+      await dir.getFileHandle(cand);
+    } catch (err) {
+      if (err.name === "NotFoundError") return cand;
+      throw err;
+    }
+  }
+}
+
+// Desktop Chrome/Edge: pick one folder, then stream every original straight into it
+async function saveToDirectory(dir, items) {
+  releaseDownloads();
+  const token = dlToken;
+  openDownloadModal(items, `Saving ${items.length} photo(s) to "${dir.name}"…`);
+
+  let saved = 0;
+  for (const [i, it] of items.entries()) {
+    if (token !== dlToken) return;
+    const st = downloadList.children[i].querySelector(".download-item-state");
+    downloadStatus.textContent = `${i + 1} / ${items.length}  ${it.path}`;
+    try {
+      const res = await fetch(origUrl(it));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const fh = await dir.getFileHandle(await uniqueName(dir, it.path.split("/").pop()), { create: true });
+      await res.body.pipeTo(await fh.createWritable());
+      st.textContent = "saved";
+      saved++;
+    } catch (err) {
+      console.error("[phototag] save failed:", it.path, err);
+      st.textContent = "failed";
+      st.classList.add("err");
+    }
+    downloadFill.style.width = `${Math.round((i + 1) / items.length * 100)}%`;
+  }
+
+  downloadTitle.textContent  = `${saved} of ${items.length} saved to "${dir.name}"`;
+  downloadStatus.textContent = "";
+  downloadClear.hidden = false;
+}
+
+// iOS: share sheet only. Fetch originals into memory first; share() then needs one more tap.
+async function prepareForShare(items) {
+  releaseDownloads();
+  const token = dlToken;
+  openDownloadModal(items, `Preparing ${items.length} photo(s)…`);
+
+  for (const [i, it] of items.entries()) {
+    const st = downloadList.children[i].querySelector(".download-item-state");
+    downloadStatus.textContent = `${i + 1} / ${items.length}  ${it.path}`;
+    try {
+      const res = await fetch(origUrl(it));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      if (token !== dlToken) return;
+      const file = new File([blob], it.path.split("/").pop(),
+                            { type: blob.type || "application/octet-stream" });
+      dlFiles.push(file);
+      st.textContent = "ready";
+    } catch (err) {
+      if (token !== dlToken) return;
+      console.error("[phototag] fetch failed:", it.path, err);
+      st.textContent = "failed";
+      st.classList.add("err");
+    }
+    downloadFill.style.width = `${Math.round((i + 1) / items.length * 100)}%`;
+  }
+
+  downloadTitle.textContent  = `${dlFiles.length} of ${items.length} ready`;
+  downloadStatus.textContent = dlFiles.length ? "Tap Save to Photos, then \"Save Images\"." : "";
+  renderShareButtons();
+  downloadClear.hidden = false;
+}
+
+function renderShareButtons() {
+  downloadShare.innerHTML = "";
+  if (!navigator.canShare) {
+    downloadStatus.textContent = "This browser can't save to Photos.";
+    return;
+  }
+  for (let s = 0; s < dlFiles.length; s += SHARE_BATCH) {
+    const files = dlFiles.slice(s, s + SHARE_BATCH);
+    if (!navigator.canShare({ files })) continue;
+    const label = dlFiles.length > SHARE_BATCH
+      ? `Save to Photos ${s + 1}–${s + files.length}` : "Save to Photos";
+    const b = document.createElement("button");
+    b.className   = "btn-process";
+    b.textContent = label;
+    b.addEventListener("click", async () => {
+      try {
+        await navigator.share({ files });
+        b.textContent = `✓ ${label}`;
+      } catch (err) {
+        if (err.name !== "AbortError") downloadStatus.textContent = `Share failed: ${err.message}`;
+      }
+    });
+    downloadShare.appendChild(b);
+  }
+}
+
+// Android / desktop fallback: server sends each original as an attachment, streamed to disk
+async function directDownload(items) {
+  releaseDownloads();
+  openDownloadModal(items, `Downloading ${items.length} photo(s)…`);
+  items.forEach((it, i) => {
+    const a = document.createElement("a");
+    a.href = origUrl(it);
+    a.download = it.path.split("/").pop();
+    a.textContent = "Save";
+    downloadList.children[i].querySelector(".download-item-state").replaceWith(a);
+  });
+  await downloadAllFiles();
+  downloadTitle.textContent = `${items.length} download(s) started`;
+  downloadAll.hidden   = false;
+  downloadClear.hidden = false;
+}
+
+async function startDownload() {
+  btnDownload.blur();
+  const items = [...marked.values()];
+  if (!items.length) return;
+
+  if (IS_IOS) return prepareForShare(items);
+
+  const isTouch = matchMedia("(pointer: coarse)").matches;
+  if (!isTouch && window.showDirectoryPicker) {
+    try {
+      const dir = await window.showDirectoryPicker({ id: "phototag-dl", mode: "readwrite", startIn: "downloads" });
+      return saveToDirectory(dir, items);
+    } catch (err) {
+      if (err.name === "AbortError") return;
+      console.warn("[phototag] folder picker unavailable, using browser downloads:", err);
+    }
+  }
+  return directDownload(items);
+}
+
+async function downloadAllFiles() {
+  const token = dlToken;
+  const links = [...downloadList.querySelectorAll("a[download]")];
+  for (const [i, a] of links.entries()) {
+    if (token !== dlToken) return;
+    downloadStatus.textContent = `Downloading ${i + 1} / ${links.length}`;
+    downloadFill.style.width = `${Math.round((i + 1) / links.length * 100)}%`;
+    a.click();
+    await new Promise(r => setTimeout(r, 500));
+  }
+  downloadStatus.textContent = IS_ANDROID
+    ? "Saved to Downloads — they appear in Gallery / Photos. If only one arrived, allow \"multiple downloads\"."
+    : "If only one arrived, allow \"multiple downloads\" for this site.";
+}
+
+downloadAll.addEventListener("click", downloadAllFiles);
+
+downloadClear.addEventListener("click", () => {
+  marked.clear();
+  filmstrip.querySelectorAll(".filmstrip-thumb.marked").forEach(t => t.classList.remove("marked"));
+  updateMarkUI();
+  closeDownloadModal();
+});
+
+function closeDownloadModal() {
+  releaseDownloads();
+  downloadModal.classList.remove("open");
+  downloadList.innerHTML = "";
+}
+
+downloadClose.addEventListener("click", closeDownloadModal);
+btnDownload.addEventListener("click", startDownload);
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // KEYBOARD SHORTCUTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 document.addEventListener("keydown", e => {
   if (processModal.classList.contains("open")) return;
+  if (downloadModal.classList.contains("open")) {
+    if (e.key === "Escape") closeDownloadModal();
+    return;
+  }
+  if (fileDropdown.classList.contains("open")) {
+    if (e.key === "Escape") closeFileDropdown();
+    return;
+  }
   // Suppress shortcuts while folder search is focused
   if (document.activeElement === folderInput) return;
   // Suppress if any other text input is focused
-  if (["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
 
   switch (e.key) {
     case "ArrowLeft":            e.preventDefault(); navigate(-1);      break;
@@ -667,6 +995,7 @@ document.addEventListener("keydown", e => {
     case "g": case "G":          applyTag("good");                      break;
     case "d": case "D":          applyTag("delete");                    break;
     case "r": case "R":          rotateImage();                         break;
+    case "m": case "M":          toggleMark();                          break;
     case "Escape": {
       const cur = state.images[state.index];
       if (cur && state.tags[cur]) applyTag(state.tags[cur]);  // toggle off

@@ -56,8 +56,7 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # ── CONFIG — add as many root paths as needed ─────────────────────────────────
 PHOTO_ROOTS = [
-    os.path.abspath(os.path.join(PROJECT_ROOT, "..", "Photos-temp")),
-    '/Photos-temp',
+    '/Photo-temp',
     '/photos1',
     # os.path.join(PROJECT_ROOT, "photos"),
     # "/mnt/nas/pictures",
@@ -75,9 +74,11 @@ PROCESS_DIRS = {"g": "g", "b": "b"}
 TAG_TO_CODE = {"best": "b", "good": "g", "delete": "d"}
 CODE_TO_TAG = {v: k for k, v in TAG_TO_CODE.items()}
 
+# Images under any folder with one of these names can't be tagged or processed
+PROTECTED_DIRS = {"e", "edit"}
+
 # Preview sizes (longest edge, JPEG quality)
 SIZES = {"view": (2048, 80), "thumb": (240, 65)}
-PASSTHROUGH_BYTES = 1_500_000   # non-raw files smaller than this are sent as-is
 
 _tags_lock    = threading.Lock()
 _preview_lock = threading.Lock()
@@ -106,6 +107,11 @@ def _is_raw(filename: str) -> bool:
 
 def _is_within(path: str, base: str) -> bool:
     return path == base or path.startswith(base.rstrip(os.sep) + os.sep)
+
+
+def _is_protected(folder_rel: str, rel_path: str) -> bool:
+    parts = [folder_rel] + rel_path.replace("\\", "/").split("/")[:-1]
+    return any(p.lower() in PROTECTED_DIRS for p in parts)
 
 
 def _has_ignore(dir_abs: str) -> bool:
@@ -351,8 +357,7 @@ def _downsize(src, size_key: str):
 def _preview_bytes(full: str, size_key: str):
     """Small JPEG for `full`, or None meaning 'send the original file'."""
     raw = _is_raw(full)
-    if not raw and (Image is None or _ext(full) == ".gif"
-                    or os.path.getsize(full) <= PASSTHROUGH_BYTES and size_key == "view"):
+    if not raw and (Image is None or _ext(full) == ".gif"):
         return None
 
     st  = os.stat(full)
@@ -401,8 +406,13 @@ def _run_process(job: dict, folder_abs: str):
     processed = {}   # rel → code handled (old entry removed from json at the end)
     moved     = {}   # new rel → code (added to json at the end)
 
+    folder_rel = os.path.basename(folder_abs)
     for rel, code in items:
         job["current"] = rel
+        if _is_protected(folder_rel, rel):
+            s["protected"] += 1
+            job["done"] += 1
+            continue
         src = os.path.realpath(os.path.join(folder_abs, rel))
         try:
             if not _is_within(src, folder_abs) or src == folder_abs:
@@ -592,6 +602,10 @@ def configure_routes_phototag(app, socketio=None):
             print(f"[phototag]   → 404 file not found: {full}")
             abort(404)
 
+        if request.args.get("orig") == "1":
+            return send_file(full, as_attachment=True,
+                             download_name=os.path.basename(full))
+
         try:
             data = _preview_bytes(full, size_key)
         except Exception as e:
@@ -680,6 +694,9 @@ def configure_routes_phototag(app, socketio=None):
         if tag and tag not in ("best", "good", "delete"):
             return jsonify({"status": "error",
                             "message": f"invalid tag: {tag!r}"}), 400
+        if _is_protected(folder_rel, rel_path):
+            return jsonify({"status": "error",
+                            "message": "Images in e/edit folders can't be tagged"}), 403
 
         try:
             root_abs, folder_abs = _resolve_folder(photo_roots, root_name, folder_rel)
@@ -726,7 +743,7 @@ def configure_routes_phototag(app, socketio=None):
                 "folder_abs": folder_abs, "state": "running",
                 "total": 0, "done": 0, "current": "", "ended": 0,
                 "summary": {"deleted": 0, "moved_best": 0, "moved_good": 0,
-                            "unchanged": 0, "missing": 0, "errors": []},
+                            "unchanged": 0, "missing": 0, "protected": 0, "errors": []},
             }
             _jobs[job_id] = job
 

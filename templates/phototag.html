@@ -54,7 +54,13 @@
   <button class="btn-process" id="btn-process" disabled
           title="Delete (d) / move best → b, good → g">Process</button>
 
-  <div class="toolbar-counter" id="counter">—</div>
+  <button class="btn-process btn-download" id="btn-download" disabled
+          title="Download marked photos (originals)" aria-label="Download marked photos">⬇ <span id="download-count">0</span></button>
+
+  <div class="toolbar-counter" id="counter-wrap">
+    <button class="counter-btn" id="counter" aria-label="Jump to photo" aria-expanded="false" disabled>—</button>
+    <div class="folder-dropdown file-dropdown" id="file-dropdown" role="listbox"></div>
+  </div>
 </div>
 
 <!-- ══ PROCESS MODAL ════════════════════════════════════════════════════ -->
@@ -65,6 +71,24 @@
     <div class="process-status" id="process-status"></div>
     <div class="process-summary" id="process-summary"></div>
     <button class="btn-process" id="process-close" hidden>Close</button>
+  </div>
+</div>
+
+<!-- ══ DOWNLOAD MODAL ════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="download-modal">
+  <div class="modal">
+    <h3 id="download-title">Preparing…</h3>
+    <div class="progress"><div class="progress-fill" id="download-fill"></div></div>
+    <div class="process-status" id="download-status"></div>
+    <div class="download-actions" id="download-share"></div>
+    <div class="download-actions">
+      <button class="btn-process" id="download-all" hidden>Download all</button>
+    </div>
+    <div class="download-list" id="download-list"></div>
+    <div class="download-actions">
+      <button class="btn-process btn-secondary" id="download-clear" hidden>Clear marks</button>
+      <button class="btn-process btn-secondary" id="download-close">Close</button>
+    </div>
   </div>
 </div>
 
@@ -84,6 +108,7 @@
   <img id="main-img" src="" alt="photo" draggable="false"/>
 
   <div class="tag-badge" id="tag-badge"></div>
+  <div class="mark-badge" id="mark-badge">⬇</div>
 
   <button class="nav-arrow nav-prev disabled" id="btn-prev-nav" aria-label="Previous">‹</button>
   <button class="nav-arrow nav-next disabled" id="btn-next-nav" aria-label="Next">›</button>
@@ -125,6 +150,14 @@
   <button class="icon-btn btn-delete" id="btn-delete" data-tip="Delete" aria-label="Mark for Delete">
     🗑
     <span class="key-badge">D</span>
+  </button>
+
+  <div class="bar-divider"></div>
+
+  <!-- mark for download (session only) -->
+  <button class="icon-btn btn-mark" id="btn-mark" data-tip="Mark for download" aria-label="Mark for download">
+    ⬇
+    <span class="key-badge">M</span>
   </button>
 
 </div>

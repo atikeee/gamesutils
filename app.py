@@ -16,6 +16,7 @@ from routes.routes_math import configure_routes_math
 from flask_socketio import SocketIO, emit
 from routes.routes_stocks import configure_routes_stocks
 from routes.routes_phototag import configure_routes_phototag
+from routes.routes_mm import configure_routes_mm
 import random
 
 
@@ -42,6 +43,7 @@ configure_routes_triage_email(app)
 configure_routes_math(app)
 configure_routes_stocks(app, socketio)
 configure_routes_phototag(app, socketio)
+configure_routes_mm(app, socketio)
 
 if __name__ == '__main__':
     #app.run(debug=True, host='0.0.0.0')
