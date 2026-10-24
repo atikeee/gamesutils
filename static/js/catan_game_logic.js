@@ -19,6 +19,8 @@ let boardEditingAllowed = document.body.dataset.boardEditable === 'true';
 let gameRobberMoveSelected = false;
 let gameRobberMoveSaving = false;
 let mapZoomLevel = 1;
+// game (TV) page zooms the board in place around its centre by this factor
+const GAME_MAP_ZOOM = 1.2;
 let selectedHandCards  = [];
 let cardActionPending = false;
 let pendingResourceCards = [];
@@ -80,6 +82,29 @@ let allEdges = [];
 
 const confirmationModal = document.getElementById('confirmationModal');
 const modalMessage = document.getElementById('modalMessage');
+// Dev card text shown when a player plays the card (edit freely)
+const DEV_CARD_INFO = {
+    knight: {
+        name: 'Knight',
+        text: 'Move the robber. Steal 1 resource from the owner of a settlement or city next to the robber\'s new hex.'
+    },
+    road_building: {
+        name: 'Road Building',
+        text: 'Place 2 new roads for free, as if you had just built them.'
+    },
+    year_of_plenty: {
+        name: 'Year of Plenty',
+        text: 'Take any 2 resources from the bank. They can be 2 of the same or 2 different resources.'
+    },
+    monopoly: {
+        name: 'Monopoly',
+        text: 'Name 1 resource type. All other players must give you all of their cards of that type.'
+    },
+    victory_point: {
+        name: 'Victory Point',
+        text: '1 Victory Point! Reveal this card on your turn if it gives you enough points to win.'
+    }
+};
 const modalConfirmBtn = document.getElementById('modalConfirmBtn');
 const modalCancelBtn = document.getElementById('modalCancelBtn');
 let modalResolve;
@@ -111,7 +136,6 @@ if (boardControlsToggle) {
         boardControlsToggle.querySelector('i').className = `fas ${boardControlsEnabled ? 'fa-eye' : 'fa-eye-slash'}`;
         boardControlsToggle.title = boardControlsEnabled ? 'Disable map controls' : 'Enable map controls';
         boardControlsToggle.setAttribute('aria-label', boardControlsToggle.title);
-        if (!boardControlsEnabled && mapZoomLevel !== 1) setMapZoom(1);
         updateBoardEditingUI();
         drawBoard();
     });
@@ -224,8 +248,62 @@ function choosePlayer(ids) {
     return chooseOption('Steal a random card from:', ids.map(value => ({ value, label: allPlayersData[value].playerName })));
 }
 
-function chooseResource() {
-    return chooseOption('Choose a resource for Monopoly', ['wood', 'brick', 'sheep', 'hay', 'rock'].map(value => ({ value, label: value, image: resourceImagePaths[value] })));
+// count > 1 keeps the most recent `count` clicks (same resource may repeat) and resolves an array
+function chooseResourceToPlay(title, text, count = 1) {
+    const modal = document.getElementById('resourcePickModal');
+    if (!modal) return Promise.resolve(null);
+    const grid = document.getElementById('resourcePickOptions');
+    const confirmBtn = document.getElementById('resourcePickConfirm');
+    const cancelBtn = document.getElementById('resourcePickCancel');
+    document.getElementById('resourcePickTitle').textContent = title;
+    document.getElementById('resourcePickText').textContent = text;
+    grid.replaceChildren();
+    confirmBtn.disabled = true;
+    const picks = [];
+
+    return new Promise(resolve => {
+        const close = value => {
+            modal.classList.add('hidden');
+            modal.onclick = confirmBtn.onclick = cancelBtn.onclick = null;
+            resolve(value);
+        };
+        const refresh = () => {
+            grid.querySelectorAll('.resource-pick-card').forEach(card => {
+                const n = picks.filter(r => r === card.dataset.resource).length;
+                card.classList.toggle('selected', n > 0);
+                card.setAttribute('aria-pressed', String(n > 0));
+                const badge = card.querySelector('.resource-pick-badge');
+                badge.textContent = n;
+                badge.hidden = count === 1 || n === 0;
+            });
+            confirmBtn.disabled = picks.length !== count;
+        };
+        ['wood', 'brick', 'sheep', 'hay', 'rock'].forEach(resource => {
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.className = 'resource-pick-card';
+            card.dataset.resource = resource;
+            const artwork = document.createElement('img');
+            artwork.src = resourceImagePaths[resource];
+            artwork.alt = '';
+            const label = document.createElement('span');
+            label.textContent = resource;
+            const badge = document.createElement('span');
+            badge.className = 'resource-pick-badge';
+            card.append(artwork, label, badge);
+            card.onclick = () => {
+                picks.push(resource);
+                if (picks.length > count) picks.shift();
+                refresh();
+            };
+            grid.appendChild(card);
+        });
+        refresh();
+        confirmBtn.onclick = () => { if (picks.length === count) close(count === 1 ? picks[0] : [...picks]); };
+        cancelBtn.onclick = () => close(null);
+        modal.onclick = event => { if (event.target === modal) close(null); };
+        modal.classList.remove('hidden');
+    });
 }
 
 if (modalConfirmBtn && modalCancelBtn) {
@@ -385,6 +463,7 @@ function updateBoardEditingUI() {
         selectedSwapItem2 = null;
     }
     document.querySelectorAll('#boardTools .map-tool').forEach(button => {
+        if (button === mapZoomToggle) return;
         const editsBoard = ['swap', 'shuffle-cells', 'shuffle-numbers', 'undo'].includes(button.dataset.tool);
         button.disabled = !boardControlsEnabled || (editsBoard && !boardEditingAllowed);
         if (editsBoard && !boardEditingAllowed) button.title = 'Reset the game to edit the board';
@@ -823,6 +902,12 @@ async function loadAllPlayerStatesFromBackend() {
             if (isGamePage && loadedStates._lastRoll) renderGameDiceResult(loadedStates._lastRoll.dice, allPlayersData[loadedStates._lastRoll.player]?.playerName);
             const deckCount = document.getElementById('devDeckCount');
             if (deckCount) deckCount.textContent = loadedStates._devDeck?.length ?? 25;
+            const devPile = document.querySelector('.player-controls .dev-card[data-resource-type="development"]');
+            if (devPile) {
+                const empty = Boolean(loadedStates._devDeckInitialized) && Array.isArray(loadedStates._devDeck) && loadedStates._devDeck.length === 0;
+                devPile.classList.toggle('empty', empty);
+                devPile.title = empty ? 'No development cards left' : 'Take a development card';
+            }
             if (isGamePage) {
                 renderActivity(loadedStates._activityLog || []);
                 renderLastPlayedDevCard((loadedStates._activityLog || []).slice().reverse().find(entry => entry.action === 'played' && entry.cardType));
@@ -877,21 +962,22 @@ async function loadAllStatesFromBackend() {
 }
 async function resetgame()
 {
+    let response;
     try {
-            const response = await fetch('/catan/reset_game', {
-
-            });
-            const result = await response.json();
-            if (result.status === 'success') {
-                showMessage(result.message);
-            } else {
-                console.error('Error reseting game:', result.message);
-                showMessage('Error reseting game: ' + result.message, 'error');
-            }
-        } catch (e) {
-            console.error('Network error:', e);
-            showMessage('Network error reseting game: ' + e.message, 'error');
-        }
+        response = await fetch('/catan/reset_game', { cache: 'no-store' });
+    } catch (e) {
+        console.error('Network error:', e);
+        showMessage('Network error resetting game: ' + e.message, 'error');
+        return;
+    }
+    const result = await response.json().catch(() => null);
+    if (response.ok && result?.status === 'success') {
+        showMessage(result.message);
+    } else {
+        const detail = result?.message || `server returned HTTP ${response.status}`;
+        console.error('Error resetting game:', detail);
+        showMessage('Error resetting game: ' + detail, 'error');
+    }
 }
 
 function getAllJunctions() {
@@ -1460,7 +1546,7 @@ if (isPlayerPage) {
 
     const devCardButton = document.querySelector('.player-controls .dev-card[data-resource-type="development"]');
     devCardButton.addEventListener('click', async () => {
-        if (devCardButton.dataset.pending) return;
+        if (devCardButton.dataset.pending || devCardButton.classList.contains('empty')) return;
         if (allPlayersData._currentTurnPlayerId !== PLAYER_ID || allPlayersData._phase !== 'MAIN_PHASE') {
             return;
         }
@@ -1594,7 +1680,11 @@ function resizeCanvas() {
     let newWidth = containerWidth * mapZoomLevel;
     let newHeight = newWidth / aspectRatio;
 
-    if (newHeight > containerHeight) {
+    if (isGamePage) {
+        // fill the whole map area; the board itself is scaled to fit below
+        newWidth = containerWidth;
+        newHeight = containerHeight || containerWidth / aspectRatio;
+    } else if (newHeight > containerHeight) {
         newHeight = containerHeight;
         newWidth = newHeight * aspectRatio;
     }
@@ -1624,13 +1714,14 @@ function resizeCanvas() {
         maxRawY += portExtent;
         const boardWithPortsWidth = maxRawX - minRawX;
         const boardWithPortsHeight = maxRawY - minRawY;
-        const boardPadding = isPlayerPage && window.matchMedia('(max-width: 768px)').matches ? 12 : 48;
-
-        boardScale = Math.min(
-            1,
+        const boardPadding = isGamePage ? 6 : isPlayerPage && window.matchMedia('(max-width: 768px)').matches ? 12 : 48;
+        const fitScale = Math.min(
             (canvas.width - boardPadding) / boardWithPortsWidth,
             (canvas.height - boardPadding) / boardWithPortsHeight
         );
+        boardScale = isGamePage
+            ? fitScale * (mapZoomLevel === 1 ? 1 : GAME_MAP_ZOOM)
+            : Math.min(1, fitScale);
 
         offsetX = (canvas.width / boardScale / 2) - (minRawX + boardWithPortsWidth / 2);
         offsetY = (canvas.height / boardScale / 2) - (minRawY + boardWithPortsHeight / 2);
@@ -1906,6 +1997,7 @@ function addDisappearingTag(containerDiv, text) {
 function renderLastPlayedDevCard(entry) {
     if (!isGamePage) return;
     const container = document.getElementById('devCards');
+    if (!container) return;
     container.replaceChildren();
     if (!entry) {
         container.textContent = 'No card played yet';
@@ -1922,6 +2014,11 @@ function renderLastPlayedDevCard(entry) {
     container.append(label, card);
 }
 
+function shortPlayerName(name, length = 5) {
+    const short = String(name || '').trim().slice(0, length);
+    return short.charAt(0).toUpperCase() + short.slice(1).toLowerCase();
+}
+
 function renderActivity(entries) {
     const container = document.getElementById('gameActivity');
     if (!container) return;
@@ -1930,36 +2027,88 @@ function renderActivity(entries) {
         knight: 'Knight.jpg', road_building: 'Road_Building.jpg',
         year_of_plenty: 'Year_of_Plenty.jpg', monopoly: 'Monopoly.jpg', victory_point: 'victory_point.jpg'
     };
-    function addCard(line, image, count, label) {
+    const nameOf = playerId => shortPlayerName(allPlayersData[playerId]?.playerName || playerId);
+    const nameEl = playerId => {
+        const el = document.createElement('strong');
+        el.className = 'activity-player';
+        el.textContent = nameOf(playerId);
+        const color = window.CATAN_PLAYER_COLORS?.[playerId] || PLAYER_COLORS[playerId];
+        if (color) el.style.color = color;
+        return el;
+    };
+    function addCard(line, image, count, label, extraClass = '') {
         const card = document.createElement('span');
-        card.className = 'activity-card';
+        card.className = `activity-card ${extraClass}`.trim();
         card.title = `${count} ${label}`;
         const picture = document.createElement('img');
         picture.src = image;
         picture.alt = label;
         card.appendChild(picture);
-        const badge = document.createElement('span');
-        badge.textContent = count;
-        card.appendChild(badge);
+        if (count > 1 || !extraClass) {
+            const badge = document.createElement('span');
+            badge.textContent = count;
+            card.appendChild(badge);
+        }
         line.appendChild(card);
     }
+    const addResources = (line, cards) => {
+        for (const [resource, count] of Object.entries(cards || {})) {
+            if (resourceImagePaths[resource] && Number(count) > 0) addCard(line, resourceImagePaths[resource], count, resource);
+        }
+    };
+    // a 7's discards are shown inside the 7 block instead of as separate lines
+    const sevenDrops = new Map();
+    entries.forEach((entry, i) => {
+        if (entry.action !== 'seven') return;
+        const drops = {};
+        for (let j = i + 1; j < entries.length && entries[j].action !== 'seven'; j++) {
+            const e = entries[j];
+            if (e.action === 'dropped' && e.seven && entry.counts && e.pid in entry.counts && !drops[e.pid]) drops[e.pid] = e;
+        }
+        sevenDrops.set(entry, drops);
+    });
+    const mergedDrops = new Set([...sevenDrops.values()].flatMap(d => Object.values(d)));
     for (const entry of entries) {
+        if (mergedDrops.has(entry)) continue;
         const action = entry.action || (entry.message === 'bought a Development Card' ? 'bought' : undefined);
         if (!['picked', 'dropped', 'gave', 'bought', 'played', 'seven'].includes(action)
             && !/^(picked up|dropped |gave |bought a Development Card|played a Development Card)/i.test(entry.message || '')) continue;
         const line = document.createElement('div');
         line.className = 'activity-entry';
         if (action === 'seven') {
-            const counts = Object.entries(entry.counts || {}).map(([playerId, count]) => `${allPlayersData[playerId]?.playerName || playerId}: ${count}`).join(', ');
-            line.textContent = `Drop cards: ${counts || 'none'}`;
+            line.classList.add('activity-seven-block');
+            const seven = document.createElement('span');
+            seven.className = 'activity-seven';
+            seven.textContent = '7';
+            line.appendChild(seven);
+            const counts = Object.entries(entry.counts || {});
+            if (!counts.length) line.append('no drops');
+            const drops = sevenDrops.get(entry) || {};
+            counts.forEach(([playerId, count]) => {
+                const row = document.createElement('div');
+                row.className = 'activity-seven-row';
+                row.appendChild(nameEl(playerId));
+                const label = document.createElement('span');
+                if (drops[playerId]) {
+                    label.textContent = 'dropped';
+                    row.appendChild(label);
+                    addResources(row, drops[playerId].cards);
+                } else {
+                    label.textContent = `drops ${count}`;
+                    row.appendChild(label);
+                }
+                line.appendChild(row);
+            });
             container.appendChild(line);
             continue;
         }
-        const playerName = allPlayersData[entry.pid]?.playerName || 'Player';
+        line.appendChild(nameEl(entry.pid));
+        // dev cards are shown as pictures only, so no card-name words for bought/played
+        const verb = { picked: 'took', dropped: 'dropped', gave: 'gave', bought: 'took', played: 'played' };
         const label = document.createElement('span');
-        const verb = { picked: 'picked up', dropped: 'dropped', gave: 'gave', bought: 'took a', played: `played ${(entry.cardType || 'Development Card').replaceAll('_', ' ')}` };
-        label.textContent = `${playerName} ${verb[action] || entry.message}${action === 'gave' && allPlayersData[entry.target] ? ` to ${allPlayersData[entry.target].playerName}` : ''}`;
+        label.textContent = `${verb[action] || entry.message}${action === 'gave' && allPlayersData[entry.target] ? ' to' : ''}`;
         line.appendChild(label);
+        if (action === 'gave' && allPlayersData[entry.target]) line.appendChild(nameEl(entry.target));
         if (entry.seven) {
             const seven = document.createElement('span');
             seven.className = 'activity-seven';
@@ -1967,11 +2116,13 @@ function renderActivity(entries) {
             seven.title = 'Discard after a 7';
             line.appendChild(seven);
         }
-        for (const [resource, count] of Object.entries(entry.cards || {})) {
-            if (resourceImagePaths[resource] && Number(count) > 0) addCard(line, resourceImagePaths[resource], count, resource);
+        if (action !== 'played') addResources(line, entry.cards);
+        if (action === 'bought') addCard(line, '/static/images/catan/dev_card.jpg', 1, 'Development Card', 'activity-dev-card');
+        if (action === 'played') {
+            const image = devImages[entry.cardType] || 'dev_card.jpg';
+            addCard(line, `/static/images/catan/${image}`, 1, (entry.cardType || 'Development Card').replaceAll('_', ' '), 'activity-dev-card');
+            addResources(line, entry.cards);
         }
-        if (action === 'bought') addCard(line, '/static/images/catan/dev_card.jpg', 1, 'Development Card');
-        if (action === 'played' && devImages[entry.cardType]) addCard(line, `/static/images/catan/${devImages[entry.cardType]}`, 1, entry.cardType.replaceAll('_', ' '));
         container.appendChild(line);
     }
     container.scrollTop = container.scrollHeight;
@@ -2017,7 +2168,7 @@ function renderGameDiceResult(dice, playerName = '') {
     if (!displayElement) return;
     displayElement.innerHTML = `<div class="dice-result" aria-live="polite">${getDiceFaceHTML(dice[0], 'red')}${getDiceFaceHTML(dice[1], 'yellow')}</div>`;
     const label = document.getElementById('lastRollPlayer');
-    if (label) label.textContent = playerName;
+    if (label) label.textContent = shortPlayerName(playerName);
     displayElement.classList.remove('rolling');
     displayElement.classList.add('final-roll');
 }
@@ -2160,7 +2311,13 @@ async function playdevcard(currentPlayerId, item) {
     if (!allPlayersData._started || allPlayersData._currentTurnPlayerId !== currentPlayerId || !cards.includes(item)) {
         return;
     }
-    const confirmed = await showConfirmation(`Are you sure you want to play the ${item} card?`);
+    const info = DEV_CARD_INFO[item] || { name: item.replaceAll('_', ' '), text: '' };
+    // Monopoly / Year of Plenty pick resources in the same dialog; closing it leaves the card unplayed
+    const monopolyResource = item === 'monopoly' ? await chooseResourceToPlay(`Play ${info.name}?`, info.text) : null;
+    const plentyResources = item === 'year_of_plenty' ? await chooseResourceToPlay(`Play ${info.name}?`, `${info.text} Pick 2 cards.`, 2) : null;
+    const confirmed = item === 'monopoly' ? Boolean(monopolyResource)
+        : item === 'year_of_plenty' ? Boolean(plentyResources)
+        : await showConfirmation(`Play ${info.name}?\n\n${info.text}`.trim());
     if (confirmed) {
         if (!allPlayersData._started || allPlayersData._currentTurnPlayerId !== currentPlayerId || !allPlayersData[currentPlayerId].devCards.includes(item)) {
             return;
@@ -2185,14 +2342,13 @@ async function playdevcard(currentPlayerId, item) {
             allPlayersData._freeRoads = 2;
             selectedPlayerTool = 'road';
         } else if (item === 'monopoly') {
-            const resource = await chooseResource();
-            if (resource) {
-                allPlayersData._turnOrder.filter(playerId => playerId !== currentPlayerId).forEach(playerId => {
-                    const taken = allPlayersData[playerId].hand.filter(card => card === resource);
-                    allPlayersData[playerId].hand = allPlayersData[playerId].hand.filter(card => card !== resource);
-                    allPlayersData[currentPlayerId].hand.push(...taken);
-                });
-            }
+            allPlayersData._turnOrder.filter(playerId => playerId !== currentPlayerId).forEach(playerId => {
+                const taken = allPlayersData[playerId].hand.filter(card => card === monopolyResource);
+                allPlayersData[playerId].hand = allPlayersData[playerId].hand.filter(card => card !== monopolyResource);
+                allPlayersData[currentPlayerId].hand.push(...taken);
+            });
+        } else if (item === 'year_of_plenty') {
+            allPlayersData[currentPlayerId].hand.push(...plentyResources);
         }
         const saved = await saveAllPlayerStatesToBackend(); // Save changes to backend
         updatePlayerUI(); // Update UI immediately
@@ -2202,7 +2358,8 @@ async function playdevcard(currentPlayerId, item) {
         socket.emit('dev_card_played', { 
             pid: currentPlayerId,
             cardType: item, 
-            playerName: allPlayersData[currentPlayerId].playerName 
+            playerName: allPlayersData[currentPlayerId].playerName,
+            cards: plentyResources ? plentyResources.reduce((acc, r) => ({ ...acc, [r]: (acc[r] || 0) + 1 }), {}) : undefined
         });
 }
 function renderGameScoreboard() {
@@ -2214,8 +2371,8 @@ function renderGameScoreboard() {
         : [];
     const playerIds = [...new Set([...registeredOrder, ...seatPlayerIds])];
     const longestRoadOwner = seatPlayerIds.find(playerId => allPlayersData[playerId].longestroad) || '';
-    const longestRoadDropdown = document.getElementById('roadChoices');
     const scoreboardBody = document.querySelector('#assignpoint table tbody');
+    const activeIds = [];
 
     playerIds.forEach(playerId => {
         const player = allPlayersData[playerId];
@@ -2231,30 +2388,30 @@ function renderGameScoreboard() {
         const inactive = /^player/i.test(player.playerName.trim());
         row.classList.toggle('unregistered-player', inactive);
         scoreboardBody.appendChild(row);
-
-        const roadChoice = longestRoadDropdown.querySelector(`[data-player-id="${playerId}"]`);
-        if (roadChoice) {
-            roadChoice.textContent = player.playerName;
-            roadChoice.hidden = inactive;
-        }
+        if (!inactive) activeIds.push(playerId);
     });
 
-    const activeOwner = allPlayersData[longestRoadOwner]?.playerName;
-    document.getElementById('roadHolder').textContent = activeOwner && !/^player/i.test(activeOwner.trim()) ? activeOwner : 'None';
+    const roadSelect = document.getElementById('longestRoadSelect');
+    if (roadSelect && document.activeElement !== roadSelect) {
+        const holder = activeIds.includes(longestRoadOwner) ? longestRoadOwner : 'none';
+        roadSelect.replaceChildren(new Option('None', 'none'),
+            ...activeIds.map(playerId => new Option(shortPlayerName(allPlayersData[playerId].playerName, 4), playerId)));
+        roadSelect.value = holder;
+        roadSelect.disabled = !allPlayersData._started || activeIds.length === 0;
+    }
     const currentPlayerId = allPlayersData._currentTurnPlayerId;
     const currentName = allPlayersData._started && allPlayersData[currentPlayerId]?.playerName;
     const title = document.getElementById('gameTurnTitle');
     title.textContent = currentName
         ? `Catan Game play (${currentName}'s Turn)` : 'Catan Game play (Waiting to start)';
     title.style.color = currentName ? window.CATAN_PLAYER_COLORS?.[currentPlayerId] || '' : '';
-    document.getElementById('roadAwardButton').disabled = !allPlayersData._started || ![...longestRoadDropdown.querySelectorAll('button')].some(button => !button.hidden);
 }
 
-function toggleRoadChoices() {
-    const choices = document.getElementById('roadChoices');
-    choices.hidden = !choices.hidden;
-    document.getElementById('roadAwardButton').setAttribute('aria-expanded', String(!choices.hidden));
-}
+document.getElementById('longestRoadSelect')?.addEventListener('change', event => {
+    if (event.target.value === 'none') renderGameScoreboard();
+    else handleDropdownChange(event.target.value);
+    event.target.blur();
+});
 
 function calculatepointsandcards() {
     for (const playerId in allPlayersData) {
@@ -2277,12 +2434,13 @@ function calculatepointsandcards() {
     renderGameScoreboard();
 }
 async function handleDropdownChange(selectedValue) {
-    document.getElementById('roadChoices').hidden = true;
-    document.getElementById('roadAwardButton').setAttribute('aria-expanded', 'false');
     const response = await fetch('/catan/longest_road', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ player_id: selectedValue })
     });
-    if (!response.ok) showMessage('Could not assign longest road.', 'error');
+    if (!response.ok) {
+        showMessage('Could not assign longest road.', 'error');
+        renderGameScoreboard();
+    }
 }
 
 async function onCatanPlayerPageLoad() {

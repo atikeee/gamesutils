@@ -186,14 +186,14 @@ function getProgressCardActionConfig(cardName) {
         return {
             title: displayName,
             message: 'Choose a resource to ask every opponent for 2 of.',
-            choices: ['wood', 'brick', 'rock', 'sheep', 'hay'].map(value => ({ value, label: formatCardName(value), image: `/static/images/catan/${value}.jpg` }))
+            choices: ['wood', 'brick', 'rock', 'sheep', 'hay'].map(value => ({ value, label: formatCardName(value), image: `/static/images/catan/${value}.webp` }))
         };
     }
     if (cardName === 'trade_monopoly') {
         return {
             title: displayName,
             message: 'Choose a commodity to ask every opponent for 1 of.',
-            choices: ['paper', 'coin', 'cloth'].map(value => ({ value, label: formatCardName(value), image: `/static/images/catan/${value}.jpg` }))
+            choices: ['paper', 'coin', 'cloth'].map(value => ({ value, label: formatCardName(value), image: `/static/images/catan/${value}.webp` }))
         };
     }
     if (cardName === 'deserter') {
@@ -361,7 +361,7 @@ async function handleMasterMerchantProgressCard({ choice }) {
     const selection = await showProgressCardActionModal({
         title: `${opponentName}'s Hand`,
         message: `Select ${pickCount} card${pickCount === 1 ? '' : 's'}. Your most recent ${pickCount} click${pickCount === 1 ? '' : 's'} will be taken.`,
-        choices: hand.map((card, index) => ({ value: index, label: formatCardName(card), image: `/static/images/catan/${card}.jpg` })),
+        choices: hand.map((card, index) => ({ value: index, label: formatCardName(card), image: `/static/images/catan/${card}.webp` })),
         pickLimit: pickCount,
         confirmLabel: 'Take cards'
     }, 'master_merchant');
@@ -3035,42 +3035,42 @@ function updatePlayerUI() {
 
 function resolveProgressCardImageUrl(cardName) {
     const card = String(cardName || '').trim();
-    if (!card) return '/static/images/catan/dev_card.jpg';
+    if (!card) return '/static/images/catan/dev_card.webp';
 
     const exactKnownMatches = {
-        merchant: 'merchant.jpg',
-        merchant_fleet: 'merchantfleet.jpg',
-        master_merchant: 'merchant.jpg',
-        trade_monopoly: 'trademonopoly.jpg',
-        resource_monopoly: 'resourcemonopoly.jpg',
-        bishop: 'bishop.jpg',
-        diplomat: 'diplomat.jpg',
-        intrigue: 'intrigue.jpg',
-        saboteur: 'sabotour.jpg',
-        spy: 'dev_card.jpg',
-        deserter: 'deserter.jpg',
-        victory_point: 'victory_point.jpg',
-        printer: 'printer.jpg',
-        constitution: 'constitution.jpg',
-        alchemist: 'alchemist.jpg',
-        crane: 'crane.jpg',
-        mining: 'mining.jpg',
-        irrigation: 'irrigation.jpg',
-        inventor: 'inventor.jpg',
-        engineer: 'engineer.jpg',
-        medicine: 'medicine.jpg',
-        smith: 'smith.jpg',
-        road_building: 'roadbuilding.jpg',
-        harbor: 'dev_card.jpg',
-        warlord: 'dev_card.jpg',
-        wedding: 'wedding.jpg',
-        progress: 'dev_card.jpg'
+        merchant: 'merchant.webp',
+        merchant_fleet: 'merchantfleet.webp',
+        master_merchant: 'merchant.webp',
+        trade_monopoly: 'trademonopoly.webp',
+        resource_monopoly: 'resourcemonopoly.webp',
+        bishop: 'bishop.webp',
+        diplomat: 'diplomat.webp',
+        intrigue: 'intrigue.webp',
+        saboteur: 'sabotour.webp',
+        spy: 'dev_card.webp',
+        deserter: 'deserter.webp',
+        victory_point: 'victory_point.webp',
+        printer: 'printer.webp',
+        constitution: 'constitution.webp',
+        alchemist: 'alchemist.webp',
+        crane: 'crane.webp',
+        mining: 'mining.webp',
+        irrigation: 'irrigation.webp',
+        inventor: 'inventor.webp',
+        engineer: 'engineer.webp',
+        medicine: 'medicine.webp',
+        smith: 'smith.webp',
+        road_building: 'roadbuilding.webp',
+        harbor: 'dev_card.webp',
+        warlord: 'dev_card.webp',
+        wedding: 'wedding.webp',
+        progress: 'dev_card.webp'
     };
 
     const exactMatch = exactKnownMatches[card];
     if (exactMatch) return `/static/images/catan/${exactMatch}`;
 
-    const fallback = `${card}.jpg`;
+    const fallback = `${card}.webp`;
     return `/static/images/catan/${fallback}`;
 }
 
@@ -3119,7 +3119,7 @@ function updateCitiesAndKnightsTracker() {
                         placeholder.hidden = false;
                     }
                 };
-                image.src = `/static/images/catan/progressbook/${track}${bookLevel || ''}.png`;
+                image.src = `/static/images/catan/progressbook/${track}${bookLevel || ''}.webp`;
             }
         }
     });
@@ -3406,10 +3406,10 @@ function getDiceFaceHTML(value, color) {
 }
 
 const CITIES_AND_KNIGHTS_EVENT_FACE_ASSETS = {
-    green_city: { label: 'Green city', image: 'diceg.png' },
-    yellow_city: { label: 'Yellow city', image: 'dicey.png' },
-    blue_city: { label: 'Blue city', image: 'diceb.png' },
-    black_ship: { label: 'Black ship', image: 'dices.png' }
+    green_city: { label: 'Green city', image: 'diceg.webp' },
+    yellow_city: { label: 'Yellow city', image: 'dicey.webp' },
+    blue_city: { label: 'Blue city', image: 'diceb.webp' },
+    black_ship: { label: 'Black ship', image: 'dices.webp' }
 };
 
 function getEventDieFaceHTML(eventFace) {

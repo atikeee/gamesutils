@@ -212,69 +212,10 @@ function checkAndUpdateMetadata(activeCard) {
 
 // YouTube error handler (detects deleted/unavailable videos)
 function onPlayerError(event) {
-    if ([100, 101, 150].includes(event.data)) {
-        const activeCard = document.getElementById('activeVideoCard');
-        const dbId = activeCard?.getAttribute('data-id');
-        const title = playlistItems[currentTrackIndex]?.getAttribute('data-title') || 'This video';
-
-        if (dbId) {
-            showUnavailableModal(dbId, title);
-        }
-    }
-}
-
-function showUnavailableModal(videoId, title) {
-    pendingDeleteVideoId = videoId;
-    const modal = document.getElementById('unavailableModal');
-    const desc = document.getElementById('unavailableDesc');
-    if (desc) {
-        desc.textContent = `"${title}" cannot be played or has been removed from YouTube.`;
-    }
-    if (modal) {
-        modal.style.display = 'flex';
-    }
-}
-
-function hideUnavailableModal() {
-    pendingDeleteVideoId = null;
-    const modal = document.getElementById('unavailableModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-}
-
-// Single-click deletion without secondary alerts
-function executeDeleteVideo(videoId) {
-    if (!videoId) return;
-
-    fetch(`/mm/api/video/${videoId}`, {
-        method: 'DELETE'
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            hideUnavailableModal();
-            const allItems = Array.from(document.querySelectorAll('.playlist-item'));
-            if (allItems.length > 1) {
-                const deletedItem = allItems[currentTrackIndex];
-                if (deletedItem) deletedItem.remove();
-                playlistItems = Array.from(document.querySelectorAll('.playlist-item'));
-                if (currentTrackIndex >= playlistItems.length) {
-                    currentTrackIndex = 0;
-                }
-                loadTrackByIndex(currentTrackIndex, true);
-            } else {
-                window.location.reload();
-            }
-        } else {
-            alert("Failed to delete video from database.");
-            hideUnavailableModal();
-        }
-    })
-    .catch(() => {
-        alert("Server error deleting video.");
-        hideUnavailableModal();
-    });
+console.warn(`[Player] Video unavailable (error code ${event.data}). Skipping to next track.`);
+    setTimeout(() => {
+        playNextTrack(true);
+    }, 10000);
 }
 
 // Load a specific track by playlist index (controls=0 prevents native YouTube scrubber)
@@ -461,15 +402,7 @@ function renderActiveTags(videoId, tagString) {
     container.innerHTML = '';
     const tags = tagString ? tagString.split(',').map(s => s.trim()).filter(Boolean) : [];
     tags.forEach(tag => {
-        const badge = document.createElement('span');
-        badge.className = 'tag-badge';
-        badge.setAttribute('data-tag', tag);
-        badge.innerHTML = `${tag} <button class="remove-tag-btn" data-tag="${tag}">&times;</button>`;
-        badge.querySelector('.remove-tag-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            removeTagFromVideo(videoId, tag);
-        });
-        container.appendChild(badge);
+        container.appendChild(makeTagBadge(tag, t => removeTagFromVideo(videoId, t)));
     });
 }
 
@@ -485,16 +418,8 @@ function addTagToVideo(videoId, tag) {
     .then(data => {
         if (data.success) {
             const container = document.getElementById('activeTagList');
-            if (container && !container.querySelector(`[data-tag="${tag}"]`)) {
-                const badge = document.createElement('span');
-                badge.className = 'tag-badge';
-                badge.setAttribute('data-tag', tag);
-                badge.innerHTML = `${tag} <button class="remove-tag-btn" data-tag="${tag}">&times;</button>`;
-                badge.querySelector('.remove-tag-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    removeTagFromVideo(videoId, tag);
-                });
-                container.appendChild(badge);
+            if (container && !container.querySelector(`[data-tag="${CSS.escape(tag)}"]`)) {
+                container.appendChild(makeTagBadge(tag, t => removeTagFromVideo(videoId, t)));
             }
 
             const allItems = Array.from(document.querySelectorAll('.playlist-item'));
@@ -533,7 +458,7 @@ function removeTagFromVideo(videoId, tag) {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            const badge = document.querySelector(`#activeTagList [data-tag="${tag}"]`);
+            const badge = document.querySelector(`#activeTagList [data-tag="${CSS.escape(tag)}"]`);
             if (badge) badge.remove();
 
             const allItems = Array.from(document.querySelectorAll('.playlist-item'));
@@ -553,90 +478,7 @@ function removeTagFromVideo(videoId, tag) {
     .catch(err => console.warn("[Tag] Error removing tag:", err));
 }
 
-// ── Inline playlist / category editor ─────────────────────────────────────────
-// Click the value → editable input with a suggestion list; Enter/pick saves, Esc cancels.
-
-const INLINE_EMPTY_LABEL = { playlist: '', category: '+ category' };
-
-function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
-function renderInlineValue(el, value) {
-    if (!el) return;
-    const field = el.dataset.field;
-    el.classList.remove('editing');
-    el.dataset.value = value;
-    el.textContent = value || INLINE_EMPTY_LABEL[field];
-    el.classList.toggle('empty', !value);
-}
-
-function setupInlineEdit(el) {
-    el.addEventListener('click', () => openInlineEdit(el));
-    el.addEventListener('keydown', (e) => {
-        if (!el.classList.contains('editing') && (e.key === 'Enter' || e.key === ' ')) {
-            e.preventDefault();
-            openInlineEdit(el);
-        }
-    });
-}
-
-function openInlineEdit(el) {
-    if (el.classList.contains('editing')) return;
-    const field = el.dataset.field;
-    const current = el.dataset.value || '';
-    const options = (window.MM_OPTIONS && window.MM_OPTIONS[field]) || [];
-
-    el.classList.add('editing');
-    el.textContent = '';
-    const input = document.createElement('input');
-    input.className = 'inline-edit-input';
-    input.value = current;
-    input.placeholder = field === 'category' ? 'category (empty = none)' : 'playlist';
-    input.autocomplete = 'off';
-    const list = document.createElement('div');
-    list.className = 'inline-suggest';
-    el.append(input, list);
-
-    const renderOptions = () => {
-        const typed = input.value.trim().toLowerCase();
-        // show every option until the user starts typing something new
-        const q = input.value.trim() === current ? '' : typed;
-        const matches = options.filter(o => o.toLowerCase().includes(q));
-        list.innerHTML = matches.map(o =>
-            `<div class="inline-suggest-item${o === current ? ' current' : ''}" data-v="${escapeHtml(o)}">${escapeHtml(o)}</div>`
-        ).join('');
-        list.hidden = !matches.length;
-    };
-
-    let done = false;
-    const finish = (save, picked) => {
-        if (done) return;
-        done = true;
-        const value = (picked ?? input.value).trim();
-        const changed = value !== current && (value || field === 'category');
-        if (save && changed) commitInlineEdit(el, value, current);
-        else renderInlineValue(el, current);
-    };
-
-    list.addEventListener('mousedown', (e) => {
-        const item = e.target.closest('.inline-suggest-item');
-        if (!item) return;
-        e.preventDefault();   // keep focus so blur doesn't save the half-typed text first
-        finish(true, item.dataset.v);
-    });
-    input.addEventListener('input', renderOptions);
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); finish(true); }
-        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(false); }
-    });
-    input.addEventListener('blur', () => finish(true));
-
-    renderOptions();
-    input.focus();
-    input.select();
-}
-
+// Persist an inline playlist / category edit (editor itself lives in mm_common.js)
 function commitInlineEdit(el, value, previous) {
     const field = el.dataset.field;
     const dbId = document.getElementById('activeVideoCard')?.getAttribute('data-id');
@@ -653,11 +495,7 @@ function commitInlineEdit(el, value, previous) {
         if (!data.success) throw new Error(data.error || `Failed to update ${field}.`);
         const item = playlistItems[currentTrackIndex];
         if (item && item.getAttribute('data-id') === dbId) item.setAttribute(`data-${field}`, value);
-        const opts = window.MM_OPTIONS?.[field];
-        if (value && opts && !opts.includes(value)) {
-            opts.push(value);
-            opts.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
-        }
+        addInlineOption(field, value);
     })
     .catch(err => {
         console.warn(`[${field}] update error:`, err);
@@ -757,80 +595,20 @@ function setupControls() {
         });
     }
 
-    // 9. Refined Tag Addition: NEVER auto-pick while typing single letters!
-    const addTagBtn = document.getElementById('addInlineTagBtn');
-    const tagInput = document.getElementById('inlineTagInput');
-    const tagDatalist = document.getElementById('playlistTagsDatalist');
-
-    if (tagInput) {
-        function triggerAddTag(val) {
-            const activeCard = document.getElementById('activeVideoCard');
-            const videoId = activeCard?.getAttribute('data-id');
-            const cleanVal = (val || tagInput.value).trim();
-            if (videoId && cleanVal) {
-                addTagToVideo(videoId, cleanVal);
-                tagInput.value = '';
-                tagInput.blur();
-            }
+    // 9. Tag addition: Enter / '+' adds typed text, picking from the dropdown adds immediately
+    setupTagInput(
+        document.getElementById('inlineTagInput'),
+        document.getElementById('addInlineTagBtn'),
+        document.getElementById('playlistTagsDatalist'),
+        (tag) => {
+            const videoId = document.getElementById('activeVideoCard')?.getAttribute('data-id');
+            if (videoId) addTagToVideo(videoId, tag);
         }
-
-        // Only auto-add if the user specifically clicked/selected an item from the dropdown!
-        tagInput.addEventListener('input', (e) => {
-            // If user is actively typing with the keyboard (e.g. typing 'm', 'ml'), NEVER auto-pick!
-            if (e.inputType === 'insertText' || e.inputType === 'deleteContentBackward' || e.inputType === 'deleteContentForward') {
-                return;
-            }
-
-            // In Chromium/Firefox, when selecting an item from datalist with mouse/arrow keys, inputType is 'insertReplacementText' or undefined
-            const currentVal = tagInput.value.trim();
-            if (!currentVal || !tagDatalist) return;
-
-            const options = Array.from(tagDatalist.querySelectorAll('option')).map(o => o.value);
-            const exactMatch = options.find(o => o.toLowerCase() === currentVal.toLowerCase());
-            
-            // Only auto-add when selected from dropdown
-            if (exactMatch && (e.inputType === 'insertReplacementText' || !e.inputType)) {
-                console.log(`[Tag] Picked from dropdown: "${exactMatch}"`);
-                triggerAddTag(exactMatch);
-            }
-        });
-
-        // Add on Enter key (accepts whatever is typed, e.g. 'ml', 'mx', or exact match)
-        tagInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const val = tagInput.value.trim();
-                if (val) triggerAddTag(val);
-            }
-        });
-
-        // Add on '+' button click
-        if (addTagBtn) {
-            addTagBtn.addEventListener('click', () => triggerAddTag());
-        }
-    }
+    );
 
     // 10. Inline playlist / category editors
-    document.querySelectorAll('.inline-edit').forEach(setupInlineEdit);
+    document.querySelectorAll('.inline-edit').forEach(el => setupInlineEdit(el, commitInlineEdit));
 
-    // 11. Unavailable Warning Modal Controls
-    const cancelDeleteBtn = document.getElementById('cancelDeleteModalBtn');
-    const confirmDeleteBtn = document.getElementById('confirmDeleteModalBtn');
-
-    if (cancelDeleteBtn) {
-        cancelDeleteBtn.addEventListener('click', () => {
-            hideUnavailableModal();
-            playNextTrack(true);
-        });
-    }
-
-    if (confirmDeleteBtn) {
-        confirmDeleteBtn.addEventListener('click', () => {
-            if (pendingDeleteVideoId) {
-                executeDeleteVideo(pendingDeleteVideoId);
-            }
-        });
-    }
 
     // 12. Keyboard Shortcuts Guide Modal
     const shortcutsModal = document.getElementById('shortcutsModal');
@@ -854,6 +632,8 @@ function setupControls() {
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Immediately bind all controls
     setupControls();
+    const bgThumb = document.getElementById('audioBgThumb');
+    if (bgThumb?.dataset.thumb) bgThumb.style.backgroundImage = `url('${bgThumb.dataset.thumb}')`;
     // the first video is shown without loadTrackByIndex, so load its chapters here
     parseChaptersFromItem(playlistItems[0]);
 

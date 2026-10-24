@@ -56,6 +56,7 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # ── CONFIG — add as many root paths as needed ─────────────────────────────────
 PHOTO_ROOTS = [
+    os.path.abspath(os.path.join(PROJECT_ROOT, "..", "Photos-temp")),
     '/Photo-temp',
     '/photos1',
     # os.path.join(PROJECT_ROOT, "photos"),

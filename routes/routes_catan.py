@@ -9,7 +9,8 @@ import os
 import secrets
 import string
 import random
-from threading import RLock
+import time
+from threading import RLock, get_ident
 
 CATAN_DATA_DIR = os.path.join(PROJECT_ROOT, "data", "catan")
 JSON_BOARD_STATE_FILE = os.path.join(CATAN_DATA_DIR, "catan_board_state.json")
@@ -34,6 +35,23 @@ def catan_registry_locked(handler):
         with CATAN_REGISTRY_LOCK:
             return handler(*args, **kwargs)
     return locked_handler
+
+
+def write_file_atomic(path, text):
+    """Write via temp file + rename so concurrent readers never see a half-written file."""
+    temporary_path = f"{path}.{get_ident()}.tmp"
+    with open(temporary_path, 'w', encoding='utf-8') as f:
+        f.write(text)
+    # Windows/OneDrive can briefly lock the target while it is being read or synced
+    for attempt in range(6):
+        try:
+            os.replace(temporary_path, path)
+            return
+        except PermissionError:
+            if attempt == 5:
+                os.remove(temporary_path)
+                raise
+            time.sleep(0.05 * (attempt + 1))
 DEV_CARD_COUNTS = {'knight': 14, 'victory_point': 5, 'road_building': 2, 'year_of_plenty': 2, 'monopoly': 2}
 #DEV_CARD_COUNTS = {'knight': 1, 'victory_point': 1, 'road_building': 1, 'year_of_plenty': 2, 'monopoly': 2}
 
@@ -74,10 +92,7 @@ def load_catan_player_registry():
 
 
 def save_catan_player_registry(registry):
-    temporary_path = f"{PLAYER_REGISTRY_FILE}.tmp"
-    with open(temporary_path, 'w', encoding='utf-8') as registry_file:
-        json.dump(registry, registry_file)
-    os.replace(temporary_path, PLAYER_REGISTRY_FILE)
+    write_file_atomic(PLAYER_REGISTRY_FILE, json.dumps(registry))
 
 
 def get_catan_turn_order(players):
@@ -194,8 +209,7 @@ def verify_player_passphrase(passphrase, salt_hex, digest_hex):
 def save_catan_board_state_to_json(board_state_json):
     """Saves the current Catan board state to a JSON file."""
     try:
-        with open(JSON_BOARD_STATE_FILE, 'w', encoding='utf-8') as f:
-            f.write(board_state_json)
+        write_file_atomic(JSON_BOARD_STATE_FILE, board_state_json)
         return True
     except Exception as e:
         print(f"Error saving Catan board state to JSON file: {e}")
@@ -229,8 +243,7 @@ def save_play_state_to_json(player_state_json):
     """Saves a player's current state to a JSON file."""
 
     try:
-        with open(JSON_PLAY_STATE_FILE, 'w', encoding='utf-8') as f:
-            f.write(player_state_json)
+        write_file_atomic(JSON_PLAY_STATE_FILE, player_state_json)
         return True
     except Exception as e:
         print(f"Error saving play state to JSON file: {e}")
@@ -697,6 +710,7 @@ def configure_routes_catan(app,socketio):
             return jsonify({"status": "error", "message": str(e)}), 500
 
     @app.route('/catan/reset_game')
+    @catan_registry_locked
     def reset_game():
         reset_state = {
             f"player{player_number}": {
@@ -776,7 +790,14 @@ def configure_routes_catan(app,socketio):
         card_type = data.get('cardType')
         player_name = data.get('playerName')
         if card_type in ('knight', 'victory_point', 'road_building', 'year_of_plenty', 'monopoly'):
-            append_activity(data.get('pid'), 'played a Development Card', action='played', cardType=card_type)
+            details = {'action': 'played', 'cardType': card_type}
+            cards = data.get('cards')
+            if card_type == 'year_of_plenty' and isinstance(cards, dict):
+                valid = {r: int(n) for r, n in cards.items()
+                         if r in ('wood', 'brick', 'sheep', 'hay', 'rock') and isinstance(n, int) and 0 < n <= 2}
+                if valid:
+                    details['cards'] = valid
+            append_activity(data.get('pid'), 'played a Development Card', **details)
         print(f"SERVER DEBUG: Received 'dev_card_played' event: {card_type} played by {player_name}")
         # Broadcast the played card information to all clients
         socketio.emit('dev_card_played_broadcast', {'cardType': card_type, 'playerName': player_name})

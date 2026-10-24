@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>MP3 Database Manager &amp; Scanner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm.css') }}">
+</head>
+<body>
+    <div class="mm-container populate-page">
+        <!-- Header & Actions -->
+        <header class="mm-header">
+            <h1 class="page-title">&#128194; Music Folder Scanner &amp; Database Manager</h1>
+            <div class="header-right header-actions">
+                <input type="file" id="csvFileInput" accept=".csv" hidden>
+                <button type="button" class="btn-cancel btn-outline-warn" id="btnUploadCsv">&#128228; Upload CSV</button>
+                <button type="button" class="btn-cancel btn-outline-info" id="btnDownloadCsv">&#128229; Download CSV</button>
+                <button type="button" class="btn-submit" id="btnSaveDb" disabled>&#128190; Save to Database</button>
+                <a href="{{ url_for('mm_mp3.mp3_player') }}" class="btn-cancel">&#127925; Player</a>
+            </div>
+        </header>
+
+        <!-- Folder Explorer & Scanner -->
+        <section class="mm-panel">
+            <div class="path-row">
+                <button type="button" class="btn-cancel" id="btnParent">&#11014; Up</button>
+                <input type="text" id="currentPath" class="modal-input path-input" placeholder="Folder path to scan...">
+                <button type="button" class="btn-submit" id="btnScan">&#128269; Scan Folder</button>
+            </div>
+            <div id="folderList" class="folder-list"></div>
+        </section>
+
+        <!-- Selection Count + Batch Apply + Pagination -->
+        <section class="mm-panel toolbar-row">
+            <div class="toolbar-group">
+                <span class="count-pill">Selected: <span id="selectedCount">0</span></span>
+                <button type="button" class="btn-warn" id="btnApplyBatch">&#9889; Apply Batch Edits to Selected</button>
+                <span class="muted-text">Showing <span id="statFiltered">0</span> of <span id="statTotal">0</span> items</span>
+            </div>
+            <div class="toolbar-group">
+                <button type="button" class="arrow-btn" id="btnPrevPage" title="Previous Page">&laquo;</button>
+                <span class="page-indicator">Page <span id="currentPage">1</span> of <span id="totalPages">1</span></span>
+                <button type="button" class="arrow-btn" id="btnNextPage" title="Next Page">&raquo;</button>
+            </div>
+        </section>
+
+        <!-- Table: labels · per-column filters · aligned batch edit row -->
+        <section class="mm-panel table-panel">
+            <div class="table-scroll">
+                <table class="mm-table">
+                    <thead>
+                        <tr class="label-row">
+                            <th class="col-check"><input type="checkbox" id="selectAll" title="Select all on this page"></th>
+                            <th class="col-md">Title</th>
+                            <th class="col-sm">Artist</th>
+                            <th class="col-sm">Album</th>
+                            <th class="col-sm">Category</th>
+                            <th class="col-sm">Playlist</th>
+                            <th class="col-sm">Tags</th>
+                            <th class="col-path">File Path</th>
+                        </tr>
+                        <tr class="filter-row">
+                            <th class="col-check" title="Filter row">&#128269;</th>
+                            <th><input class="cell-input" id="fltTitle" placeholder="Filter title..."></th>
+                            <th><input class="cell-input" id="fltArtist" placeholder="Filter artist..."></th>
+                            <th><input class="cell-input" id="fltAlbum" placeholder="Filter album..."></th>
+                            <th><input class="cell-input" id="fltCategory" placeholder="Filter category..."></th>
+                            <th><input class="cell-input" id="fltPlaylist" placeholder="Filter playlist..."></th>
+                            <th><input class="cell-input" id="fltTags" placeholder="Filter tags..."></th>
+                            <th><input class="cell-input" id="fltPath" placeholder="Filter path..."></th>
+                        </tr>
+                        <tr class="batch-row">
+                            <th class="col-check">
+                                <button type="button" class="btn-warn btn-xs" id="btnApplyBatchRow" title="Apply row values to all selected tracks">&#9889;</button>
+                            </th>
+                            <th><input class="cell-input batch-input" id="batchTitle" placeholder="Set title..."></th>
+                            <th><input class="cell-input batch-input" id="batchArtist" placeholder="Set artist..."></th>
+                            <th><input class="cell-input batch-input" id="batchAlbum" placeholder="Set album..."></th>
+                            <th><input class="cell-input batch-input" id="batchCategory" placeholder="Set category..."></th>
+                            <th><input class="cell-input batch-input" id="batchPlaylist" placeholder="Set playlist..."></th>
+                            <th><input class="cell-input batch-input" id="batchTags" placeholder="Set tags..."></th>
+                            <th class="batch-hint">&larr; Batch Edit Row</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/mm_common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/mm_mp3_populate.js') }}"></script>
+</body>
+</html>

@@ -91,8 +91,8 @@
             </div>
         </div>
         <div class="player-decks-section">
-            <div class="deck-display">
-                <h2 class="player-cards-heading">Hands (<span id="handCardCount">0</span> + <span id="devCardCount">0</span>) <button type="button" id="toggleDevCards" class="dev-cards-toggle" aria-controls="devCards" aria-expanded="false" aria-label="Show development cards" title="Show development cards"><i class="fas fa-eye" aria-hidden="true"></i></button> <span class="played-dev-card" title="Victory point cards played"><img src="{{ url_for('static', filename='images/catan/victory_point.jpg') }}" alt="Victory point cards played"> <span id="victoryPointCount">0</span></span> <span class="played-dev-card" title="Knight cards played"><img src="{{ url_for('static', filename='images/catan/Knight.jpg') }}" alt="Knight cards played"> <span id="knightPlayedCount">0</span></span></h2>
+                <div class="deck-display">
+                    <h2 class="player-cards-heading">Hands (<span id="handCardCount">0</span> + <span id="devCardCount">0</span>) <button type="button" id="toggleDevCards" class="dev-cards-toggle" aria-controls="devCards" aria-expanded="false" aria-label="Show development cards" title="Show development cards"><i class="fas fa-eye" aria-hidden="true"></i></button> <span class="played-dev-card" title="Victory point cards played"><img src="{{ url_for('static', filename='images/catan/victory_point.webp') }}" alt="Victory point cards played"> <span id="victoryPointCount">0</span></span> <span class="played-dev-card" title="Knight cards played"><img src="{{ url_for('static', filename='images/catan/Knight.webp') }}" alt="Knight cards played"> <span id="knightPlayedCount">0</span></span></h2>
                 <div id="handCards" class="card-list"></div>
                 <span id="selectedCardCount" hidden>0</span>
                 <div id="devCards" class="card-list concealed"></div>
@@ -124,6 +124,17 @@
         </div>
     </div>
     <div id="choiceModal" class="modal-overlay hidden"><div class="modal-content"><p id="choiceTitle"></p><div id="choiceButtons" class="modal-buttons"></div></div></div>
+    <div id="resourcePickModal" class="modal-overlay hidden">
+        <div class="modal-content resource-pick-content">
+            <p id="resourcePickTitle" class="resource-pick-title"></p>
+            <p id="resourcePickText" class="modal-message"></p>
+            <div id="resourcePickOptions" class="resource-pick-grid" aria-label="Choose a resource"></div>
+            <div class="modal-buttons">
+                <button type="button" id="resourcePickConfirm" class="btn btn-confirm" disabled>Confirm</button>
+                <button type="button" id="resourcePickCancel" class="btn btn-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Removed Socket.IO client library -->
     <!-- Load drawing utilities first, then game logic -->

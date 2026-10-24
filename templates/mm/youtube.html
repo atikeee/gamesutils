@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>MM YouTube Player</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm_youtube.css') }}">
+    <title>Atiq's YouTube Player</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm.css') }}">
     <!-- Google Cast SDK -->
     <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 </head>
 <body>
-    <div class="mm-container" id="appContainer" data-page="{{ page }}" data-total-pages="{{ total_pages }}" data-playlist="{{ selected_playlist }}">
+    <div class="mm-container" id="appContainer" data-page="{{ page }}" data-total-pages="{{ total_pages }}" data-playlist="{{ selected_playlist }}"
+         data-playlist-options='{{ all_playlists | tojson }}' data-category-options='{{ all_categories | tojson }}'>
         <!-- Top Header: playlist · tags · icon actions -->
         <header class="mm-header">
             <select id="playlistFilterSelect" class="playlist-select" aria-label="Playlist">
@@ -83,7 +84,7 @@
 
                         <!-- Audio-Only Interface Overlay -->
                         <div class="audio-player-overlay" id="mainAudioOverlay">
-                            <div class="audio-bg-thumb" id="audioBgThumb" style="background-image: url('{{ initial_vid.thumbnail_url }}');"></div>
+                            <div class="audio-bg-thumb" id="audioBgThumb" data-thumb="{{ initial_vid.thumbnail_url }}"></div>
                             <div class="audio-overlay-content">
                                 <img src="{{ initial_vid.thumbnail_url }}" alt="Cover" class="audio-cover-art" id="audioCoverImg">
                                 <div class="audio-equalizer" id="mainEqualizer">
@@ -104,7 +105,7 @@
                             <button class="ctrl-btn" id="rev10sBtn" type="button" title="Back 10 s (J / ←)" aria-label="Back 10 seconds">&#8634;</button>
                             <button class="ctrl-btn play-main-btn" id="mainPlayBtn" type="button" title="Play / Pause (Space / K)" aria-label="Play or pause">
                                 <span class="icon-play">&#9658;</span>
-                                <span class="icon-pause" style="display: none;">&#10074;&#10074;</span>
+                                <span class="icon-pause">&#10074;&#10074;</span>
                             </button>
                             <button class="ctrl-btn" id="fwd10sBtn" type="button" title="Forward 10 s (L / →)" aria-label="Forward 10 seconds">&#8635;</button>
                             <button class="ctrl-btn" id="fwd1mBtn" type="button" title="Forward 1 min (])" aria-label="Forward 1 minute">&#9193;</button>
@@ -228,7 +229,7 @@
     </div>
 
     <!-- Keyboard Shortcuts Help Modal -->
-    <div class="modal-backdrop" id="shortcutsModal" style="display: none;">
+    <div class="modal-backdrop" id="shortcutsModal">
         <div class="modal-card shortcuts-card">
             <div class="modal-header-row">
                 <h3>⌨️ Keyboard Shortcuts</h3>
@@ -258,26 +259,10 @@
         </div>
     </div>
 
-    <!-- Styled Unavailable Video Warning Modal -->
-    <div class="modal-backdrop" id="unavailableModal" style="display: none;">
-        <div class="modal-card warning-card">
-            <div class="warning-icon-wrapper">
-                <span class="warning-icon">&#9888;</span>
-            </div>
-            <h3 class="warning-title">Video Unavailable</h3>
-            <p class="warning-desc" id="unavailableDesc">
-                This video cannot be played or has been removed from YouTube.
-            </p>
-            <p class="warning-sub">Would you like to permanently delete it from your database?</p>
-            <div class="modal-actions">
-                <button type="button" class="btn-cancel" id="cancelDeleteModalBtn">Keep in Database</button>
-                <button type="button" class="btn-danger" id="confirmDeleteModalBtn">Delete Video</button>
-            </div>
-        </div>
-    </div>
+ 
 
     <!-- Add Video Modal -->
-    <div class="modal-backdrop" id="addVideoModal" style="display: none;">
+    <div class="modal-backdrop" id="addVideoModal">
         <div class="modal-card">
             <h3>Add YouTube Video</h3>
             <p class="modal-desc">Paste YouTube link or ID to add to playlist:</p>
@@ -298,13 +283,7 @@
         </div>
     </div>
 
-    <!-- suggestions for the inline playlist / category editors -->
-    <script>
-        window.MM_OPTIONS = {
-            playlist: {{ all_playlists | tojson }},
-            category: {{ all_categories | tojson }}
-        };
-    </script>
+    <script src="{{ url_for('static', filename='js/mm_common.js') }}"></script>
     <script src="{{ url_for('static', filename='js/mm_youtube.js') }}"></script>
 </body>
 </html>

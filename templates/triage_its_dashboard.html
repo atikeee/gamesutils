@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSD-ES Tickets</title>
+    <style>
+        body { font-family: sans-serif; background: #f9f9f9; color: #263d38; padding: 20px; margin: 0; }
+        header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        h1 { font-size: 1.4rem; margin: 0; }
+        .summary { color: #526961; margin: 12px 0 16px; }
+        .error { padding: 10px; border: 1px solid #d78d86; background: #fff0ee; color: #792b27; }
+        .table-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 24px 0 8px; }
+        .table-heading h2 { margin: 0; font-size: 1.1rem; }
+        .delete-selected { min-height: 36px; padding: 6px 12px; border: 1px solid #ad332b; border-radius: 5px; background: #fff; color: #9f2922; font-weight: 600; cursor: pointer; }
+        .delete-selected:disabled { opacity: 0.45; cursor: not-allowed; }
+        a:focus-visible { outline: 3px solid #c49c26; outline-offset: 2px; }
+        .table-scroll { overflow-x: auto; }
+        table { width: 100%; min-width: 850px; border-collapse: collapse; background: white; }
+        th, td { border: 1px solid #999; padding: 8px; text-align: left; vertical-align: top; }
+        th { background: #eaeaea; font-weight: bold; }
+        tr.priority { background: #d4edda; font-weight: 600; }
+        td { overflow-wrap: anywhere; }
+        td:first-child, td:nth-child(2) { white-space: nowrap; }
+        a { color: #175d86; }
+        .empty { padding: 18px 8px; text-align: center; color: #526961; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>HSD-ES Tickets</h1>
+    </header>
+    <p class="summary">{{ data.tickets|length }} saved tickets from the last 48 hours. Last scan: {{ data.scanned_at or 'Not scanned yet' }}{% if data.scanned_at_utc %} (<span id="scan-age" data-scanned-at="{{ data.scanned_at_utc }}">calculating age</span>){% endif %}</p>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+    <div class="table-heading">
+        <h2>HSD-ES Tickets</h2>
+        <button type="button" class="delete-selected" data-delete-type="tickets" disabled>Delete selected</button>
+    </div>
+    <div class="table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col"><input type="checkbox" data-select-all="tickets" aria-label="Select all HSD-ES tickets"></th>
+                    <th scope="col">Received</th>
+                    <th scope="col">ITS</th>
+                    <th scope="col">Attention</th>
+                    <th scope="col">Module</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Owner</th>
+                    <th scope="col">Release</th>
+                    <th scope="col">Subject</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticket in data.tickets %}
+                <tr class="{% if ticket.attention == 'rahmanma' and ticket.module == 'Mazama' %}priority{% endif %}" data-row-id="{{ ticket.its }}">
+                    <td><input type="checkbox" class="row-select" data-row-type="tickets" value="{{ ticket.its }}" aria-label="Select ticket {{ ticket.its }}"></td>
+                    <td>{{ ticket.received }}</td>
+                    <td><a href="{{ ticket.url }}" target="_blank" rel="noopener noreferrer">{{ ticket.its }}</a></td>
+                    <td>{{ ticket.attention }}</td>
+                    <td>{{ ticket.module }}</td>
+                    <td>{{ ticket.status }}</td>
+                    <td>{{ ticket.owner }}</td>
+                    <td>{{ ticket.release }}</td>
+                    <td>{{ ticket.subject }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="9" class="empty">No saved tickets. Run the Windows Outlook scanner to populate the shared cache.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="table-heading">
+        <h2>Validation Check</h2>
+        <button type="button" class="delete-selected" data-delete-type="validation" disabled>Delete selected</button>
+    </div>
+    <p class="summary">{{ validation_data.rows|length }} saved validation rows. Last scan: {{ validation_data.scanned_at or 'Not scanned yet' }}{% if validation_data.scanned_at_utc %} (<span class="scan-age" data-scanned-at="{{ validation_data.scanned_at_utc }}">calculating age</span>){% endif %}</p>
+    <div class="table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col"><input type="checkbox" data-select-all="validation" aria-label="Select all validation rows"></th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Recipe File</th>
+                    <th scope="col">RunDir</th>
+                    <th scope="col">Errors</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in validation_data.rows %}
+                <tr data-row-id="{{ row.row_id }}">
+                    <td><input type="checkbox" class="row-select" data-row-type="validation" value="{{ row.row_id }}" aria-label="Select validation row {{ loop.index }}"></td>
+                    <td>{{ row.received }}</td>
+                    <td>{{ row.recipe_file }}</td>
+                    <td>{{ row.run_dir }}</td>
+                    <td>{{ row.errors }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="empty">No saved validation rows. Run the Windows Outlook scanner to populate the shared cache.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <script>
+        document.querySelectorAll('.scan-age, #scan-age').forEach(scanAge => {
+            const scannedAt = Date.parse(scanAge.dataset.scannedAt);
+            function updateScanAge() {
+                if (Number.isNaN(scannedAt)) return scanAge.textContent = 'age unavailable';
+                const minutes = Math.max(0, Math.floor((Date.now() - scannedAt) / 60000));
+                scanAge.textContent = minutes < 60 ? `${minutes}m ago`
+                    : minutes < 1440 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m ago`
+                    : `${Math.floor(minutes / 1440)}d ${Math.floor(minutes % 1440 / 60)}h ago`;
+            }
+            updateScanAge();
+            setInterval(updateScanAge, 60000);
+        });
+
+        document.querySelectorAll('[data-select-all]').forEach(master => {
+            master.addEventListener('change', () => {
+                document.querySelectorAll(`.row-select[data-row-type="${master.dataset.selectAll}"]`).forEach(row => row.checked = master.checked);
+                updateDeleteButtons();
+            });
+        });
+        document.querySelectorAll('.row-select').forEach(row => row.addEventListener('change', updateDeleteButtons));
+        function updateDeleteButtons() {
+            document.querySelectorAll('[data-delete-type]').forEach(button => {
+                button.disabled = !document.querySelector(`.row-select[data-row-type="${button.dataset.deleteType}"]:checked`);
+            });
+        }
+        document.querySelectorAll('[data-delete-type]').forEach(button => {
+            button.addEventListener('click', async () => {
+                const type = button.dataset.deleteType;
+                const ids = [...document.querySelectorAll(`.row-select[data-row-type="${type}"]:checked`)].map(row => row.value);
+                if (!ids.length || !window.confirm(`Delete ${ids.length} selected ${type === 'tickets' ? 'ticket' : 'validation'} row(s)?`)) return;
+                button.disabled = true;
+                try {
+                    const response = await fetch('/triage_its/delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ type, ids }),
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.message || 'Could not delete rows.');
+                    window.location.reload();
+                } catch (error) {
+                    window.alert(error.message);
+                    updateDeleteButtons();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

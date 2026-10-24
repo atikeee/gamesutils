@@ -25,12 +25,12 @@ const NUMBER_COLOR = '#333';
 const ROBBER_COLOR = '#333';
 
 const resourceImagePaths = {
-    'wood': '/static/images/catan/wood.jpg',
-    'brick': '/static/images/catan/brick.jpg',
-    'sheep': '/static/images/catan/sheep.jpg',
-    'hay': '/static/images/catan/hay.jpg',
-    'rock': '/static/images/catan/rock.jpg',
-    'desert': '/static/images/catan/desert.jpg',
+    'wood': '/static/images/catan/wood.webp',
+    'brick': '/static/images/catan/brick.webp',
+    'sheep': '/static/images/catan/sheep.webp',
+    'hay': '/static/images/catan/hay.webp',
+    'rock': '/static/images/catan/rock.webp',
+    'desert': '/static/images/catan/desert.webp',
 };
 
 const PORT_DATA = [

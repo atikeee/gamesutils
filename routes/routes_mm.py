@@ -4,8 +4,11 @@ import re
 import sqlite3
 import urllib.request
 import urllib.parse
-from flask import Blueprint, render_template, request, jsonify, current_app
+from google_auth_oauthlib.flow import Flow
+from google.oauth2.credentials import Credentials
+from flask import Blueprint, url_for, render_template, request,redirect, jsonify, current_app
 
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 routes_mm = Blueprint('routes_mm', __name__)
 
 def get_db_path():
@@ -184,6 +187,38 @@ def init_db():
     conn.commit()
     conn.close()
 
+
+SCOPES = ['https://www.googleapis.com/auth/youtube.readonly']
+
+@routes_mm.route('/auth/login')
+def auth_login():
+    client_secrets_file = os.path.join(current_app.root_path, 'data', 'mm', 'youtube_token.json')
+    flow = Flow.from_client_secrets_file(
+        client_secrets_file,
+        scopes=SCOPES,
+        redirect_uri=url_for('routes_mm.auth_callback', _external=True)
+    )
+    auth_url, _ = flow.authorization_url(prompt='consent', access_type='offline')
+    return redirect(auth_url)
+
+@routes_mm.route('/auth/callback')
+def auth_callback():
+    client_secrets_file = os.path.join(current_app.root_path, 'data', 'mm', 'youtube_token.json')
+    flow = Flow.from_client_secrets_file(
+        client_secrets_file,
+        scopes=SCOPES,
+        redirect_uri=url_for('routes_mm.auth_callback', _external=True)
+    )
+    flow.fetch_token(authorization_response=request.url)
+    credentials = flow.credentials
+
+    # Save the credentials & permanent refresh_token
+    token_path = os.path.join(current_app.root_path, 'data', 'mm', 'youtube_token.json')
+    with open(token_path, 'w') as token_file:
+        token_file.write(credentials.to_json())
+
+    return "<h2>✅ YouTube Account Authenticated!</h2><p>Your server will now permanently stay logged in.</p>"
+
 @routes_mm.route('/mm/youtube')
 def mm_youtube():
     init_db()
@@ -353,6 +388,52 @@ def api_add_video():
         return jsonify({'success': True, 'id': new_id, 'video_id': vid})
     finally:
         conn.close()
+
+@routes_mm.route('/mm/api/tv/videos')
+def api_tv_videos():
+    """Lightweight JSON endpoint designed for Native Android TV clients."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # 1. Get playlist and pagination parameters
+    playlist = request.args.get('playlist', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    offset = (page - 1) * per_page
+
+    # Default to first available playlist if none specified
+    if not playlist:
+        cursor.execute("SELECT DISTINCT playlist FROM videos WHERE playlist IS NOT NULL ORDER BY playlist ASC LIMIT 1")
+        row = cursor.fetchone()
+        playlist = row[0] if row else 'Default'
+
+    # 2. Fetch video list
+    cursor.execute("""
+        SELECT v.id, v.video_id, v.title, v.artist, v.duration, v.thumbnail_url, v.playlist
+        FROM videos v
+        WHERE v.playlist = ?
+        ORDER BY v.id DESC
+        LIMIT ? OFFSET ?
+    """, (playlist, per_page, offset))
+    
+    videos = [dict(row) for row in cursor.fetchall()]
+
+    # 3. Fetch all available playlists for TV sidebar
+    cursor.execute("SELECT DISTINCT playlist FROM videos WHERE playlist IS NOT NULL ORDER BY playlist ASC")
+    all_playlists = [r[0] for r in cursor.fetchall()]
+
+    conn.close()
+
+    # Return pure JSON
+    return jsonify({
+        'status': 'success',
+        'current_playlist': playlist,
+        'page': page,
+        'playlists': all_playlists,
+        'videos': videos
+    })
+
+
 
 @routes_mm.route('/mm/api/video/<int:vid_id>', methods=['DELETE'])
 def api_delete_video(vid_id):

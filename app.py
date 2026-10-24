@@ -12,11 +12,13 @@ from routes.routes_bridge_v2 import configure_routes_bridge_v2
 from routes.routes_links import configure_routes_links
 from routes.routes_launcher import configure_routes_launcher
 from routes.routes_triage_email import configure_routes_triage_email
+from routes.routes_triage_its import configure_routes_triage_its
 from routes.routes_math import configure_routes_math
 from flask_socketio import SocketIO, emit
 from routes.routes_stocks import configure_routes_stocks
 from routes.routes_phototag import configure_routes_phototag
 from routes.routes_mm import configure_routes_mm
+from routes.routes_mm_mp3 import configure_routes_mm_mp3
 import random
 
 
@@ -40,11 +42,13 @@ configure_routes_launcher(app, socketio)
 # Add the new Bridge V2 configuration
 configure_routes_bridge_v2(app, socketio)
 configure_routes_triage_email(app)
+configure_routes_triage_its(app)
 configure_routes_math(app)
 configure_routes_stocks(app, socketio)
 configure_routes_phototag(app, socketio)
 configure_routes_mm(app, socketio)
-
+#configure_routes_mm_mp3(app, socketio)
+configure_routes_mm_mp3(app)
 if __name__ == '__main__':
     #app.run(debug=True, host='0.0.0.0')
     socketio.run(app, debug=True, host='0.0.0.0', allow_unsafe_werkzeug=True)
