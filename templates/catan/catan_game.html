@@ -3,16 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catan GamePlay</title>
+    <title>Catan</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_game.css') }}">
 </head>
-<body class="bg-gray-100 catan-game-page">
+<body class="catan-game-page">
     <div class="main-container">
         <div class="left-column">
+            <!-- Header above the map: title, eye, road, dev left -->
+            <div class="game-header">
+                <h1 id="gameTurnTitle"></h1>
+                <button type="button" id="boardControlsToggle" class="board-controls-toggle" aria-pressed="false" aria-controls="boardTools" title="Enable map controls" aria-label="Enable map controls"><i class="fas fa-eye-slash" aria-hidden="true"></i></button>
+                <label class="road-select-label" for="longestRoadSelect">&#128739;&#65039; Road:</label>
+                <select id="longestRoadSelect" class="compact-select">
+                    <option value="none">None</option>
+                </select>
+                <span class="dev-deck-left">Dev left: <strong id="devDeckCount">25</strong></span>
+            </div>
+
             <div class="game-board-shell">
                 <div class="game-map" id="boardTools">
                     <div class="canvas-wrapper map-zoom-viewport">
@@ -38,6 +49,7 @@
                     </div>
                 </div>
             </div>
+
             <div id="messageBox" class="message-box"></div>
             <dialog id="resetDialog" class="game-dialog" aria-labelledby="resetDialogTitle" aria-describedby="resetDialogText">
                 <form method="dialog">
@@ -51,29 +63,26 @@
                 </form>
             </dialog>
         </div>
+
+        <!-- Sidebar: score table (4 reserved rows) + activity -->
         <div class="right-column game-sidebar">
-            <div class="game-title-row">
-                <h1 id="gameTurnTitle"></h1>
-            </div>
-            <div class="game-toolbar-row">
-                <button type="button" id="boardControlsToggle" class="board-controls-toggle" aria-pressed="false" aria-controls="boardTools" title="Enable map controls" aria-label="Enable map controls"><i class="fas fa-eye-slash" aria-hidden="true"></i></button>
-                <label class="road-select-label" for="longestRoadSelect">&#128739;&#65039; Road:</label>
-                <select id="longestRoadSelect" class="compact-select">
-                    <option value="none">None</option>
-                </select>
-                <span class="dev-deck-left">Dev left: <strong id="devDeckCount">25</strong></span>
-            </div>
-            <div class="middle-section score-section">
+            <div class="score-section">
                 <div id="assignpoint">
                     <table class="score-table">
+                        <colgroup>
+                            <col>
+                            <col style="width:17%">
+                            <col style="width:23%">
+                            <col style="width:13%">
+                            <col style="width:13%">
+                        </colgroup>
                         <thead>
                             <tr>
-                                <th title="Name">N</th>
-                                <th title="Score">S</th>
-                                <th title="Cards">C</th>
-                                <th title="Knights played">K</th>
-                                <th title="Development cards">D</th>
-                                <th title="Victory points">V</th>
+                                <th>Name</th>
+                                <th>Score</th>
+                                <th>Cards</th>
+                                <th>Kn</th>
+                                <th>VP</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -85,14 +94,59 @@
                     </table>
                 </div>
             </div>
-            <div class="right-section game-activity-section">
+            <div class="game-activity-section">
                 <h2>Activity</h2>
                 <div id="gameActivity" role="log" aria-live="polite"></div>
             </div>
         </div>
     </div>
+
     <script>window.CATAN_PLAYER_COLORS = {{ player_colors|tojson }};</script>
     <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/catan_game_logic.js') }}"></script>
+
+    <!-- Display tweaks that run after your JS (no changes to catan_game_logic.js needed) -->
+    <script>
+    (function () {
+        var box = document.getElementById('assignpoint');
+        var title = document.getElementById('gameTurnTitle');
+        var trim = function (s) { return (s || '').replace(/^\s+|\s+$/g, ''); };
+
+        // Score table: Cards shows "cards (dev)"; hide rows whose name starts with "player"
+        var tableObs = new MutationObserver(fixTable);
+        function fixTable() {
+            tableObs.disconnect();
+            var rows = box.querySelectorAll('tbody tr');
+            for (var i = 0; i < rows.length; i++) {
+                var td = rows[i].children;
+                if (td.length < 6) continue;
+                var name = trim(td[0].textContent);
+                rows[i].style.display = /^player/i.test(name) ? 'none' : '';
+                td[0].title = name;
+                var cards = trim(td[2].textContent.replace(/\s*\(.*\)\s*$/, '')) || '0';
+                var dev = trim(td[4].textContent) || '0';
+                var merged = cards + ' (' + dev + ')';
+                if (td[2].textContent !== merged) td[2].textContent = merged;
+            }
+            tableObs.observe(box, { childList: true, subtree: true, characterData: true });
+        }
+        fixTable();
+
+        // Title: "Catan GamePlay (x's turn)" -> "Catan (x's turn)"
+        var titleObs = new MutationObserver(fixTitle);
+        function fixTitle() {
+            var s = title.textContent, n = s.replace(/Catan\s*Game\s*Play/i, 'Catan');
+            if (n !== s) title.textContent = n;
+        }
+        titleObs.observe(title, { childList: true, characterData: true, subtree: true });
+        fixTitle();
+
+        // Reset game -> reload page (short delay lets the reset request go out first)
+        var dlg = document.getElementById('resetDialog');
+        dlg.addEventListener('close', function () {
+            if (dlg.returnValue === 'confirm') setTimeout(function () { location.reload(); }, 1000);
+        });
+    })();
+    </script>
 </body>
 </html>

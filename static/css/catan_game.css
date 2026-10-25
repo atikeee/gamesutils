@@ -1,0 +1,170 @@
+/* catan_game.css - /catan/game page only.
+   Two layouts: TV / laptop (>= 769px wide) and mobile (<= 768px wide).
+   Avoids newer CSS (:has, inset, aspect-ratio, clamp, svh, flex gap) so old TV browsers render it. */
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; padding: 0; }
+body.catan-game-page {
+    font-family: Inter, Arial, sans-serif;
+    font-size: 14px;
+    color: #1f2d29;
+    background: #f0f2f5;
+    overflow: hidden;
+}
+button, select { font-family: inherit; }
+
+/* ---------- TV / LAPTOP LAYOUT ---------- */
+.main-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 36%;
+    grid-gap: 8px;
+    gap: 8px;
+    width: 100vw;
+    height: 100vh;
+    padding: 6px;
+}
+.left-column { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+/* header above the map: title, eye, road, dev left */
+.game-header { display: flex; flex: 0 0 auto; align-items: center; height: 34px; margin-bottom: 6px; white-space: nowrap; }
+.game-header > * { flex: 0 0 auto; margin-right: 8px; }
+#gameTurnTitle { flex: 0 1 auto; min-width: 0; max-width: 42%; margin: 0 8px 0 0; font-size: 1.15rem; font-weight: 700; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-controls-toggle { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid #b8c8c1; border-radius: 6px; background: #fff; color: #526660; cursor: pointer; }
+.board-controls-toggle[aria-pressed="true"] { border-color: #176b5b; background: #e4f0ec; color: #145347; }
+.road-select-label { font-weight: 600; color: #29453e; margin-right: 4px; }
+.compact-select { height: 32px; max-width: 120px; padding: 0 6px; border: 1px solid #b8c8c1; border-radius: 6px; background: #fff; color: #21493c; font-weight: 600; font-size: 0.95rem; }
+.compact-select:disabled { opacity: 0.55; }
+.dev-deck-left { margin-left: auto; margin-right: 0; color: #526660; }
+
+/* map */
+.game-board-shell { flex: 1 1 auto; min-height: 0; position: relative; }
+.game-map { position: relative; width: 100%; height: 100%; }
+.canvas-wrapper.map-zoom-viewport { position: relative; width: 100%; height: 100%; overflow: hidden; border: 2px solid #a78bfa; border-radius: 12px; background: #e0e7ff; }
+#catanBoard { position: absolute; top: 0; left: 0; display: block; width: 100%; height: 100%; max-width: none; background: #fff; }
+
+/* zoom: 1.2x on TV / laptop; scrolls inside the map, scrollbars hidden */
+.map-zoom-viewport.map-zoomed { overflow: auto; scrollbar-width: none; }
+.map-zoom-viewport.map-zoomed::-webkit-scrollbar { display: none; }
+.map-zoom-viewport.map-zoomed #catanBoard { width: 120% !important; height: 120% !important; max-width: none !important; }
+
+/* map corner buttons */
+.map-corner { position: absolute; z-index: 5; display: flex; flex-wrap: nowrap; align-items: center; }
+.map-corner > * + * { margin-left: 6px; }
+.map-corner-top-left { top: 8px; left: 8px; }
+.map-corner-top-right { top: 8px; right: 8px; max-width: calc(100% - 16px); }
+.map-corner-bottom-left { bottom: 8px; left: 8px; }
+.map-corner-bottom-right { bottom: 8px; right: 8px; }
+.map-tool { display: grid; place-items: center; flex: 0 0 auto; width: 36px; height: 36px; padding: 0; border: 1px solid #b8c8c1; border-radius: 6px; background: #fff; color: #21493c; font-size: 1rem; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+.map-tool:hover:not(:disabled) { background: #e4f0ec; }
+.map-tool.selected, .map-tool[aria-pressed="true"] { border-color: #176b5b; background: #176b5b; color: #fff; }
+.map-tool-danger { color: #b22b31; }
+.map-tool:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+/* last roll: name + dice + zoom stay on ONE line. Empty parts disappear. */
+.map-last-roll { display: flex; flex-wrap: nowrap; align-items: center; min-width: 0; white-space: nowrap; }
+#lastRollPlayer { flex: 0 1 auto; min-width: 0; max-width: 9ch; margin-right: 6px; padding: 3px 7px; border: 1px solid #b8c8c1; border-radius: 6px; background: rgba(255,255,255,0.92); color: #21493c; font-size: 0.95rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#lastRollPlayer:empty, #diceroll:empty { display: none; }
+#diceroll { flex: 0 0 auto; padding: 3px 4px; border: 1px solid #b8c8c1; border-radius: 6px; background: rgba(255,255,255,0.92); }
+.dice-result { display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; }
+.dice-result > * + * { margin-left: 4px; }
+.dice-face { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); flex: 0 0 auto; width: 30px; height: 30px; margin: 0; padding: 5px; border: 1px solid #d4dedb; border-radius: 6px; background: #fff; }
+.dice-face.dice-red { background: #b6423e; border-color: #8e302d; }
+.dice-face.dice-yellow { background: #f2cf4a; border-color: #c1a532; }
+.die-pip { align-self: center; justify-self: center; width: 5px; height: 5px; border-radius: 50%; background: #31564e; }
+.dice-face.dice-red .die-pip { background: #fff; }
+.dice-face.dice-yellow .die-pip { background: #313b32; }
+.catan2-event-die-face { display: block; flex: 0 0 auto; width: 30px; height: 30px; border: 1px solid #263238; border-radius: 6px; overflow: hidden; }
+.catan2-event-die-face img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+/* sidebar: score table (4 reserved rows) + activity */
+.game-sidebar { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.score-section { flex: 0 0 auto; min-height: 178px; margin-bottom: 8px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.score-table { width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #9fb3ab; font-variant-numeric: tabular-nums; }
+.score-table th, .score-table td { height: 34px; padding: 0 5px; border: 1px solid #c9d7d3; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 1rem; }
+.score-table th { height: 30px; background: #eef2f1; color: #526660; font-size: 0.9rem; font-weight: 700; }
+.score-table th:first-child, .score-table td:first-child { text-align: left; font-weight: 600; }
+.score-table td:nth-child(5) { display: none; }                 /* raw Dev column is merged into Cards */
+.score-table th:nth-child(2) { background: #176b5b; color: #fff; }   /* Score = main column */
+.score-table td:nth-child(2) { background: #e4f0ec; color: #145347; font-size: 1.35rem; font-weight: 800; }
+.unregistered-player { display: none; }
+
+.game-activity-section { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; }
+.game-activity-section h2 { margin: 0 0 6px; font-size: 1rem; font-weight: 700; }
+#gameActivity { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+#gameActivity::-webkit-scrollbar { display: none; }
+.activity-entry { display: flex; flex-wrap: wrap; align-items: center; min-height: 2.6rem; padding: 5px 0; border-top: 1px solid #e5e9e7; font-size: 0.95rem; line-height: 1.3; }
+.activity-entry > * { margin-right: 6px; }
+.activity-player { display: inline-block; max-width: 9ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; font-weight: 800; line-height: 1; text-shadow: 0 0 1px #000, 0 0 1px #000; }
+.activity-card { position: relative; display: inline-block; flex: 0 0 30px; width: 30px; height: 40px; }
+.activity-card img { display: block; width: 100%; height: 100%; border-radius: 2px; object-fit: cover; }
+.activity-card > span { position: absolute; right: -3px; bottom: -3px; min-width: 16px; padding: 1px 3px; border-radius: 3px; background: #173f34; color: #fff; font-size: 0.64rem; font-weight: 700; text-align: center; }
+.activity-dev-card { flex-basis: 38px; width: 38px; height: 52px; }
+.activity-seven { display: grid; place-items: center; width: 22px; height: 22px; border: 2px solid #b22b31; border-radius: 4px; color: #b22b31; font-weight: 800; }
+.activity-seven-block { flex-direction: column; align-items: flex-start; margin: 4px 0; padding: 6px 8px; border-radius: 6px; background: #fdf1f1; }
+.activity-seven-row { display: flex; flex-wrap: wrap; align-items: center; }
+.activity-seven-row > * { margin-right: 6px; }
+
+/* longest-road picker + award select (if your JS renders them) */
+.road-award-picker { position: relative; display: flex; align-items: center; justify-content: space-between; }
+.road-award-picker > button { padding: 6px 10px; border: 1px solid #2b6656; border-radius: 5px; background: #e2f0e9; color: #205344; font-weight: 700; }
+#roadChoices { position: absolute; z-index: 10; top: 100%; right: 0; min-width: 140px; padding: 5px; border: 1px solid #bacbc3; border-radius: 5px; background: #fff; box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+#roadChoices[hidden], #roadChoices button[hidden] { display: none; }
+#roadChoices button { display: block; width: 100%; padding: 7px; border: 0; background: none; text-align: left; }
+#roadChoices button:hover { background: #e2f0e9; }
+.award-select { max-width: 100%; padding: 5px 7px; border: 1px solid #cbd5d1; border-radius: 5px; background: #fff; color: #263d38; font: inherit; }
+
+/* toasts */
+.message-box { position: fixed; z-index: 1200; top: 10px; left: 50%; display: flex; flex-direction: column; align-items: center; max-width: calc(100vw - 24px); max-height: 60vh; overflow-y: auto; transform: translateX(-50%); }
+.message-box:empty { display: none; }
+.game-toast { margin-bottom: 8px; padding: 10px 14px; border: 1px solid #eadcae; border-radius: 8px; background: rgba(255,251,235,0.98); color: #664e12; box-shadow: 0 6px 18px rgba(15,23,42,0.16); font-size: 0.9rem; text-align: center; cursor: pointer; }
+.game-toast-error { border-color: #f2b8b5; background: rgba(254,242,242,0.98); color: #842d2b; }
+
+/* reset dialog */
+.game-dialog { width: 92vw; max-width: 380px; padding: 0; border: 0; border-radius: 14px; background: #fff; color: #1f2d29; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+.game-dialog::backdrop { background: rgba(15,30,25,0.45); }
+.game-dialog form { display: flex; flex-direction: column; align-items: center; padding: 24px 22px 20px; text-align: center; }
+.game-dialog-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: #fdecec; color: #b22b31; font-size: 1.4rem; }
+.game-dialog h2 { margin: 10px 0 6px; font-size: 1.15rem; font-weight: 700; }
+.game-dialog p { margin: 0; color: #526660; font-size: 0.92rem; line-height: 1.4; }
+.game-dialog-actions { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 10px; gap: 10px; width: 100%; margin-top: 16px; }
+.game-dialog-actions button { min-height: 42px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+.game-dialog-cancel { border: 1px solid #c9d7d3; background: #fff; color: #29453e; }
+.game-dialog-confirm { border: 1px solid #b22b31; background: #b22b31; color: #fff; }
+
+/* big dice-roll overlay */
+.dice-roll-overlay { position: fixed; z-index: 1500; top: 0; right: 0; bottom: 0; left: 0; display: none; align-items: center; justify-content: center; background: rgba(15,28,25,0.48); }
+.dice-roll-overlay.is-visible { display: flex; }
+.dice-roll-overlay[hidden] { display: none !important; }
+.dice-roll-panel { display: flex; flex-direction: column; align-items: center; padding: 24px; }
+.dice-overlay-pair, .dice-overlay-dice { display: flex; align-items: center; justify-content: center; }
+.dice-overlay-pair > * + *, .dice-overlay-dice > * + * { margin-left: 22px; }
+.dice-roll-overlay .dice-face { width: 96px; height: 96px; padding: 15px; border: 2px solid #fff; border-radius: 16px; background: #b6423e; box-shadow: inset 0 -5px 0 #8e302d, 0 9px 0 #782825, 0 18px 30px rgba(5,20,16,0.35); }
+.dice-roll-overlay .dice-face:nth-child(2) { background: #f2cf4a; box-shadow: inset 0 -5px 0 #c1a532, 0 9px 0 #998223, 0 18px 30px rgba(5,20,16,0.35); }
+.dice-roll-overlay .die-pip { width: 13px; height: 13px; background: #fff; }
+.dice-roll-overlay .dice-face:nth-child(2) .die-pip { background: #313b32; }
+.dice-roll-overlay .catan2-event-die-face { width: 96px; height: 96px; border-radius: 16px; }
+.dice-roll-overlay.is-rolling .dice-face { animation: dice-tumble 330ms ease-in-out infinite alternate; }
+@keyframes dice-tumble { from { transform: translateY(-9px) rotate(-10deg); } to { transform: translateY(8px) rotate(10deg); } }
+
+/* ---------- MOBILE LAYOUT (<= 768px) ---------- */
+@media (max-width: 768px) {
+    html, body { height: auto; }
+    body.catan-game-page { overflow-x: hidden; overflow-y: auto; }
+    .main-container { display: block; width: 100%; height: auto; padding: 8px; }
+    .left-column { display: block; }
+    .game-header { flex-wrap: wrap; height: auto; white-space: normal; }
+    .game-header > * { margin-bottom: 4px; }
+    #gameTurnTitle { max-width: 60%; }
+    .game-board-shell { width: 100%; }
+    .game-map { height: 0; padding-bottom: 83.333%; }              /* keeps the 1.2 : 1 board shape */
+    .canvas-wrapper.map-zoom-viewport { position: absolute; top: 0; left: 0; }
+    .map-zoom-viewport.map-zoomed { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: auto; }
+    .map-zoom-viewport.map-zoomed::-webkit-scrollbar { display: block; }
+    .map-zoom-viewport.map-zoomed #catanBoard { width: 200% !important; height: 100% !important; }
+    .map-tool { width: 40px; height: 40px; }
+    .game-sidebar { display: block; margin-top: 8px; }
+    .score-section { min-height: 0; }
+    .score-table th, .score-table td { font-size: 0.85rem; }
+    .score-table td:nth-child(2) { font-size: 1.15rem; }
+    .game-activity-section { max-height: 260px; }
+}

@@ -2579,3 +2579,36 @@ body.tv-mode #activityLog .log-entry:last-child {
     .catan-game-page .activity-card { width: 34px; height: 45px; flex-basis: 34px; }
     .catan-game-page .activity-dev-card { width: 44px; height: 60px; flex-basis: 44px; }
 }
+
+
+/* ===== TV tweaks ===== */
+
+/* Title row: eye + truncated title */
+.catan-game-page .game-title-row { min-width: 0; }
+.catan-game-page .game-title-row h1 { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catan-game-page .board-controls-toggle { width: 32px; height: 32px; }
+
+/* Score table: grid lines, fixed columns, truncated names */
+.catan-game-page .score-table { table-layout: fixed; border: 1px solid #9fb3ab; }
+.catan-game-page .score-table th,
+.catan-game-page .score-table td { border: 1px solid #c9d7d3; padding: 5px 4px; overflow: hidden; white-space: nowrap; }
+.catan-game-page .score-table th:nth-child(2) { width: 56px; }
+.catan-game-page .score-table th:nth-child(3) { width: 76px; }
+.catan-game-page .score-table th:nth-child(4) { width: 44px; }
+.catan-game-page .score-table th:nth-child(5) { width: 44px; }
+.catan-game-page .score-table td:first-child { text-overflow: ellipsis; }
+.catan-game-page .score-table td:nth-child(5) { display: none; } /* raw Dev column, merged into Cards */
+
+/* Score column highlighted as the main column */
+.catan-game-page .score-table th:nth-child(2) { background: #176b5b; color: #fff; }
+.catan-game-page .score-table td:nth-child(2) { background: #e4f0ec; color: #145347; font-size: 1.25em; font-weight: 800; }
+
+/* Last roll: name + dice + zoom button always on one line */
+.catan-game-page .map-corner-top-right { flex-wrap: nowrap; max-width: calc(100% - 16px); }
+.catan-game-page .map-last-roll { flex-wrap: nowrap; min-width: 0; white-space: nowrap; }
+.catan-game-page #lastRollPlayer { flex: 0 1 auto; min-width: 0; max-width: 9ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catan-game-page .map-last-roll #diceroll { flex: 0 0 auto; }
+.catan-game-page .map-last-roll .dice-result { flex-wrap: nowrap; }
+.catan-game-page .map-last-roll #diceroll .dice-face,
+.catan-game-page .map-last-roll .catan2-event-die-face { flex: 0 0 auto; width: 34px; height: 34px; padding: 5px; }
+.catan-game-page #mapZoomToggle { flex: 0 0 auto; }
