@@ -5,7 +5,7 @@ const ROAD_WIDTH = 12;
 const HOUSE_SIZE = 20;
 const CITY_SIZE = 30;
 const PORT_SIZE = HEX_SIZE * 0.3;
-
+window.SHOW_PORT_INDEX = false;
 const PLAYER_COLORS = window.CATAN_PLAYER_COLORS || {
     'player1': '#F80000',
     'player2': '#0000CC',
@@ -25,47 +25,113 @@ const NUMBER_COLOR = '#333';
 const ROBBER_COLOR = '#333';
 
 const resourceImagePaths = {
-    'wood': '/static/images/catan/wood.jpg',
-    'brick': '/static/images/catan/brick.jpg',
-    'sheep': '/static/images/catan/sheep.jpg',
-    'hay': '/static/images/catan/hay.jpg',
-    'rock': '/static/images/catan/rock.jpg',
-    'desert': '/static/images/catan/desert.jpg',
+    'wood': '/static/images/catan/wood.webp',
+    'brick': '/static/images/catan/brick.webp',
+    'sheep': '/static/images/catan/sheep.webp',
+    'hay': '/static/images/catan/hay.webp',
+    'rock': '/static/images/catan/rock.webp',
+    'desert': '/static/images/catan/desert.webp',
 };
 
-const PORT_DATA = [
-    ['any', '3:1'], 
-    ['hay', '2:1'], 
-    0, 
-    0, 
-    0, 
-    ['any', '3:1'], 
-    0, 
-    ['rock', '2:1'], 
-    0, 
-    0, 
-    ['hay', '2:1'], 
-    ['rock', '2:1'], 
-    0, 
-    ['brick', '2:1'], 
-    ['any', '3:1'], 
-    ['any', '3:1'], 
-    0, 
-    0, 
-    ['wood', '2:1'], 
-    0, 
-    ['brick', '2:1'], 
-    ['wood', '2:1'], 
-    0, 
-    ['sheep', '2:1'],
-    ['any', '3:1'],    
-    ['any', '3:1'],       
-    0,
-    ['sheep', '2:1'],    
-    ['any', '3:1'],    
-    ['any', '3:1'],
+
+const PORT_PAIRS_4P = [
+    { a: 1,  b: 2,  type: 'any',   ratio: '3:1' },
+    { a: 9, b: 10, type: 'hay',  ratio: '2:1' },
+    { a: 0, b: 5, type: 'brick',  ratio: '2:1' },
+    { a: 21, b: 22, type: 'wood',  ratio: '2:1' },
+    { a: 24, b: 26, type: 'rock',  ratio: '2:1' },
+    { a: 6, b: 12, type: 'sheep',  ratio: '2:1' },
+    { a: 13, b: 20, type: 'any',   ratio: '3:1' },
+    { a: 7, b: 8, type: 'any',   ratio: '3:1' },
+    { a: 17, b: 18, type: 'any',   ratio: '3:1' },
     
 ];
+
+
+
+const PORT_PAIRS_6P = [
+    // a, b = the two junction numbers (must share one edge)
+    { a: 4,  b: 5,  type: 'wood',   ratio: '2:1' },
+    { a: 1,  b: 2,  type: 'any',   ratio: '3:1' },
+    { a: 9,  b: 10,  type: 'hay',   ratio: '2:1' },
+    { a: 14,  b: 18,  type: 'any',   ratio: '3:1' },
+    { a: 17,  b: 24,  type: 'rock',   ratio: '2:1' },
+    { a: 33,  b: 31,  type: 'any',   ratio: '3:1' },
+    { a: 34,  b: 35,  type: 'sheep',   ratio: '2:1' },
+    { a: 29,  b: 30,  type: 'any',   ratio: '3:1' },
+    { a: 21,  b: 22,  type: 'any',   ratio: '3:1' },
+    { a: 16,  b: 11,  type: 'brick',   ratio: '2:1' },
+    { a: 6,  b: 7,  type: 'sheep',   ratio: '2:1' },
+    // { a: 9,  b: 10, type: 'rock',  ratio: '2:1' },
+    // { a: 14, b: 15, type: 'brick', ratio: '2:1' },
+    // types: 'any' | 'wood' | 'brick' | 'sheep' | 'hay' | 'rock'
+	
+];
+function drawRailTrack(ctx, x1, y1, x2, y2) {
+    const GAP = 22;                          // empty space left at the junction (px)
+    const dx = x2 - x1, dy = y2 - y1;
+    const fullLen = Math.sqrt(dx * dx + dy * dy) || 1;
+    const ux = dx / fullLen, uy = dy / fullLen;   // along the track
+    const px = -uy, py = ux;                      // perpendicular
+    const half = 7;
+    const tieSpacing = 8;
+
+    // start the track GAP pixels away from the junction
+    const sx = x1 + ux * GAP;
+    const sy = y1 + uy * GAP;
+    const trackLen = fullLen - GAP;
+    if (trackLen <= 0) return;
+
+    ctx.save();
+    ctx.lineCap = 'butt';
+
+    // ties
+    ctx.strokeStyle = '#8b6b3e';
+    ctx.lineWidth = 4;
+    for (let d = tieSpacing / 2; d < trackLen; d += tieSpacing) {
+        const cx = sx + ux * d, cy = sy + uy * d;
+        ctx.beginPath();
+        ctx.moveTo(cx - px * (half + 2), cy - py * (half + 2));
+        ctx.lineTo(cx + px * (half + 2), cy + py * (half + 2));
+        ctx.stroke();
+    }
+
+    // rails
+    ctx.strokeStyle = '#3b2a17';
+    ctx.lineWidth = 3;
+    [-half, half].forEach(o => {
+        ctx.beginPath();
+        ctx.moveTo(sx + px * o, sy + py * o);
+        ctx.lineTo(x2 + px * o, y2 + py * o);
+        ctx.stroke();
+    });
+    ctx.restore();
+}
+
+function drawPortPair(ctx, ja, jb, type, ratio, centerX, centerY) {
+    // ja, jb, centerX, centerY are already in canvas coordinates (offset applied)
+    const mx = (ja.x + jb.x) / 2;
+    const my = (ja.y + jb.y) / 2;
+    const ex = jb.x - ja.x;
+    const ey = jb.y - ja.y;
+    const len = Math.sqrt(ex * ex + ey * ey) || 1;
+
+    // unit normal to the edge, flipped so it points away from the board center
+    let nx = -ey / len;
+    let ny = ex / len;
+    if ((mx - centerX) * nx + (my - centerY) * ny < 0) { nx = -nx; ny = -ny; }
+
+    // how far the port circle sits from the middle of the edge
+    const portDistance = HEX_SIZE * 0.65;
+    const px = mx + nx * portDistance;
+    const py = my + ny * portDistance;
+
+    // rail tracks from each junction to the port (drawn first, circle covers the ends)
+    drawRailTrack(ctx, ja.x, ja.y, px, py);
+    drawRailTrack(ctx, jb.x, jb.y, px, py);
+
+    drawCirclePort(ctx, px, py, type, ratio);
+}
 
 function hexToPixel(q, r, offsetX, offsetY) {
     const x = HEX_SIZE * (3/2 * q);
@@ -116,9 +182,11 @@ function getHexVertices(centerX, centerY, size) {
     }
     return vertices;
 }
+const TILE_OPACITY = 0.4;      // the tile picture/colour
+const BORDER_OPACITY = 0.2;    // the hex outline (lower = fainter)
 
 function drawHex(ctx, x, y, size, fillColor, image = null, strokeColor = '#333', lineWidth = 2) {
-    ctx.globalAlpha = 0.6;
+    ctx.globalAlpha = TILE_OPACITY;
     ctx.beginPath();
     const vertices = getHexVertices(x, y, size);
     ctx.moveTo(vertices[0].x, vertices[0].y);
@@ -147,6 +215,9 @@ function drawHex(ctx, x, y, size, fillColor, image = null, strokeColor = '#333',
     }
     ctx.restore();
 
+    // outline: separate opacity; custom colours (e.g. a highlighted tile) stay fully visible
+    const isDefaultBorder = strokeColor === '#333';
+    ctx.globalAlpha = isDefaultBorder ? BORDER_OPACITY : 1;
     ctx.strokeStyle = strokeColor;
     ctx.lineWidth = lineWidth;
     ctx.stroke();

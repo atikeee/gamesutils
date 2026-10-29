@@ -19,14 +19,20 @@
             <ol class="catan-seat-list">
                 {% for seat in seats %}
                 <li>
+                    {% if seat.code %}
+                    <button type="button" class="catan-seat-number catan-seat-open" data-seat-url="{{ url_for('catan2_player', player_code=seat.code, verify=1) }}" data-seat-name="{{ seat.name }}" aria-label="Open seat {{ seat.seat }} for {{ seat.name }}" title="Open {{ seat.name }}'s seat">{{ seat.seat }}</button>
+                    <span class="catan-seat-name">{{ seat.name }}</span>
+                    {% else %}
                     <span class="catan-seat-number">{{ seat.seat }}</span>
-                    <span class="catan-seat-name">{{ seat.name or 'Open seat' }}</span>
+                    <span class="catan-seat-name">Open seat</span>
+                    {% endif %}
                     <span class="catan-seat-state">{{ 'Joined' if seat.name else 'Available' }}</span>
                 </li>
                 {% endfor %}
             </ol>
         </section>
 
+        {% if not game_started %}
         <section class="catan-setup-section" aria-labelledby="join-title">
             <h2 id="join-title">Create or open your player link</h2>
             {% if error %}<p class="catan-setup-error" role="alert">{{ error }}</p>{% endif %}
@@ -42,6 +48,63 @@
                 <button type="submit">Continue</button>
             </form>
         </section>
+        {% endif %}
     </main>
+    <dialog class="catan-seat-dialog" id="seatPassphraseDialog" aria-labelledby="seatPassphraseTitle">
+        <form id="seatPassphraseForm" class="catan-seat-dialog-form" method="post">
+            <h2 id="seatPassphraseTitle"></h2>
+            <label for="seatPassphrase">Passphrase</label>
+            <input id="seatPassphrase" name="passphrase" type="password" autocomplete="current-password" required>
+            <p id="seatPassphraseError" class="catan-setup-error" role="alert" hidden></p>
+            <div class="catan-seat-dialog-actions">
+                <button type="button" id="closeSeatPassphrase">Cancel</button>
+                <button type="submit">Open player page</button>
+            </div>
+        </form>
+    </dialog>
+    <script>
+        const seatDialog = document.getElementById('seatPassphraseDialog');
+        const seatForm = document.getElementById('seatPassphraseForm');
+        const seatError = document.getElementById('seatPassphraseError');
+
+        document.querySelectorAll('.catan-seat-open').forEach(button => {
+            button.addEventListener('click', () => {
+                seatForm.action = button.dataset.seatUrl;
+                document.getElementById('seatPassphraseTitle').textContent = button.dataset.seatName;
+                seatError.hidden = true;
+                seatDialog.showModal();
+                document.getElementById('seatPassphrase').focus();
+            });
+        });
+        document.getElementById('closeSeatPassphrase').addEventListener('click', () => seatDialog.close());
+        seatDialog.addEventListener('click', event => {
+            if (event.target === seatDialog) seatDialog.close();
+        });
+        seatDialog.addEventListener('close', () => {
+            seatForm.reset();
+            seatError.hidden = true;
+        });
+        seatForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            const submitButton = seatForm.querySelector('[type="submit"]');
+            submitButton.disabled = true;
+            seatError.hidden = true;
+            try {
+                const response = await fetch(seatForm.action, {
+                    method: 'POST',
+                    headers: { Accept: 'application/json' },
+                    body: new FormData(seatForm),
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Could not open this seat.');
+                window.location.assign(result.url);
+            } catch (error) {
+                seatError.textContent = error.message;
+                seatError.hidden = false;
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    </script>
 </body>
 </html>

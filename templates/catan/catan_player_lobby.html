@@ -11,7 +11,7 @@
     <main class="catan-setup-shell">
         <header class="catan-setup-header">
             <h1>Catan Players</h1>
-            <p>Four seats total. Player names are visible to everyone; passphrases stay private.</p>
+            <p>{{ 'Game started. Existing players can reopen their seats; new players cannot join.' if game_started else 'Four seats total. Player names are visible to everyone; passphrases stay private.' }}</p>
         </header>
 
         <section class="catan-setup-section" aria-labelledby="seat-list-title">
@@ -21,6 +21,7 @@
                 <li>
                     <span class="catan-seat-number">{{ seat.seat }}</span>
                     <span class="catan-seat-name">{{ seat.name or 'Open seat' }}</span>
+                    {% if seat.color %}<span class="catan-seat-color" style="background: {{ seat.color }}" title="Color claimed" aria-label="Color claimed"></span>{% endif %}
                     <span class="catan-seat-state">{{ 'Joined' if seat.name else 'Available' }}</span>
                 </li>
                 {% endfor %}
@@ -28,7 +29,7 @@
         </section>
 
         <section class="catan-setup-section" aria-labelledby="join-title">
-            <h2 id="join-title">Create or open your player link</h2>
+            <h2 id="join-title">{{ 'Open your player link' if game_started else 'Create or open your player link' }}</h2>
             {% if error %}<p class="catan-setup-error" role="alert">{{ error }}</p>{% endif %}
             <form class="catan-join-form" method="post">
                 <label>

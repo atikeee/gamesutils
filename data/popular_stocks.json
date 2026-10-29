@@ -20,8 +20,8 @@
   {
     "symbol": "HD",
     "name": "The Home Depot, Inc.",
-    "quantity": 100,
-    "price": 300
+    "quantity": 0,
+    "price": 0
   },
   {
     "symbol": "NVDA",
@@ -98,6 +98,18 @@
   {
     "symbol": "ARM",
     "name": "Arm Holdings plc",
+    "quantity": 0,
+    "price": 0
+  },
+  {
+    "symbol": "AFRM",
+    "name": "Affirm Holdings, Inc.",
+    "quantity": 0,
+    "price": 0
+  },
+  {
+    "symbol": "NIO",
+    "name": "NIO Inc.",
     "quantity": 0,
     "price": 0
   }

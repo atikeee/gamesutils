@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>My Music</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm.css') }}">
+</head>
+<body>
+    <div class="mm-container" id="appContainer"
+         data-tracks='{{ tracks | tojson }}'
+         data-playlist-options='{{ all_playlists | tojson }}'
+         data-category-options='{{ all_categories | tojson }}'>
+        <!-- Top Header: playlist · category · tags · icon actions -->
+        <header class="mm-header">
+            <select id="playlistSelect" class="playlist-select" aria-label="Playlist">
+                {% for pl in all_playlists %}
+                    <option value="{{ pl }}" {% if pl == selected_playlist %}selected{% endif %}>{{ pl }}</option>
+                {% endfor %}
+            </select>
+
+            <select id="categorySelect" class="playlist-select category-select" aria-label="Category">
+                <option value="" {% if not selected_category %}selected{% endif %}>All</option>
+                {% for cat in all_categories %}
+                    <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- tag chips are built by mm_mp3.js from the loaded tracks -->
+            <div class="tag-filter-bar" id="tagChipsBar"></div>
+
+            <div class="header-right">
+                <a href="{{ url_for('mm_mp3.populate_ui') }}" class="icon-btn" title="Manage / Populate DB" aria-label="Manage / Populate DB">&#9881;</a>
+            </div>
+        </header>
+
+        <!-- Main Two-Column View -->
+        <div class="mm-main-layout">
+            <!-- Left Side: Audio Stage & Control Bar -->
+            <div class="player-column">
+                <div class="active-video-container audio-stage">
+                    <div class="audio-player-overlay">
+                        <div class="audio-overlay-content">
+                            <div class="audio-equalizer" id="visualizer">
+                                <span></span><span></span><span></span><span></span>
+                                <span></span><span></span><span></span><span></span>
+                            </div>
+                            <h3 class="overlay-title" id="nowTitle">Select a track to play</h3>
+                            <p class="overlay-artist" id="nowArtist">&mdash;</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="player-controls-bar">
+                    <div class="timeline-row">
+                        <span class="time-label" id="currTime">0:00</span>
+                        <input type="range" id="scrubber" class="range-slider timeline-slider" value="0" min="0" max="100" step="1" aria-label="Seek">
+                        <span class="time-label" id="durTime">0:00</span>
+                    </div>
+
+                    <div class="buttons-row">
+                        <button class="ctrl-btn" id="prevTrackBtn" type="button" title="Previous" aria-label="Previous track">&#9198;</button>
+                        <button class="ctrl-btn" id="rev30sBtn" type="button" title="Back 30 s" aria-label="Back 30 seconds">&#8634;</button>
+                        <button class="ctrl-btn play-main-btn" id="mainPlayBtn" type="button" title="Play / Pause" aria-label="Play or pause">
+                            <span class="icon-play">&#9658;</span>
+                            <span class="icon-pause">&#10074;&#10074;</span>
+                        </button>
+                        <button class="ctrl-btn" id="fwd30sBtn" type="button" title="Forward 30 s" aria-label="Forward 30 seconds">&#8635;</button>
+                        <button class="ctrl-btn" id="nextTrackBtn" type="button" title="Next" aria-label="Next track">&#9197;</button>
+                        <label class="volume-control" title="Volume">
+                            <span aria-hidden="true">&#128266;</span>
+                            <input type="range" id="volumeSlider" class="range-slider" min="0" max="1" step="0.05" value="0.9" aria-label="Volume">
+                        </label>
+                    </div>
+
+                    <!-- Active Track Managers -->
+                    <div class="active-video-meta">
+                        <div class="meta-managers-group">
+                            <!-- Playlist / Category: click the value to edit or pick -->
+                            <div class="meta-fields-row">
+                                <span class="inline-edit" id="playlistEdit" data-field="playlist"
+                                      data-value="" tabindex="0" role="button"
+                                      title="Playlist — click to change"></span>
+                                <span class="inline-edit empty" id="categoryEdit" data-field="category"
+                                      data-value="" tabindex="0" role="button"
+                                      title="Category — click to change">+ category</span>
+                            </div>
+
+                            <div class="video-tag-manager">
+                                <span class="meta-label">Tags:</span>
+                                <div class="video-tags-list" id="activeTagList"></div>
+                                <div class="add-tag-inline">
+                                    <input type="text" id="inlineTagInput" list="trackTagsDatalist" placeholder="Add tag..." autocomplete="off">
+                                    <datalist id="trackTagsDatalist"></datalist>
+                                    <button type="button" id="addInlineTagBtn">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: 10-Song Paginated Queue -->
+            <div class="playlist-column">
+                <div class="playlist-header">
+                    <h3>Up Next (<span id="totalQueueCount">{{ tracks|length }}</span>)</h3>
+                    <span class="page-indicator">Page <span id="curQueuePage">1</span> of <span id="maxQueuePage">1</span></span>
+                </div>
+
+                <div class="playlist-items-list" id="queueList"></div>
+
+                <div class="numbered-pagination-bar">
+                    <button type="button" class="arrow-btn" id="queuePrevBtn" title="Previous Page">&laquo;</button>
+                    <div class="pagination-scroll-track" id="pageScrollTrack"></div>
+                    <button type="button" class="arrow-btn" id="queueNextBtn" title="Next Page">&raquo;</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="audioEngine"></audio>
+
+    <script src="{{ url_for('static', filename='js/mm_common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/mm_mp3.js') }}"></script>
+</body>
+</html>

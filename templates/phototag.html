@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="theme-color" content="#0d0d12"/>
+<title>PhotoTag</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/phototag.css') }}"/>
+</head>
+<body>
+
+<!-- ══ TOOLBAR ══════════════════════════════════════════════════ -->
+<div class="toolbar">
+
+  <div class="toolbar-logo">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20 5h-3.17L15 3H9L7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 13a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>
+    </svg>
+    PhotoTag
+  </div>
+
+  <!-- searchable folder picker -->
+  <div class="folder-picker" id="folder-picker">
+    <div class="folder-input-wrap">
+      <span class="folder-search-icon">⌕</span>
+      <input
+        type="text"
+        class="folder-input"
+        id="folder-input"
+        placeholder="Search folders…"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        role="combobox"
+        aria-expanded="false"
+        aria-autocomplete="list"
+      />
+      <button class="folder-clear-btn" id="folder-clear-btn" aria-label="Clear" tabindex="-1">✕</button>
+    </div>
+    <div class="folder-dropdown" id="folder-dropdown" role="listbox">
+      <!-- populated by JS -->
+    </div>
+    <div class="folder-selected-tag" id="folder-selected-tag"></div>
+  </div>
+
+  <label class="raw-toggle" title="Show raw files (low-quality embedded preview)">
+    <input type="checkbox" id="chk-raw"/>
+    <span class="lbl-long">Show raw</span><span class="lbl-short">Raw</span>
+  </label>
+
+  <button class="btn-process" id="btn-process" disabled
+          title="Delete (d) / move best → b, good → g">Process</button>
+
+  <button class="btn-process btn-download" id="btn-download" disabled
+          title="Download marked photos (originals)" aria-label="Download marked photos">⬇ <span id="download-count">0</span></button>
+
+  <div class="toolbar-counter" id="counter-wrap">
+    <button class="counter-btn" id="counter" aria-label="Jump to photo" aria-expanded="false" disabled>—</button>
+    <div class="folder-dropdown file-dropdown" id="file-dropdown" role="listbox"></div>
+  </div>
+</div>
+
+<!-- ══ PROCESS MODAL ════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="process-modal">
+  <div class="modal">
+    <h3 id="process-title">Processing…</h3>
+    <div class="progress"><div class="progress-fill" id="process-fill"></div></div>
+    <div class="process-status" id="process-status"></div>
+    <div class="process-summary" id="process-summary"></div>
+    <button class="btn-process" id="process-close" hidden>Close</button>
+  </div>
+</div>
+
+<!-- ══ DOWNLOAD MODAL ════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="download-modal">
+  <div class="modal">
+    <h3 id="download-title">Preparing…</h3>
+    <div class="progress"><div class="progress-fill" id="download-fill"></div></div>
+    <div class="process-status" id="download-status"></div>
+    <div class="download-actions" id="download-share"></div>
+    <div class="download-actions">
+      <button class="btn-process" id="download-all" hidden>Download all</button>
+    </div>
+    <div class="download-list" id="download-list"></div>
+    <div class="download-actions">
+      <button class="btn-process btn-secondary" id="download-clear" hidden>Clear marks</button>
+      <button class="btn-process btn-secondary" id="download-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FILMSTRIP (desktop sidebar) ═════════════════════════════ -->
+<div class="filmstrip" id="filmstrip"></div>
+
+<!-- ══ VIEWER ═══════════════════════════════════════════════════ -->
+<div class="viewer" id="viewer">
+
+  <div class="spinner" id="spinner"></div>
+
+  <div class="viewer-message visible" id="viewer-msg">
+    <strong>Search for a folder</strong>
+    Type in the search box above to find and select a photo folder.
+  </div>
+
+  <img id="main-img" src="" alt="photo" draggable="false"/>
+
+  <div class="tag-badge" id="tag-badge"></div>
+  <div class="mark-badge" id="mark-badge">⬇</div>
+
+  <button class="nav-arrow nav-prev disabled" id="btn-prev-nav" aria-label="Previous">‹</button>
+  <button class="nav-arrow nav-next disabled" id="btn-next-nav" aria-label="Next">›</button>
+
+  <div class="filename-strip" id="filename-strip"></div>
+
+</div>
+
+<!-- ══ ACTION BAR ═══════════════════════════════════════════════ -->
+<div class="action-bar">
+
+  <!-- prev / next -->
+  <button class="btn-nav disabled" id="btn-prev-bar" aria-label="Previous">‹</button>
+  <button class="btn-nav disabled" id="btn-next-bar" aria-label="Next">›</button>
+
+  <div class="bar-divider"></div>
+
+  <!-- rotate -->
+  <button class="icon-btn btn-rotate" id="btn-rotate" data-tip="Rotate counterclockwise" aria-label="Rotate image counterclockwise">
+    ↺
+    <span class="key-badge">R</span>
+  </button>
+
+  <div class="bar-divider"></div>
+
+  <!-- tag: best -->
+  <button class="icon-btn btn-best" id="btn-best" data-tip="Best" aria-label="Mark as Best">
+    ★
+    <span class="key-badge">B</span>
+  </button>
+
+  <!-- tag: good -->
+  <button class="icon-btn btn-good" id="btn-good" data-tip="Good" aria-label="Mark as Good">
+    ✓
+    <span class="key-badge">G</span>
+  </button>
+
+  <!-- tag: delete -->
+  <button class="icon-btn btn-delete" id="btn-delete" data-tip="Delete" aria-label="Mark for Delete">
+    🗑
+    <span class="key-badge">D</span>
+  </button>
+
+  <div class="bar-divider"></div>
+
+  <!-- mark for download (session only) -->
+  <button class="icon-btn btn-mark" id="btn-mark" data-tip="Mark for download" aria-label="Mark for download">
+    ⬇
+    <span class="key-badge">M</span>
+  </button>
+
+</div>
+
+<!-- folder data from Flask -->
+<script>
+  window.PHOTOTAG_FOLDERS = {{ folders | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/phototag.js') }}"></script>
+</body>
+</html>

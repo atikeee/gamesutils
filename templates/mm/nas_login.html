@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protected NAS Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm.css') }}">
+    <style>
+        body { display: flex; align-items: center; justify-content: center; height: 100vh; background: #121212; color: #fff; font-family: sans-serif; }
+        .login-card { background: #1e1e1e; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); width: 300px; text-align: center; }
+        .login-input { width: 100%; padding: 10px; margin: 15px 0; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; text-align: center; font-size: 1.2rem; letter-spacing: 3px; }
+        .login-btn { width: 100%; padding: 10px; background: #007bff; border: none; color: #fff; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .login-btn:hover { background: #0056b3; }
+        .error-msg { color: #ff4d4d; font-size: 0.8rem; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h3>🔒 Private NAS</h3>
+        <p style="font-size: 0.8rem; color: #aaa;">Enter PIN to unlock</p>
+        <input type="password" id="pinInput" class="login-input" placeholder="••••" maxlength="10">
+        <button type="button" class="login-btn" id="submitPinBtn">Unlock</button>
+        <p class="error-msg" id="errorMsg">Incorrect PIN code</p>
+    </div>
+
+    <script>
+        document.getElementById('submitPinBtn').addEventListener('click', submitPin);
+        document.getElementById('pinInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') submitPin();
+        });
+
+        function submitPin() {
+            const pin = document.getElementById('pinInput').value;
+            fetch('/mm/api/nas/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    window.location.reload();
+                } else {
+                    document.getElementById('errorMsg').style.display = 'block';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

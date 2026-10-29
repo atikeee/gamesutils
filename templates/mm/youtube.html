@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Atiq's YouTube Player</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm.css') }}">
+    <!-- Google Cast SDK -->
+    <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+</head>
+<body>
+    <div class="mm-container" id="appContainer" data-page="{{ page }}" data-total-pages="{{ total_pages }}" data-playlist="{{ selected_playlist }}"
+         data-playlist-options='{{ all_playlists | tojson }}' data-category-options='{{ all_categories | tojson }}'>
+        <!-- Top Header: playlist · tags · icon actions -->
+        <header class="mm-header">
+            <select id="playlistFilterSelect" class="playlist-select" aria-label="Playlist">
+                {% for pl in all_playlists %}
+                    <option value="{{ pl }}" {% if selected_playlist == pl %}selected{% endif %}>{{ pl }}</option>
+                {% endfor %}
+            </select>
+
+            {% if playlist_categories %}
+            <select id="categoryFilterSelect" class="playlist-select category-select" aria-label="Category">
+                <option value="" {% if not selected_category %}selected{% endif %}>All</option>
+                {% for c in playlist_categories %}
+                    <option value="{{ c }}" {% if selected_category == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+
+            <div class="tag-filter-bar">
+                {% if all_tags %}
+                <span class="tag-filter-title">Tags</span>
+                {% for t in all_tags %}
+                    {% set is_selected = t.name in selected_tags %}
+                    {% if is_selected %}
+                        {% set new_tags = selected_tags | reject('equalto', t.name) | list %}
+                    {% else %}
+                        {% set new_tags = (selected_tags + [t.name]) | list %}
+                    {% endif %}
+                    <a href="{{ url_for('routes_mm.mm_youtube', playlist=selected_playlist, category=selected_category or None, tags=new_tags|join(',')) }}" 
+                       class="tag-chip {% if is_selected %}active{% endif %}" 
+                       data-tag="{{ t.name }}">
+                        {{ t.name }} <span class="tag-count">{{ t.count }}</span>
+                    </a>
+                {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="header-right">
+                <label class="icon-btn audio-btn" title="Audio only (A)">
+                    <input type="checkbox" id="audioOnlyToggle">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                        <path d="M12 3a9 9 0 0 0-9 9v7a2 2 0 0 0 2 2h2a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1H5v-1a7 7 0 0 1 14 0v1h-2a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2a2 2 0 0 0 2-2v-7a9 9 0 0 0-9-9z"/>
+                    </svg>
+                </label>
+                <button class="icon-btn" id="openAddModalBtn" type="button" title="Add video (+)" aria-label="Add video">+</button>
+                <!-- revealed by JS only when a Cast device is available -->
+                <div class="cast-wrapper" id="castWrapper" title="Cast to TV (C)" hidden>
+                    <google-cast-launcher id="castbutton"></google-cast-launcher>
+                </div>
+                <button class="icon-btn" id="shortcutsHelpBtn" type="button" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
+            </div>
+        </header>
+
+        <!-- Main Two-Column View -->
+        <div class="mm-main-layout">
+            <!-- Left Side: Active Player & Control Bar -->
+            <div class="player-column">
+                {% if videos %}
+                    {% set initial_vid = videos[0] %}
+                    <div class="active-video-container" id="activeVideoCard" 
+                         data-video-id="{{ initial_vid.video_id }}" 
+                         data-id="{{ initial_vid.id }}"
+                         data-is-new="{{ initial_vid.is_new }}">
+                        <!-- Native YouTube controls give the on-video timeline + fullscreen -->
+                        <iframe id="main-yt-player" 
+                                class="yt-player-target"
+                                src="https://www.youtube.com/embed/{{ initial_vid.video_id }}?enablejsapi=1&controls=1&fs=1&rel=0&modestbranding=1&playsinline=1" 
+                                title="YouTube Video Player"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
+                                allowfullscreen>
+                        </iframe>
+
+                        <!-- Audio-Only Interface Overlay -->
+                        <div class="audio-player-overlay" id="mainAudioOverlay">
+                            <div class="audio-bg-thumb" id="audioBgThumb" data-thumb="{{ initial_vid.thumbnail_url }}"></div>
+                            <div class="audio-overlay-content">
+                                <img src="{{ initial_vid.thumbnail_url }}" alt="Cover" class="audio-cover-art" id="audioCoverImg">
+                                <div class="audio-equalizer" id="mainEqualizer">
+                                    <span></span><span></span><span></span><span></span>
+                                </div>
+                                <h3 class="overlay-title" id="overlayTitle">{{ initial_vid.title }}</h3>
+                                <p class="overlay-artist" id="overlayArtist">{{ initial_vid.artist }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Control Bar (timeline lives on the video itself) -->
+                    <div class="player-controls-bar">
+                        <div class="buttons-row">
+                            <button class="ctrl-btn" id="prevTrackBtn" type="button" title="Previous video (P)" aria-label="Previous video">&#9198;</button>
+                            <button class="ctrl-btn" id="prevChapterBtn" type="button" title="Previous chapter (,)" aria-label="Previous chapter">&#8676;</button>
+                            <button class="ctrl-btn" id="rev1mBtn" type="button" title="Back 1 min ([)" aria-label="Back 1 minute">&#9194;</button>
+                            <button class="ctrl-btn" id="rev10sBtn" type="button" title="Back 10 s (J / ←)" aria-label="Back 10 seconds">&#8634;</button>
+                            <button class="ctrl-btn play-main-btn" id="mainPlayBtn" type="button" title="Play / Pause (Space / K)" aria-label="Play or pause">
+                                <span class="icon-play">&#9658;</span>
+                                <span class="icon-pause">&#10074;&#10074;</span>
+                            </button>
+                            <button class="ctrl-btn" id="fwd10sBtn" type="button" title="Forward 10 s (L / →)" aria-label="Forward 10 seconds">&#8635;</button>
+                            <button class="ctrl-btn" id="fwd1mBtn" type="button" title="Forward 1 min (])" aria-label="Forward 1 minute">&#9193;</button>
+                            <button class="ctrl-btn" id="nextChapterBtn" type="button" title="Next chapter (.)" aria-label="Next chapter">&#8677;</button>
+                            <button class="ctrl-btn" id="nextTrackBtn" type="button" title="Next video (N)" aria-label="Next video">&#9197;</button>
+                        </div>
+
+                        <!-- Active Video Managers (title/artist already shown on the video) -->
+                        <div class="active-video-meta">
+                            <div class="meta-managers-group">
+                                <!-- Playlist / Category: click the value to edit or pick -->
+                                <div class="meta-fields-row">
+                                    {% set cur_pl = initial_vid.playlist or selected_playlist %}
+                                    <span class="inline-edit" id="playlistEdit" data-field="playlist"
+                                          data-value="{{ cur_pl }}" tabindex="0" role="button"
+                                          title="Playlist — click to change">{{ cur_pl }}</span>
+                                    <span class="inline-edit {% if not initial_vid.category %}empty{% endif %}" id="categoryEdit" data-field="category"
+                                          data-value="{{ initial_vid.category or '' }}" tabindex="0" role="button"
+                                          title="Category — click to change">{{ initial_vid.category or '+ category' }}</span>
+                                </div>
+
+                                <!-- Tag Manager with Predictive Autocomplete from Playlist -->
+                                <div class="video-tag-manager">
+                                    <span class="meta-label">Tags:</span>
+                                    <div class="video-tags-list" id="activeTagList">
+                                        {% if initial_vid.tag_list %}
+                                            {% for tag in initial_vid.tag_list.split(',') %}
+                                                <span class="tag-badge" data-tag="{{ tag }}">{{ tag }} <button class="remove-tag-btn" data-tag="{{ tag }}">&times;</button></span>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                    <div class="add-tag-inline">
+                                        <input type="text" id="inlineTagInput" list="playlistTagsDatalist" placeholder="Add tag..." autocomplete="off">
+                                        <datalist id="playlistTagsDatalist">
+                                            {% for t in all_tags %}
+                                                <option value="{{ t.name }}"></option>
+                                            {% endfor %}
+                                        </datalist>
+                                        <button type="button" id="addInlineTagBtn">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <p>No videos found matching your selected playlist or tags.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Right Side: Playlist Sidebar (10 Items) & Scrollable Numbered Pagination -->
+            <div class="playlist-column">
+                <div class="playlist-header">
+                    <h3>{{ selected_playlist }} ({{ total_videos }} videos)</h3>
+                    <span class="page-indicator">Page {{ page }} of {{ total_pages }}</span>
+                </div>
+
+                <div class="playlist-items-list" id="playlistList">
+                    {% for v in videos %}
+                    <div class="playlist-item {% if loop.first %}active{% endif %}" 
+                         data-id="{{ v.id }}" 
+                         data-video-id="{{ v.video_id }}" 
+                         data-title="{{ v.title }}" 
+                         data-artist="{{ v.artist }}" 
+                         data-thumb="{{ v.thumbnail_url }}" 
+                         data-chapters="{{ v.chapters_json }}"
+                         data-chapter-checked="{{ v.chapter_checked or 0 }}"
+                         data-playlist="{{ v.playlist or selected_playlist }}"
+                         data-category="{{ v.category or '' }}"
+                         data-is-new="{{ v.is_new }}"
+                         data-tags="{{ v.tag_list or '' }}">
+                        <div class="item-thumb-wrapper">
+                            <img src="{{ v.thumbnail_url }}" alt="Thumb" class="item-thumb" loading="lazy">
+                            <span class="play-overlay-icon">&#9658;</span>
+                        </div>
+                        <div class="item-info">
+                            <h4 class="item-title">{{ v.title }}</h4>
+                            <p class="item-artist">{{ v.artist }}</p>
+                            {% if v.tag_list %}
+                            <div class="item-tags">
+                                {% for tag in v.tag_list.split(',')[:3] %}
+                                    <span class="mini-tag">{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Numbered Scrollable Pagination Bar (1 to N) -->
+                <div class="numbered-pagination-bar">
+                    {% set tags_param = selected_tags | join(',') %}
+                    {% set cat_param = selected_category or None %}
+                    
+                    {% if page > 1 %}
+                        <a href="{{ url_for('routes_mm.mm_youtube', page=page-1, playlist=selected_playlist, category=cat_param, tags=tags_param) }}" class="arrow-btn" title="Previous Page">&laquo;</a>
+                    {% else %}
+                        <span class="arrow-btn disabled">&laquo;</span>
+                    {% endif %}
+
+                    <div class="pagination-scroll-track" id="pageScrollTrack">
+                        {% for p in range(1, total_pages + 1) %}
+                            <a href="{{ url_for('routes_mm.mm_youtube', page=p, playlist=selected_playlist, category=cat_param, tags=tags_param) }}" 
+                               class="page-num-pill {% if p == page %}active{% endif %}"
+                               data-page-num="{{ p }}">
+                                {{ p }}
+                            </a>
+                        {% endfor %}
+                    </div>
+
+                    {% if page < total_pages %}
+                        <a href="{{ url_for('routes_mm.mm_youtube', page=page+1, playlist=selected_playlist, category=cat_param, tags=tags_param) }}" class="arrow-btn" title="Next Page">&raquo;</a>
+                    {% else %}
+                        <span class="arrow-btn disabled">&raquo;</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Help Modal -->
+    <div class="modal-backdrop" id="shortcutsModal">
+        <div class="modal-card shortcuts-card">
+            <div class="modal-header-row">
+                <h3>⌨️ Keyboard Shortcuts</h3>
+                <button type="button" class="close-x-btn" id="closeShortcutsBtn">&times;</button>
+            </div>
+            <p class="shortcuts-sub">Full playback control from anywhere on the page:</p>
+            <div class="shortcuts-grid">
+                <div class="shortcut-item"><kbd>Space</kbd> / <kbd>K</kbd> <span>Play / Pause</span></div>
+                <div class="shortcut-item"><kbd>F</kbd> <span>Toggle Fullscreen</span></div>
+                <div class="shortcut-item"><kbd>N</kbd> / <kbd>Shift + N</kbd> <span>Next Track</span></div>
+                <div class="shortcut-item"><kbd>P</kbd> / <kbd>Shift + P</kbd> <span>Previous Track</span></div>
+                <div class="shortcut-item"><kbd>J</kbd> / <kbd>&larr;</kbd> <span>Rewind 10 Seconds</span></div>
+                <div class="shortcut-item"><kbd>L</kbd> / <kbd>&rarr;</kbd> <span>Forward 10 Seconds</span></div>
+                <div class="shortcut-item"><kbd>[</kbd> <span>Rewind 1 Minute</span></div>
+                <div class="shortcut-item"><kbd>]</kbd> <span>Forward 1 Minute</span></div>
+                <div class="shortcut-item"><kbd>&lt;</kbd> / <kbd>,</kbd> <span>Previous Chapter</span></div>
+                <div class="shortcut-item"><kbd>&gt;</kbd> / <kbd>.</kbd> <span>Next Chapter</span></div>
+                <div class="shortcut-item"><kbd>A</kbd> <span>Toggle Audio-Only Mode</span></div>
+                <div class="shortcut-item"><kbd>C</kbd> <span>Cast to TV</span></div>
+                <div class="shortcut-item"><kbd>+</kbd> <span>Add New Video</span></div>
+                <div class="shortcut-item"><kbd>?</kbd> / <kbd>H</kbd> <span>Show Shortcuts Guide</span></div>
+                <div class="shortcut-item"><kbd>Esc</kbd> <span>Close Dialog / Exit Fullscreen</span></div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-submit" id="gotItShortcutsBtn">Got It</button>
+            </div>
+        </div>
+    </div>
+
+ 
+
+    <!-- Add Video Modal -->
+    <div class="modal-backdrop" id="addVideoModal">
+        <div class="modal-card">
+            <h3>Add YouTube Video</h3>
+            <p class="modal-desc">Paste YouTube link or ID to add to playlist:</p>
+            <input type="text" id="newVideoUrlInput" class="modal-input" placeholder="https://www.youtube.com/watch?v=...">
+            <input type="text" id="newVideoPlaylistInput" class="modal-input" placeholder="Playlist" value="{{ selected_playlist }}" list="addPlaylistOptions" autocomplete="off">
+            <input type="text" id="newVideoCategoryInput" class="modal-input" placeholder="Category (optional)" value="{{ selected_category }}" list="addCategoryOptions" autocomplete="off">
+            <datalist id="addPlaylistOptions">
+                {% for pl in all_playlists %}<option value="{{ pl }}"></option>{% endfor %}
+            </datalist>
+            <datalist id="addCategoryOptions">
+                {% for c in all_categories %}<option value="{{ c }}"></option>{% endfor %}
+            </datalist>
+            <input type="text" id="newVideoTagsInput" class="modal-input" placeholder="Tags (comma-separated, e.g. 90s, Live)">
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="cancelAddBtn">Cancel</button>
+                <button type="button" class="btn-submit" id="submitAddBtn">Save Video</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/mm_common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/mm_youtube.js') }}"></script>
+</body>
+</html>

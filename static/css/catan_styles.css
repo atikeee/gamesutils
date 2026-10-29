@@ -84,6 +84,10 @@ canvas {
     transform: none;
 }
 
+.catan-board-page .board-map-shell { position: relative; width: min(100%, 950px); }
+.catan-board-page .board-map-shell .canvas-wrapper { width: 100%; margin: 0; border: 0; }
+.catan-board-page .board-map-shell #catanBoard { width: 100%; max-width: 100%; box-sizing: border-box; }
+
 .main-container {
     display: flex;
     height: 100vh;
@@ -111,17 +115,52 @@ body.catan-game-page {
 
 .catan-game-page #catanBoard {
     width: 100%;
-    max-width: min(100%, calc((100svh - 96px) * 1.2));
+    max-width: 100%;
     height: auto;
+    border: 0;
+    box-sizing: border-box;
 }
 
-.catan-game-page .middle-section:has(#devCards):not(:has(#devCards > *)),
-.catan-game-page .middle-section:has(#diceroll):not(:has(#diceroll > *)),
-.catan-game-page .right-section:not(:has([id$="log"] *)) {
-    display: none;
+.catan-game-page .canvas-wrapper.map-zoom-viewport {
+    width: min(100%, 950px, calc((100svh - 96px) * 1.2));
+    height: auto;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
-.catan-game-page .right-column:not(:has([id$="log"] *)) {
+.catan-game-page .game-board-shell { position: relative; width: min(100%, 950px, calc((100svh - 96px) * 1.2)); }
+.catan-game-page .game-map { position: relative; width: 100%; }
+.catan-game-page .game-board-shell .canvas-wrapper { width: 100%; margin: 0; }
+.catan-game-page .game-map .canvas-wrapper.map-zoom-viewport { width: 100%; margin: 0; aspect-ratio: 1.2 / 1; box-sizing: border-box; }
+.catan-game-page .game-title-row { display: flex; align-items: center; gap: 10px; }
+.catan-game-page .board-controls-toggle { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 auto; border: 1px solid #b8c8c1; border-radius: 6px; background: #fff; color: #526660; cursor: pointer; }
+.catan-game-page .board-controls-toggle[aria-pressed="true"] { border-color: #176b5b; background: #e4f0ec; color: #145347; }
+.catan-game-page .map-corner { position: absolute; z-index: 5; display: flex; gap: 6px; }
+.catan-game-page .map-corner-top-left { top: 8px; left: 8px; }
+.catan-game-page .map-corner-top-right { top: 8px; right: 8px; }
+.catan-game-page .map-corner-bottom-left { bottom: 8px; left: 8px; }
+.catan-game-page .map-corner-bottom-right { bottom: 8px; right: 8px; }
+.catan-game-page .map-tool { display: grid; place-items: center; box-sizing: border-box; width: 40px; height: 40px; padding: 0; border: 1px solid #b8c8c1; border-radius: 6px; background: #fff; color: #21493c; font-size: 1.05rem; cursor: pointer; box-shadow: 0 2px 6px #0001; }
+.catan-game-page .map-tool:hover:not(:disabled) { background: #e4f0ec; }
+.catan-game-page .map-tool.selected, .catan-game-page .map-tool[aria-pressed="true"] { border-color: #176b5b; background: #176b5b; color: #fff; }
+.catan-game-page .map-tool-danger { color: #b22b31; }
+.catan-game-page .map-tool:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+.catan-game-page .game-dialog { width: min(92vw, 380px); padding: 0; border: 0; border-radius: 14px; background: #fff; color: #1f2d29; box-shadow: 0 20px 50px #0004; }
+.catan-game-page .game-dialog::backdrop { background: rgba(15, 30, 25, 0.45); backdrop-filter: blur(2px); }
+.catan-game-page .game-dialog[open] { animation: game-dialog-in 0.16s ease-out; }
+.catan-game-page .game-dialog form { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 22px 20px; text-align: center; }
+.catan-game-page .game-dialog-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: #fdecec; color: #b22b31; font-size: 1.4rem; }
+.catan-game-page .game-dialog h2 { margin: 4px 0 0; font-size: 1.15rem; font-weight: 700; }
+.catan-game-page .game-dialog p { margin: 0; color: #526660; font-size: 0.92rem; line-height: 1.4; }
+.catan-game-page .game-dialog-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin-top: 10px; }
+.catan-game-page .game-dialog-actions button { min-height: 42px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+.catan-game-page .game-dialog-cancel { border: 1px solid #c9d7d3; background: #fff; color: #29453e; }
+.catan-game-page .game-dialog-cancel:hover { background: #eef4f2; }
+.catan-game-page .game-dialog-confirm { border: 1px solid #b22b31; background: #b22b31; color: #fff; }
+.catan-game-page .game-dialog-confirm:hover { background: #962228; }
+@keyframes game-dialog-in { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: none; } }
+
+.catan-game-page .middle-section:has(#devCards):not(:has(#devCards > *)) {
     display: none;
 }
 
@@ -229,7 +268,8 @@ body.catan-game-page {
     line-height: 1.35;
     overflow-wrap: anywhere;
     text-align: center;
-    pointer-events: none;
+    cursor: pointer;
+    pointer-events: auto;
 }
 
 .catan-game-page .game-toast-error {
@@ -439,6 +479,20 @@ body.catan-game-page {
     background: #fff;
 }
 
+.catan-player-page .player-start-button {
+    display: block;
+    min-height: 40px;
+    margin: 0 0 4px;
+    padding: 6px 16px;
+    border: 1px solid #176b5b;
+    border-radius: 6px;
+    background: #176b5b;
+    color: #fff;
+    font-weight: 700;
+}
+
+.catan-player-page .player-start-button[hidden] { display: none; }
+
 .player-color-picker h2 {
     margin: 0 0 12px;
     font-size: 1.1rem;
@@ -510,6 +564,13 @@ body.catan-game-page {
 
 body.catan-player-page.has-player-color {
     background-color: color-mix(in srgb, var(--player-color) 30%, white);
+}
+
+.catan-player-page.has-player-color .player-heading {
+    padding: 0;
+    color: var(--player-color) !important;
+    -webkit-text-stroke: 1px var(--player-color-text);
+    line-height: 1.1;
 }
 
 .catan-player-page .transfer-btn[data-target-player="player1"] {
@@ -641,7 +702,7 @@ body.catan-setup-page {
 
 .catan-seat-list li {
     display: grid;
-    grid-template-columns: 34px minmax(0, 1fr) auto;
+    grid-template-columns: 34px minmax(0, 1fr) 18px auto;
     align-items: center;
     gap: 12px;
     min-height: 52px;
@@ -661,16 +722,35 @@ body.catan-setup-page {
     font-weight: 700;
 }
 
+.catan-seat-open {
+    width: 40px;
+    height: 40px;
+    margin-left: -6px;
+    border: 1px solid #176b5b;
+    background: #176b5b;
+    color: #fff;
+    font: 700 1rem Inter, sans-serif;
+    cursor: pointer;
+}
+
+.catan-seat-open:hover { background: #105346; }
+.catan-seat-open:focus-visible { outline: 3px solid #c49c26; outline-offset: 2px; }
+
 .catan-seat-name {
     color: #263d38;
     font-weight: 600;
     overflow-wrap: anywhere;
 }
 
+.catan-seat-color { width: 16px; height: 16px; border: 1px solid #9ba9a2; border-radius: 3px; }
+
 .catan-seat-state {
+    grid-column: 4;
     color: #647770;
     font-size: 0.82rem;
 }
+
+.catan-player-page .player-color-picker[hidden] { display: none; }
 
 .catan-join-form {
     display: grid;
@@ -719,6 +799,43 @@ body.catan-setup-page {
     background: #fff1ef;
     color: #842d2b;
 }
+
+.catan-seat-dialog {
+    width: min(380px, calc(100vw - 32px));
+    padding: 20px;
+    border: 1px solid #c9d7d3;
+    border-radius: 8px;
+    background: #fff;
+    color: #263d38;
+    box-sizing: border-box;
+}
+
+.catan-seat-dialog::backdrop { background: rgba(20, 37, 31, 0.6); }
+.catan-seat-dialog-form { display: grid; gap: 12px; }
+.catan-seat-dialog-form h2 { margin: 0; font-size: 1.1rem; }
+.catan-seat-dialog-form label { font-weight: 600; }
+.catan-seat-dialog-form input {
+    width: 100%;
+    min-height: 42px;
+    padding: 8px 10px;
+    border: 1px solid #c9d7d3;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font: inherit;
+}
+.catan-seat-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.catan-seat-dialog-actions button {
+    min-height: 42px;
+    padding: 8px 12px;
+    border: 1px solid #176b5b;
+    border-radius: 6px;
+    background: #176b5b;
+    color: #fff;
+    font: 600 0.9rem Inter, sans-serif;
+    cursor: pointer;
+}
+.catan-seat-dialog-actions button[type="button"] { border-color: #c9d7d3; background: #f2f6f4; color: #263d38; }
+.catan-seat-dialog-actions button:disabled { opacity: 0.5; cursor: wait; }
 
 .catan-access-shell {
     max-width: 480px;
@@ -968,9 +1085,9 @@ body.catan-setup-page {
     bottom: max(12px, env(safe-area-inset-bottom));
     left: 12px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
     width: min(520px, calc(100% - 24px));
     margin: 0 auto;
     padding: 10px 12px;
@@ -995,11 +1112,10 @@ body.catan-setup-page {
 }
 
 .catan-player-page #resourceSelectionDetails {
-    overflow: hidden;
     color: #526660;
-    font-size: 0.75rem;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
 }
 
 .catan-player-page .resource-selection-actions {
@@ -1117,7 +1233,7 @@ body.catan-setup-page {
 }
 
 #progressCardButton {
-    background-image: url('/static/images/catan/dev_card.jpg');
+    background-image: url('/static/images/catan/dev_card.webp');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -1180,33 +1296,41 @@ body.catan-setup-page {
 
 /* Background Images for Resource Cards */
 .resource-card[data-resource-type="wood"] {
-    background-image: url('/static/images/catan/wood.jpg');
+    background-image: url('/static/images/catan/wood.webp');
 }
 .resource-card[data-resource-type="brick"] {
-    background-image: url('/static/images/catan/brick.jpg');
+    background-image: url('/static/images/catan/brick.webp');
 }
 .resource-card[data-resource-type="sheep"] {
-    background-image: url('/static/images/catan/sheep.jpg');
+    background-image: url('/static/images/catan/sheep.webp');
 }
 .resource-card[data-resource-type="hay"] {
-    background-image: url('/static/images/catan/hay.jpg');
+    background-image: url('/static/images/catan/hay.webp');
 }
 .resource-card[data-resource-type="rock"] {
-    background-image: url('/static/images/catan/rock.jpg');
+    background-image: url('/static/images/catan/rock.webp');
 }
 .catan2-player-page .resource-card[data-resource-type="coin"] {
-    background-image: url('/static/images/catan/coin.jpg');
+    background-image: url('/static/images/catan/coin.webp');
 }
 .catan2-player-page .resource-card[data-resource-type="paper"] {
-    background-image: url('/static/images/catan/paper.jpg');
+    background-image: url('/static/images/catan/paper.webp');
 }
 .catan2-player-page .resource-card[data-resource-type="cloth"] {
-    background-image: url('/static/images/catan/cloth.jpg');
+    background-image: url('/static/images/catan/cloth.webp');
 }
 .c2-progress-card,
 .dev-card[data-resource-type="development"] { /* This was for the button, now for the actual card */
-    background-image: url('/static/images/catan/dev_card.jpg');
+    background-image: url('/static/images/catan/dev_card.webp');
 }
+.dev-card[data-resource-type="development"].empty {
+    background: transparent;
+    border: 2px dashed #9aa5a1;
+    box-shadow: none;
+    cursor: default;
+}
+.dev-card[data-resource-type="development"].empty:hover,
+.dev-card[data-resource-type="development"].empty:active { transform: none; box-shadow: none; }
 .c2-progress-card {
     width: 80px;
     height: 110px;
@@ -1219,19 +1343,19 @@ body.catan-setup-page {
     position: relative;
 }
 .dev-card[data-card-type="knight"] {
-    background-image: url('/static/images/catan/Knight.jpg');
+    background-image: url('/static/images/catan/Knight.webp');
 }
 .dev-card[data-card-type="victory_point"] {
-    background-image: url('/static/images/catan/victory_point.jpg');
+    background-image: url('/static/images/catan/victory_point.webp');
 }
 .dev-card[data-card-type="road_building"] {
-    background-image: url('/static/images/catan/Road_Building.jpg');
+    background-image: url('/static/images/catan/Road_Building.webp');
 }
 .dev-card[data-card-type="year_of_plenty"] {
-    background-image: url('/static/images/catan/Year_of_Plenty.jpg');
+    background-image: url('/static/images/catan/Year_of_Plenty.webp');
 }
 .dev-card[data-card-type="monopoly"] {
-    background-image: url('/static/images/catan/Monopoly.jpg');
+    background-image: url('/static/images/catan/Monopoly.webp');
 }
 
 
@@ -1285,6 +1409,7 @@ body.catan-setup-page {
     font-size: 1.1em;
     color: #374151;
     margin-bottom: 15px;
+    white-space: pre-line;
 }
 
 .modal-buttons {
@@ -1311,6 +1436,44 @@ body.catan-setup-page {
 }
 .btn-cancel:hover {
     background-color: #dc2626;
+}
+.btn-confirm:disabled,
+.btn-confirm:disabled:hover {
+    background-color: #22c55e;
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* Monopoly: pick one resource and confirm in a single dialog */
+.resource-pick-content { max-width: 460px; gap: 14px; }
+.resource-pick-title { margin: 0; color: #173f34; font-size: 1.25rem; font-weight: 700; }
+.resource-pick-content .modal-message { margin: 0; font-size: 0.95rem; }
+.resource-pick-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.resource-pick-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 4px;
+    border: 2px solid #d6dfdb;
+    border-radius: 8px;
+    background: #f7faf8;
+    color: #374151;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.resource-pick-card img { width: 100%; max-width: 56px; aspect-ratio: 5 / 7; border-radius: 4px; object-fit: cover; }
+.resource-pick-card:hover { border-color: #7fb59e; }
+.resource-pick-card.selected { border-color: #16a34a; background: #e6f6ec; box-shadow: 0 0 0 3px #16a34a33; transform: translateY(-2px); }
+.resource-pick-badge { position: absolute; top: -8px; right: -8px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; background: #16a34a; color: #fff; font-size: 0.8rem; font-weight: 800; line-height: 22px; box-sizing: border-box; }
+.resource-pick-badge[hidden] { display: none; }
+@media (max-width: 420px) {
+    .resource-pick-content { padding: 20px 14px; }
+    .resource-pick-grid { gap: 5px; }
 }
 
 
@@ -1499,6 +1662,52 @@ body.catan-setup-page {
     height: 11px;
 }
 
+.catan-dice-roll-overlay .dice-roll-panel {
+    min-width: 0;
+    width: min(100%, 360px);
+    padding: 24px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    box-sizing: border-box;
+}
+
+.catan-dice-roll-overlay .dice-overlay-pair {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(14px, 4vw, 28px);
+    width: 100%;
+}
+
+.catan-dice-roll-overlay .dice-face {
+    flex: 0 0 clamp(76px, 24vw, 108px);
+    width: clamp(76px, 24vw, 108px);
+    height: clamp(76px, 24vw, 108px);
+    margin: 0;
+    padding: clamp(12px, 3vw, 18px);
+    border: 2px solid #ffffff;
+    border-radius: 16px;
+    background: #b6423e;
+    box-shadow: inset 0 -5px 0 #8e302d, 0 9px 0 #782825, 0 18px 30px rgba(5, 20, 16, 0.35);
+}
+
+.catan-dice-roll-overlay .dice-face:nth-child(2) {
+    background: #f2cf4a;
+    box-shadow: inset 0 -5px 0 #c1a532, 0 9px 0 #998223, 0 18px 30px rgba(5, 20, 16, 0.35);
+}
+
+.catan-dice-roll-overlay .dice-face .die-pip {
+    width: clamp(10px, 2.6vw, 15px);
+    height: clamp(10px, 2.6vw, 15px);
+    background: #ffffff;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.catan-dice-roll-overlay .dice-face:nth-child(2) .die-pip {
+    background: #313b32;
+}
+
 .dice-roll-overlay.is-rolling .dice-face {
     animation: dice-overlay-tumble 330ms ease-in-out infinite alternate;
 }
@@ -1626,6 +1835,36 @@ body.catan-setup-page {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+    body.catan-board-page {
+        display: block;
+        width: 100%;
+        height: auto;
+        min-height: 100svh;
+        margin: 0 !important;
+        padding: 8px !important;
+        overflow-x: hidden;
+    }
+
+    .catan-board-page .container {
+        width: 100% !important;
+        min-height: calc(100svh - 16px);
+        margin: 0;
+        padding: 8px;
+        gap: 8px;
+        align-items: stretch;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .catan-board-page h1 { margin: 0; font-size: 1.3rem; text-align: center; }
+    .catan-board-page .controls { width: 100%; }
+    .catan-board-page #tool-select { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    .catan-board-page #tool-select [data-tool="swap"] { grid-column: 1 / -1; }
+    .catan-board-page #tool-select .btn-tool { width: 100%; min-width: 0; min-height: 44px; padding: 6px; font-size: 0.85rem; }
+    .catan-board-page .board-map-shell .canvas-wrapper { max-width: 100%; overflow-x: auto; overflow-y: hidden; }
+    .catan-board-page .board-map-shell .map-zoom-controls { position: absolute; z-index: 5; top: 8px; right: 8px; display: flex; width: auto; margin: 0; }
+    .catan-board-page .board-map-shell .map-zoom-toggle { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; font-size: 1.6rem; line-height: 1; }
+
     body{
             
         width: 950px;
@@ -1934,8 +2173,17 @@ body.catan-setup-page {
     }
 
     .catan-game-page .left-column h1 {
-        margin: 0 0 10px;
+        margin: 0;
         font-size: 1.35rem;
+    }
+
+    .catan-game-page .game-board-shell {
+        width: 100%;
+    }
+
+    .catan-game-page .game-map {
+        grid-column: 1 / -1;
+        grid-row: 2;
     }
 
     .catan-game-page .canvas-wrapper.map-zoom-viewport {
@@ -2012,4 +2260,370 @@ body.catan-setup-page {
         max-width: 100%;
     }
 
+}
+
+.catan-player-page .player-map-shell { position: relative; width: min(100%, 950px, calc((100svh - 48px) * 1.2)); margin: 0 auto; }
+.catan-player-page .player-map-header { position: absolute; z-index: 6; top: 8px; left: 8px; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 76px); }
+.catan-player-page .player-map-board { position: relative; }
+.catan-player-page .player-map-shell .canvas-wrapper { width: 100%; margin: 0; box-sizing: border-box; }
+.catan-player-page .map-overlay { position: absolute; z-index: 5; display: flex; gap: 4px; padding: 4px; border-radius: 6px; background: rgba(255,255,255,.9); }
+.catan-player-page .player-map-header .player-heading { align-self: flex-start; min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.catan-player-page .map-top-right { top: 8px; right: 8px; }
+.catan-player-page .map-bottom-left { bottom: 8px; left: 8px; }
+.catan-player-page .map-bottom-right { bottom: 8px; right: 8px; }
+.catan-player-page .player-action-toolbar.map-bottom-left { display: grid; grid-template-columns: repeat(2, 38px); width: auto; max-width: none; margin: 0; padding: 0; overflow: visible; background: transparent; pointer-events: none; }
+.catan-player-page .map-bottom-left .btn-tool { pointer-events: auto; }
+.catan-player-page .map-bottom-left [data-tool="city"] { grid-column: 1; grid-row: 1; }
+.catan-player-page .map-bottom-left [data-tool="house"] { grid-column: 1; grid-row: 2; }
+.catan-player-page .map-bottom-left [data-tool="road"] { grid-column: 2; grid-row: 2; }
+.catan-player-page .map-bottom-left [hidden] { display: none; }
+.catan-player-page .map-undo { flex: 0 0 38px; width: 38px; height: 38px; border: 1px solid #b8c8c1; border-radius: 6px; background: #fff; color: #21493c; }
+.catan-player-page .map-overlay button { min-width: 38px; min-height: 38px; border: 1px solid #b8c8c1; border-radius: 6px; background: #fff; color: #21493c; }
+.catan-player-page .map-top-right #mapZoomToggle { display: grid; place-items: center; box-sizing: border-box; width: 44px; height: 44px; padding: 0; font-size: 1.6rem; line-height: 1; }
+.catan-player-page .last-roll-total { display: grid; place-items: center; box-sizing: border-box; width: 40px; height: 40px; border: 1px solid #b8c8c1; border-radius: 6px; background: #fff; color: #21493c; font-size: 1.2rem; font-weight: 700; }
+.catan-player-page .last-roll-total[hidden] { display: none; }
+.catan-player-page .map-bottom-right #turnButton { display: grid; place-items: center; box-sizing: border-box; width: 40px; height: 40px; padding: 0; color: #fff; opacity: 1; }
+.catan-player-page .map-bottom-right #turnButton i { font-size: 1.2rem; line-height: 1; }
+.catan-player-page .map-bottom-right #turnButton[data-state="waiting"] { background: #b92332; border-color: #9c1d2a; }
+.catan-player-page .map-bottom-right #turnButton[data-state="setup"] { background: #20815c; border-color: #186a4b; }
+.catan-player-page .map-bottom-right #turnButton[data-state="roll"] { background: #2563a6; border-color: #174e8a; }
+.catan-player-page .map-bottom-right #turnButton[data-state="end"] { background: #20815c; border-color: #186a4b; }
+.catan-player-page .map-bottom-right #turnButton[data-state="busy"] { background: #68787a; border-color: #566668; }
+.catan-player-page .message-box { position: fixed; z-index: 1500; top: 12px; left: 50%; width: min(90vw, 480px); margin: 0; transform: translateX(-50%); text-align: center; box-shadow: 0 8px 24px #0003; }
+.catan-player-page .message-box:empty { display: none; }
+.catan-player-page .container.player-page-container { gap: 4px; }
+.catan-player-page .player-controls .card-buttons { margin: 0; }
+.catan-player-page .player-cards-heading { margin: 0 0 4px; color: #334155; font-size: 1rem; font-weight: 700; text-align: center; }
+.catan-player-page .played-dev-card { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; vertical-align: middle; white-space: nowrap; }
+.catan-player-page .played-dev-card img { width: 21px; height: 28px; border-radius: 2px; object-fit: cover; }
+.catan-player-page .dev-cards-back { display: inline-block; width: 22px; height: 30px; margin: 0 2px; border-radius: 2px; object-fit: cover; vertical-align: middle; }
+.catan-player-page .dev-cards-toggle { width: 30px; height: 30px; border: 1px solid #c9d7d3; border-radius: 5px; background: #f3f7f6; color: #29453e; vertical-align: middle; }
+.catan-player-page .dev-cards-back[hidden], .catan-player-page #devCards[hidden] { display: none; }
+.catan-player-page #devCards.concealed .dev-card { background-image: url('/static/images/catan/dev_card.webp'); cursor: default; }
+.catan-player-page #devCards.concealed .dev-card:hover { transform: none; }
+.catan-player-page .player-decks-section { width: 100%; max-width: 950px; margin: 0 auto; gap: 0; }
+.catan-player-page .player-decks-section .deck-display { border-radius: 6px; padding: 6px; }
+.catan-player-page .player-decks-section .card-list { min-height: 0; padding: 3px; }
+.catan-player-page .player-decks-section .card-list:empty { display: none; }
+.catan-player-page .player-content-spacer { display: block; flex: none; width: 100%; height: 165px; min-height: 165px; }
+.catan-player-page #resourceSelectionSlot, .catan-player-page #handSelectionSlot { width: 100%; }
+.catan-player-page .resource-selection-actions { display: flex; gap: 6px; width: 100%; overflow-x: auto; }
+.catan-player-page .resource-selection-actions #transferDropButtons { display: contents; }
+.catan-player-page .resource-selection-actions #transferDropButtons[hidden] { display: none; }
+.catan-player-page .resource-selection-actions button { flex: 1 0 88px; min-width: 88px; min-height: 38px; padding: 5px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.76rem; line-height: 1.2; }
+.catan-player-page .hand-selection-panel .resource-selection-actions { display: grid; grid-template-columns: repeat(2, 38px) repeat(3, minmax(0, 1fr)); gap: 4px; overflow-x: hidden; }
+.catan-player-page .hand-selection-panel .resource-selection-actions button { width: 100%; min-width: 0; padding: 5px 2px; white-space: nowrap; font-size: 0.72rem; }
+.catan-game-page .game-activity-section { flex: 1 1 auto; max-height: calc(100svh - 24px); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.catan-game-page .game-activity-section h2 { margin-bottom: 8px; font-size: 1rem; font-weight: 700; }
+.catan-game-page #gameActivity { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.catan-game-page .activity-entry { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 7px; min-height: 3rem; padding: 6px 0; border-top: 1px solid #e5e9e7; font-size: 0.82rem; line-height: 1.3; }
+.catan-game-page .activity-card { position: relative; display: inline-block; width: 29px; height: 38px; flex: 0 0 29px; }
+.catan-game-page .activity-card img { display: block; width: 100%; height: 100%; border-radius: 2px; object-fit: cover; }
+.catan-game-page .activity-card > span { position: absolute; right: -3px; bottom: -3px; min-width: 16px; padding: 1px 3px; border-radius: 3px; background: #173f34; color: white; font-size: 0.64rem; font-weight: 700; text-align: center; }
+.catan-game-page .activity-seven { display: grid; place-items: center; width: 22px; height: 22px; border: 2px solid #b22b31; border-radius: 4px; color: #b22b31; font-weight: 800; }
+.catan-game-page .activity-seven-block { align-items: flex-start; flex-direction: column; gap: 4px; margin: 4px 0; padding: 6px 8px; border-radius: 6px; background: #fdf1f1; }
+.catan-game-page .activity-seven-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 7px; }
+.catan-game-page #assignpoint .unregistered-player, .catan-game-page #assignpoint .unregistered-player:hover { background: #e1e5e6; color: #858f92; opacity: 0.6; }
+.catan-game-page .road-award-picker { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; }
+.catan-game-page .road-award-picker > button { padding: 6px 10px; border: 1px solid #2b6656; border-radius: 5px; background: #e2f0e9; color: #205344; font-size: 0.8rem; font-weight: 700; }
+.catan-game-page .road-award-picker > button:hover { background: #cae5d6; }
+.catan-game-page .road-award-picker > button:disabled { opacity: 0.45; cursor: not-allowed; }
+.catan-game-page #roadChoices { top: 100%; right: 0; min-width: 140px; display: grid; gap: 2px; padding: 5px; border: 1px solid #bacbc3; border-radius: 5px; background: #fff; box-shadow: 0 6px 20px #0002; }
+.catan-game-page #roadChoices button { padding: 7px; text-align: left; border-radius: 3px; font-size: 0.85rem; }
+.catan-game-page #roadChoices button:hover { background: #e2f0e9; }
+.catan-game-page #roadChoices button[hidden] { display: none; }
+.catan-game-page .played-dev-cards-section:has(#diceroll) { min-height: 125px; }
+.catan-game-page #roadChoices { position: absolute; z-index: 10; }
+.catan-game-page #roadChoices[hidden] { display: none; }
+@media (max-width: 768px) {
+    .catan-player-page .player-content-spacer { height: 165px; min-height: 165px; }
+    .catan-player-page .player-page-container { display: flex; flex-direction: column; }
+    .catan-player-page .player-color-picker { order: 1; }
+    .catan-player-page .player-start-button { order: 2; align-self: flex-start; }
+    .catan-player-page .player-map-shell { order: 2; width: 100%; }
+    .catan-player-page .player-controls { order: 3; }
+    .catan-player-page .player-decks-section { order: 4; }
+    .catan-player-page #handSelectionSlot { order: 5; }
+    .catan-player-page .player-content-spacer { order: 6; }
+}
+
+
+
+/* ==========================================================================
+   TV-OPTIMIZED LAYOUT: Fits 100% of 1080p Screen With Zero Scrollbars
+   ========================================================================== */
+body.tv-mode {
+    width: 100vw !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: #121212 !important;
+    color: #e0e0e0 !important;
+}
+
+/* 1. Main 2-Column Split: 60% Map / 40% Sidebar */
+body.tv-mode .game-container,
+body.tv-mode .main-content {
+    display: flex !important;
+    flex-direction: row !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    padding: 4px !important;
+    margin: 0 !important;
+    gap: 8px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+}
+
+/* 2. Left Side: Make Board Map as Large as Possible */
+body.tv-mode #board-container,
+body.tv-mode .board-area {
+    flex: 0 0 58vw !important;
+    height: calc(100vh - 8px) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+}
+
+body.tv-mode #catanBoard,
+body.tv-mode .catan-canvas {
+    width: auto !important;
+    height: 98vh !important;
+    max-width: 58vw !important;
+    object-fit: contain !important;
+    border: none !important;
+}
+
+/* 3. Right Side: Unified Vertical Panel (Scores + Activity) */
+body.tv-mode .sidebar,
+body.tv-mode .game-info-panel {
+    flex: 0 0 40vw !important;
+    height: calc(100vh - 8px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* 4. Top Toolbar: Eye Icon + Longest Road Inline */
+body.tv-mode .top-bar-controls {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 4px 10px !important;
+    background: #1e1e1e !important;
+    border-radius: 6px !important;
+    font-size: 0.85rem !important;
+}
+
+body.tv-mode .longest-road-container {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    margin: 0 !important;
+    font-size: 0.8rem !important;
+}
+
+/* 5. Transposed Compact Score Table */
+body.tv-mode .score-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    background: #181818 !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
+    font-size: 0.85rem !important;
+    margin: 0 !important;
+}
+
+body.tv-mode .score-table th,
+body.tv-mode .score-table td {
+    padding: 4px 6px !important;
+    text-align: center !important;
+    border: 1px solid #2a2a2a !important;
+    line-height: 1.2 !important;
+}
+
+body.tv-mode .score-table th {
+    background: #242424 !important;
+    color: #4ade80 !important; /* Green accent */
+    font-weight: 700 !important;
+    width: 44px !important;
+}
+
+body.tv-mode .score-table td {
+    font-variant-numeric: tabular-nums !important;
+    font-weight: 600 !important;
+}
+
+/* 6. Activity Log: Fills Remaining Vertical Space & Auto-Scrolls */
+body.tv-mode #activityLog,
+body.tv-mode .activity-panel {
+    flex-grow: 1 !important;
+    height: auto !important;
+    max-height: calc(100vh - 210px) !important;
+    background: #141414 !important;
+    border: 1px solid #242424 !important;
+    border-radius: 6px !important;
+    padding: 6px 10px !important;
+    overflow-y: auto !important;
+    scrollbar-width: none !important;
+}
+
+body.tv-mode #activityLog::-webkit-scrollbar {
+    display: none !important;
+}
+
+body.tv-mode #activityLog .log-entry {
+    font-size: 0.82rem !important;
+    padding: 3px 0 !important;
+    border-bottom: 1px solid #1f1f1f !important;
+}
+
+body.tv-mode #activityLog .log-entry:last-child {
+    border-bottom: none !important;
+    line-height: 1.3 !important;
+}
+
+/* ==========================================================================
+   /catan/game — TV layout: map fills the left side, sidebar = turn, score, activity
+   ========================================================================== */
+.catan-game-page #assignpoint .unregistered-player { display: none; }
+
+.catan-game-page .map-corner-top-right { align-items: center; }
+.catan-game-page .map-last-roll {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 6px;
+    border: 1px solid #b8c8c1;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 2px 6px #0001;
+}
+.catan-game-page .map-last-roll:not(:has(.dice-result)) { display: none; }
+.catan-game-page #lastRollPlayer { color: #21493c; font-size: 1rem; font-weight: 700; }
+.catan-game-page .map-last-roll #diceroll { min-height: 0; }
+.catan-game-page .map-last-roll .dice-result { min-height: 0; gap: 6px; }
+.catan-game-page .map-last-roll #diceroll .dice-face { width: 40px; height: 40px; padding: 6px; }
+.catan-game-page .map-last-roll .die-pip { width: 6px; height: 6px; }
+
+.catan-game-page .game-toolbar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.catan-game-page .road-select-label { font-weight: 600; color: #29453e; }
+.catan-game-page .compact-select { height: 36px; padding: 0 8px; border: 1px solid #b8c8c1; border-radius: 6px; background: #fff; color: #21493c; font: inherit; font-weight: 600; cursor: pointer; }
+.catan-game-page .compact-select:disabled { opacity: 0.55; cursor: not-allowed; }
+.catan-game-page .dev-deck-left { margin-left: auto; color: #526660; white-space: nowrap; }
+
+.catan-game-page .score-table { width: 100%; border-collapse: collapse; }
+.catan-game-page .score-table th { padding: 6px 4px; background: #eef2f1; color: #526660; font-weight: 700; text-align: center; }
+.catan-game-page .score-table td { padding: 6px 4px; border-top: 1px solid #e5e9e7; color: #1f2d29; text-align: center; font-variant-numeric: tabular-nums; }
+.catan-game-page .score-table th:first-child,
+.catan-game-page .score-table td:first-child { text-align: left; font-weight: 600; }
+
+/* light player colours (white/yellow) need the outline to stay readable on the light panel */
+.catan-game-page .activity-player { font-weight: 800; font-size: 2em; line-height: 1; text-shadow: 0 0 1px #000, 0 0 1px #000; }
+.catan-game-page .activity-dev-card { width: 42px; height: 58px; flex-basis: 42px; }
+
+@media (min-width: 769px) {
+    body.catan-game-page {
+        height: 100vh;
+        height: 100svh;
+        padding: 8px !important;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+    .catan-game-page .main-container {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) clamp(300px, 32vw, 620px);
+        gap: 10px;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+    }
+
+    .catan-game-page .left-column { min-width: 0; min-height: 0; }
+    .catan-game-page .game-board-shell { width: 100%; height: 100%; min-height: 0; }
+    .catan-game-page .game-map { width: 100%; height: 100%; max-width: none !important; }
+    .catan-game-page .game-map .canvas-wrapper.map-zoom-viewport {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        aspect-ratio: auto;
+        overflow: hidden;
+    }
+    /* canvas is absolutely placed so its pixel size never feeds back into the layout */
+    .catan-game-page .game-map #catanBoard { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; }
+
+    .catan-game-page .right-column.game-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+        max-width: none;
+        height: 100%;
+        min-height: 0;
+        font-size: clamp(0.9rem, 1vw, 1.15rem);
+    }
+    .catan-game-page .game-sidebar .game-title-row h1 { margin: 0; font-size: clamp(1.05rem, 1.45vw, 1.7rem); font-weight: 700; line-height: 1.2; }
+    .catan-game-page .game-sidebar .score-section { flex: 0 0 auto; margin: 0; padding: 6px 10px; overflow: visible; }
+    .catan-game-page .score-table { font-size: clamp(1rem, 1.2vw, 1.35rem); }
+    .catan-game-page .game-sidebar .game-activity-section { flex: 1 1 auto; min-height: 0; max-height: none; margin: 0; padding: 10px 12px; }
+    .catan-game-page .game-activity-section h2 { font-size: clamp(1rem, 1.2vw, 1.3rem); }
+    .catan-game-page .activity-entry { gap: 6px 8px; font-size: clamp(1rem, 1.15vw, 1.3rem); }
+    .catan-game-page .activity-card { width: 34px; height: 45px; flex-basis: 34px; }
+    .catan-game-page .activity-dev-card { width: 44px; height: 60px; flex-basis: 44px; }
+}
+
+
+/* ===== TV tweaks ===== */
+
+/* Title row: eye + truncated title */
+.catan-game-page .game-title-row { min-width: 0; }
+.catan-game-page .game-title-row h1 { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catan-game-page .board-controls-toggle { width: 32px; height: 32px; }
+
+/* Score table: grid lines, fixed columns, truncated names */
+.catan-game-page .score-table { table-layout: fixed; border: 1px solid #9fb3ab; }
+.catan-game-page .score-table th,
+.catan-game-page .score-table td { border: 1px solid #c9d7d3; padding: 5px 4px; overflow: hidden; white-space: nowrap; }
+.catan-game-page .score-table th:nth-child(2) { width: 56px; }
+.catan-game-page .score-table th:nth-child(3) { width: 76px; }
+.catan-game-page .score-table th:nth-child(4) { width: 44px; }
+.catan-game-page .score-table th:nth-child(5) { width: 44px; }
+.catan-game-page .score-table td:first-child { text-overflow: ellipsis; }
+.catan-game-page .score-table td:nth-child(5) { display: none; } /* raw Dev column, merged into Cards */
+
+/* Score column highlighted as the main column */
+.catan-game-page .score-table th:nth-child(2) { background: #176b5b; color: #fff; }
+.catan-game-page .score-table td:nth-child(2) { background: #e4f0ec; color: #145347; font-size: 1.25em; font-weight: 800; }
+
+/* Last roll: name + dice + zoom button always on one line */
+.catan-game-page .map-corner-top-right { flex-wrap: nowrap; max-width: calc(100% - 16px); }
+.catan-game-page .map-last-roll { flex-wrap: nowrap; min-width: 0; white-space: nowrap; }
+.catan-game-page #lastRollPlayer { flex: 0 1 auto; min-width: 0; max-width: 9ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catan-game-page .map-last-roll #diceroll { flex: 0 0 auto; }
+.catan-game-page .map-last-roll .dice-result { flex-wrap: nowrap; }
+.catan-game-page .map-last-roll #diceroll .dice-face,
+.catan-game-page .map-last-roll .catan2-event-die-face { flex: 0 0 auto; width: 34px; height: 34px; padding: 5px; }
+.catan-game-page #mapZoomToggle { flex: 0 0 auto; }
+
+
+@media (max-width: 768px) {
+    .catan-player-page .canvas-wrapper.map-zoom-viewport.map-zoomed {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+    .catan-player-page .canvas-wrapper.map-zoom-viewport.map-zoomed #catanBoard {
+        width: 160% !important;
+        max-width: none !important;
+        height: auto !important;
+        aspect-ratio: 0.95 / 1;   /* same ratio the JS uses on mobile */
+    }
 }

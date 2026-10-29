@@ -3,159 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catan GamePlay</title>
+    <title>Catan</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_game.css') }}">
 </head>
-<body class="bg-gray-100 catan-game-page">
+<body class="catan-game-page">
     <div class="main-container">
         <div class="left-column">
-            <h1 class="text-2xl font-bold text-gray-800 mb-4">Catan GamePlay</h1>
-            <div class="map-zoom-controls">
-                <button type="button" class="map-zoom-toggle" id="mapZoomToggle" aria-pressed="false" title="Zoom map to 2x">2×</button>
+            <!-- Header above the map: title, eye, road, dev left -->
+            <div class="game-header">
+                <h1 id="gameTurnTitle"></h1>
+                <button type="button" id="boardControlsToggle" class="board-controls-toggle" aria-pressed="false" aria-controls="boardTools" title="Enable map controls" aria-label="Enable map controls"><i class="fas fa-eye-slash" aria-hidden="true"></i></button>
+                <label class="road-select-label" for="longestRoadSelect">&#128739;&#65039; Road:</label>
+                <select id="longestRoadSelect" class="compact-select">
+                    <option value="none">None</option>
+                </select>
+                <span class="dev-deck-left">Dev left: <strong id="devDeckCount">25</strong></span>
             </div>
-            <div class="canvas-wrapper map-zoom-viewport">
-                <canvas id="catanBoard"></canvas>
-            </div>
-            <div id="messageBox" class="message-box"></div>
-        </div>
-        <div class="middle-column">
-            <div class="middle-top-row">
-                <div class="middle-section">
-                    <div class="played-dev-cards-section">
-                        <div id="devCards" class="card-list">
-                        <!-- Played development cards will be displayed here -->
-                        </div>
-                    </div>
-                </div>
-            <div class="middle-section">
-                <div class="played-dev-cards-section">
-                    <h2 class="text-1xl text-gray-800 mb-3">Dice Roll</h2>
-                    <div id="diceroll">
-                    <!-- Played development cards will be displayed here -->
-                    </div>
-                </div>
-            </div>
-            </div>
-            <div class="middle-section">
-                <div class="assign-point-section mt-6">
-                    <div id="assignpoint">
-                    <!-- add couple of button-->
-                     <table class="w-full text-left table-auto border-collapse">
-                    <thead>
-                        <tr class="bg-gray-200 text-gray-700 uppercase text-sm leading-normal">
-                            <!-- Table Headers -->
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300 rounded-tl-lg">Name</th>
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300">Score</th>
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300">Cards</th>
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Knights played">Knights</th>
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300">Dev</th>
-                        </tr>
-                    </thead>
-                    <tbody class="text-gray-600 text-sm font-light">
-                        <!-- Row 1 -->
-                        <tr class="border-b border-gray-200 hover:bg-gray-100" data-player-id="player1">
-                            <td class="result" id="cell-0-0">Player 1</td>
-                            <td class="result" id="cell-0-1">0</td>
-                            <td class="result" id="cell-0-2"></td>
-                            <td class="result" id="cell-0-3">0</td>
-                            <td class="result" id="cell-0-4"></td>
-                        </tr>
-                        <!-- Row 2 -->
-                        <tr class="border-b border-gray-200 hover:bg-gray-100" data-player-id="player2">
-                            <td class="result" id="cell-1-0">Player 2</td>
-                            <td class="result" id="cell-1-1">0</td>
-                            <td class="result" id="cell-1-2"></td>
-                            <td class="result" id="cell-1-3">0</td>
-                            <td class="result" id="cell-1-4"></td>
-                        </tr>
-                        <!-- Row 3 -->
-                        <tr class="border-b border-gray-200 hover:bg-gray-100" data-player-id="player3">
-                            <td class="result" id="cell-2-0">Player 3</td>
-                            <td class="result" id="cell-2-1">0</td>
-                            <td class="result" id="cell-2-2"></td>
-                            <td class="result" id="cell-2-3">0</td>
-                            <td class="result" id="cell-2-4"></td>
-                        </tr>
-                        <!-- Row 4 -->
-                        <tr class="hover:bg-gray-100" data-player-id="player4">
-                            <td class="result" id="cell-3-0">Player 4</td>
-                            <td class="result" id="cell-3-1">0</td>
-                            <td class="result" id="cell-3-2"></td>
-                            <td class="result" id="cell-3-3">0</td>
-                            <td class="result" id="cell-3-4"></td>
-                        </tr>
-                    </tbody>
-                </table>
 
+            <div class="game-board-shell">
+                <div class="game-map" id="boardTools">
+                    <div class="canvas-wrapper map-zoom-viewport">
+                        <canvas id="catanBoard"></canvas>
                     </div>
-                    <div>
-                    <table class="w-full text-center border-collapse">
+                    <div class="map-corner map-corner-top-left">
+                        <button type="button" class="map-tool" data-tool="shuffle-cells" title="Shuffle tiles" aria-label="Shuffle tiles" disabled><i class="fas fa-shuffle" aria-hidden="true"></i></button>
+                        <button type="button" class="map-tool" data-tool="shuffle-numbers" title="Shuffle numbers" aria-label="Shuffle numbers" disabled><i class="fas fa-dice" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="map-corner map-corner-top-right">
+                        <div class="map-last-roll" aria-label="Last dice roll">
+                            <span id="lastRollPlayer"></span>
+                            <div id="diceroll"></div>
+                        </div>
+                        <button type="button" class="map-tool" id="mapZoomToggle" aria-pressed="false" title="Zoom in" aria-label="Zoom in"><i class="fas fa-magnifying-glass-plus" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="map-corner map-corner-bottom-left">
+                        <button type="button" class="map-tool map-tool-danger" data-tool="reset-game" title="Reset game" aria-label="Reset game" disabled><i class="fas fa-power-off" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="map-corner map-corner-bottom-right">
+                        <button type="button" class="map-tool" data-tool="undo" title="Undo last board change" aria-label="Undo last board change" disabled><i class="fas fa-rotate-left" aria-hidden="true"></i></button>
+                        <button type="button" class="map-tool" data-tool="swap" aria-pressed="false" title="Swap tiles or numbers" aria-label="Swap tiles or numbers" disabled><i class="fas fa-right-left" aria-hidden="true"></i></button>
+                    </div>
+                </div>
             </div>
-                        <tbody>
-                            <!-- First Row -->
-                            <tr class="border-b border-gray-200 hover:bg-gray-100">
-                                <td class="result">Longest Road</td>
-                                <td class="result" id="cell_lr">
-                                    <select id="pl-dropdown" class="award-select" aria-label="Longest Road owner" onchange="handleDropdownChange()">
-                                        <option value="" disabled selected>None</option>
-                                        <!-- Each option has a displayed name and a stored value -->
-                                        <option id="player1" value="player1">Player 1</option>
-                                        <option id="player2" value="player2">Player 2</option>
-                                        <option id="player3" value="player3">Player 3</option>
-                                        <option id="player4" value="player4">Player 4</option>
-                                    </select>
-                                </td>
+
+            <div id="messageBox" class="message-box"></div>
+            <dialog id="resetDialog" class="game-dialog" aria-labelledby="resetDialogTitle" aria-describedby="resetDialogText">
+                <form method="dialog">
+                    <div class="game-dialog-icon"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i></div>
+                    <h2 id="resetDialogTitle">Reset game?</h2>
+                    <p id="resetDialogText">All player seats and progress will be cleared.</p>
+                    
+                    <div style="margin: 12px 0; text-align: left; font-size: 0.95rem;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px;">Game Mode:</label>
+                        <label style="display: block; margin-bottom: 4px;"><input type="radio" name="player_mode" value="4" checked> 4 Players (Standard Board)</label>
+                        <label style="display: block;"><input type="radio" name="player_mode" value="6"> 6 Players (Extended 30-Hex Board)</label>
+                    </div>
+
+                    <div class="game-dialog-actions">
+                        <button type="submit" value="cancel" class="game-dialog-cancel" autofocus>Cancel</button>
+                        <button type="submit" value="confirm" class="game-dialog-confirm"><i class="fas fa-power-off" aria-hidden="true"></i> Reset game</button>
+                    </div>
+                </form>
+            </dialog>
+        </div>
+
+        <!-- Sidebar: score table (4 reserved rows) + activity -->
+        <div class="right-column game-sidebar">
+            <div class="score-section">
+                <div id="assignpoint">
+                    <table class="score-table">
+                        <colgroup>
+                            <col>
+                            <col style="width:17%">
+                            <col style="width:23%">
+                            <col style="width:13%">
+                            <col style="width:13%">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Score</th>
+                                <th>Cards</th>
+                                <th>Kn</th>
+                                <th>VP</th>
                             </tr>
-                            <!-- Second Row -->
-                            <tr class="hover:bg-gray-100">
-                                <td class="result">Largest Army</td>
-                                <td class="result" id="cell_la">
-                                    <select id="la-dropdown" class="award-select" aria-label="Largest Army owner" onchange="handleLargestArmyChange()">
-                                        <option value="" disabled selected>None</option>
-                                        <option value="player1">Player 1</option>
-                                        <option value="player2">Player 2</option>
-                                        <option value="player3">Player 3</option>
-                                        <option value="player4">Player 4</option>
-                                    </select>
-                                </td>
-                            </tr> 
+                        </thead>
+                        <tbody>
+                            <tr data-player-id="player1"><td>Player 1</td><td>0</td><td></td><td>0</td><td></td><td>0</td></tr>
+                            <tr data-player-id="player2"><td>Player 2</td><td>0</td><td></td><td>0</td><td></td><td>0</td></tr>
+                            <tr data-player-id="player3"><td>Player 3</td><td>0</td><td></td><td>0</td><td></td><td>0</td></tr>
+                            <tr data-player-id="player4"><td>Player 4</td><td>0</td><td></td><td>0</td><td></td><td>0</td></tr>
                         </tbody>
                     </table>
-                    </div>
                 </div>
             </div>
-        </div>
-        <div class="right-column">
-            
-
-
-            <div class="right-section">
-                <h2><span id ="player1k"></span><span id ="player1rc"></span><span id ="player1dc"></span><span id="player1logh"></span></h2>
-                <div id="player1log">            </div>
-            </div>
-            <div class="right-section">
-                <h2><span id ="player2k"></span><span id ="player2rc"></span><span id ="player2dc"></span><span id="player2logh"></span></h2>
-                <div id="player2log">            </div>
-            </div>
-            <div class="right-section">
-                <h2><span id ="player3k"></span><span id ="player3rc"></span><span id ="player3dc"></span><span id="player3logh"></span></h2>
-                <div id="player3log">            </div>
-            </div>
-            <div class="right-section">
-                <h2><span id ="player4k"></span><span id ="player4rc"></span><span id ="player4dc"></span><span id="player4logh"></span></h2>
-                <div id="player4log">            </div>
+            <div class="game-activity-section">
+                <h2>Activity</h2>
+                <div id="gameActivity" role="log" aria-live="polite"></div>
             </div>
         </div>
-        
-        
     </div>
+
     <script>window.CATAN_PLAYER_COLORS = {{ player_colors|tojson }};</script>
     <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/catan_game_logic.js') }}"></script>
 
+    <!-- Display tweaks that run after your JS (no changes to catan_game_logic.js needed) -->
+    <script>
+    (function () {
+        var box = document.getElementById('assignpoint');
+        var title = document.getElementById('gameTurnTitle');
+        var trim = function (s) { return (s || '').replace(/^\s+|\s+$/g, ''); };
+
+        // Score table: Cards shows "cards (dev)"; hide rows whose name starts with "player"
+        var tableObs = new MutationObserver(fixTable);
+        function fixTable() {
+            tableObs.disconnect();
+            var rows = box.querySelectorAll('tbody tr');
+            for (var i = 0; i < rows.length; i++) {
+                var td = rows[i].children;
+                if (td.length < 6) continue;
+                var name = trim(td[0].textContent);
+                rows[i].style.display = /^player/i.test(name) ? 'none' : '';
+                td[0].title = name;
+                var cards = trim(td[2].textContent.replace(/\s*\(.*\)\s*$/, '')) || '0';
+                var dev = trim(td[4].textContent) || '0';
+                var merged = cards + ' (' + dev + ')';
+                if (td[2].textContent !== merged) td[2].textContent = merged;
+            }
+            tableObs.observe(box, { childList: true, subtree: true, characterData: true });
+        }
+        fixTable();
+
+        // Title: "Catan GamePlay (x's turn)" -> "Catan (x's turn)"
+        var titleObs = new MutationObserver(fixTitle);
+        function fixTitle() {
+            var s = title.textContent, n = s.replace(/Catan\s*Game\s*Play/i, 'Catan');
+            if (n !== s) title.textContent = n;
+        }
+        titleObs.observe(title, { childList: true, characterData: true, subtree: true });
+        fixTitle();
+
+        // Reset game -> reload page (short delay lets the reset request go out first)
+        var dlg = document.getElementById('resetDialog');
+        dlg.addEventListener('close', function () {
+            if (dlg.returnValue === 'confirm') setTimeout(function () { location.reload(); }, 1000);
+        });
+    })();
+	var dlg = document.getElementById('resetDialog');
+        dlg.addEventListener('close', function () {
+            if (dlg.returnValue === 'confirm') {
+                var selectedMode = dlg.querySelector('input[name="player_mode"]:checked').value;
+                setTimeout(function () { 
+                    fetch('/catan/reset_game?players=' + selectedMode)
+                        .then(res => res.json())
+                        .then(() => location.reload()); 
+                }, 1000);
+            }
+        });
     </script>
 </body>
 </html>
