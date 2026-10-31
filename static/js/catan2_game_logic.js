@@ -526,8 +526,9 @@ function setMapZoom(level) {
         mapZoomToggle.title = mapZoomLevel === 2 ? 'Zoom out' : 'Zoom in';
         mapZoomToggle.setAttribute('aria-label', mapZoomToggle.title);
     } else {
-        mapZoomToggle.textContent = mapZoomLevel === 2 ? 'Fit' : '2×';
-        mapZoomToggle.title = mapZoomLevel === 2 ? 'Return map to fit' : 'Zoom map to 2x';
+        mapZoomToggle.textContent = mapZoomLevel === 2 ? '−' : '+';
+        mapZoomToggle.title = mapZoomLevel === 2 ? 'Zoom out' : 'Zoom in';
+        mapZoomToggle.setAttribute('aria-label', mapZoomToggle.title);
     }
     resizeCanvas();
     zoomViewport.scrollLeft = 0;
@@ -3194,7 +3195,7 @@ function updateCitiesAndKnightsTracker() {
         }
     }
     const progressCardCount = document.getElementById('progressCardCount');
-    if (progressCardCount) progressCardCount.textContent = `${state.progressCards.length}/5`;
+    if (progressCardCount) progressCardCount.textContent = String(state.progressCards.length);
 }
 
 async function activateProgressCard(cardIndex) {

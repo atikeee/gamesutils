@@ -10,12 +10,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css') }}">
     <style>
         .catan2-player-page .canvas-wrapper.map-zoom-viewport { position: relative; }
-        .catan2-player-page .player-action-toolbar .map-zoom-toggle {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            line-height: 1;
-        }
         .c2-awaiting-start .player-page-container > *:not(.c2-player-heading):not(.player-color-picker):not(.c2-player-start-button) {
             opacity: 0.45;
             filter: grayscale(0.6);
@@ -62,21 +56,100 @@
         #boardPieceActionModal.c2-compact-action-modal .modal-content { width: auto; min-width: 0; max-width: max-content; padding: 10px; gap: 6px; }
         .c2-compact-action-text { font-size: 0.85rem; font-weight: 600; text-align: center; color: #29453e; }
         .c2-compact-action-modal .c2-board-piece-action-choices { margin: 0; }
-        .has-player-color .c2-player-heading {
-            padding: 8px 14px;
-            border: 3px solid #fff;
-            border-radius: 10px;
-            background: var(--player-color);
-            color: var(--player-color-text) !important;
-            box-shadow: 0 0 0 2px var(--player-color), 0 4px 12px rgba(0, 0, 0, 0.3);
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+        /* Zero-size sticky strips keep the map buttons in the visible corners while the zoomed map scrolls.
+           Top strip: undo + zoom (top-left).  Bottom strip: build menu (bottom-left) + turn button (bottom-right). */
+        .c2-map-anchor-top { position: sticky; top: 0; left: 0; z-index: 3; width: 0; height: 0; }
+        .c2-map-anchor-bottom { position: sticky; left: 0; z-index: 3; width: 100%; height: 0; }
+        .c2-map-tools-top { position: absolute; top: 8px; left: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+        .c2-map-tools-row { display: flex; gap: 8px; }
+        /* player name on the map, in the player's own colour (max 5 letters) */
+        .c2-map-player-name {
+            max-width: 100%;
+            padding: 3px 12px;
+            border: 2px solid #fff;
+            border-radius: 999px;
+            background: var(--player-color, #475569);
+            color: var(--player-color-text, #fff);
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            line-height: 1.3;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            pointer-events: none;
         }
-        /* Zero-size sticky anchor keeps the turn button pinned to the visible top-left while the zoomed map scrolls. */
-        .c2-end-turn-anchor { position: sticky; top: 0; left: 0; z-index: 3; width: 0; height: 0; }
+        .c2-map-undo-button,
+        .c2-map-zoom-button,
+        .c2-build-toggle {
+            display: grid;
+            place-items: center;
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            background: #475569;
+            color: #fff;
+            font-size: 1.1rem;
+            line-height: 1;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .c2-map-zoom-button { font-size: 1.6rem; font-weight: 700; }
+        .c2-map-zoom-button[aria-pressed="true"] { background: #176b5b; }
+        .c2-map-undo-button:disabled { background: #b8c4bf; color: #eef3f1; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); cursor: not-allowed; }
+        .c2-map-undo-button:focus-visible,
+        .c2-map-zoom-button:focus-visible,
+        .c2-build-toggle:focus-visible { outline: 3px solid #f1c40f; outline-offset: 2px; }
+
+        /* Build menu: toggle button bottom-left, options open upward */
+        .c2-build-control { position: absolute; left: 8px; bottom: 8px; }
+        .c2-build-toggle { background: #176b5b; }
+        .c2-build-toggle.is-open,
+        .c2-build-toggle.has-selection { background: #0f4f43; box-shadow: 0 0 0 3px #f1c40f, 0 2px 8px rgba(0, 0, 0, 0.35); }
+        .c2-build-toggle:disabled { background: #b8c4bf; color: #eef3f1; cursor: not-allowed; }
+        /* Options stack upward from the build button: house (nearest), city, road, knight, wall (top).
+           column-reverse puts the first option in the markup at the bottom. */
+        .c2-build-menu {
+            position: absolute;
+            left: 0;
+            bottom: 54px;
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            gap: 8px;
+            width: 44px;
+        }
+        .c2-build-menu[hidden] { display: none; }
+        .catan2-player-page .c2-build-menu .btn-tool {
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+            width: 40px;
+            min-width: 40px;
+            height: 40px;
+            min-height: 40px;
+            padding: 0;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            background: #176b5b;
+            color: #fff;
+            font-size: 1rem;
+            line-height: 1;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+            transform: none;
+        }
+        .catan2-player-page .c2-build-menu .btn-tool:hover { background: #1d8470; border-color: #fff; transform: none; }
+        .catan2-player-page .c2-build-menu .btn-tool.selected { background: #0f4f43; border-color: #fff; box-shadow: 0 0 0 3px #f1c40f, 0 2px 8px rgba(0, 0, 0, 0.35); }
+        .catan2-player-page .c2-build-menu .btn-tool:disabled { background: #b8c4bf; color: #eef3f1; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); cursor: not-allowed; }
+        .c2-build-menu .btn-tool i { pointer-events: none; }
+
         .c2-turn-button {
             position: absolute;
-            top: 8px;
-            left: 8px;
+            right: 8px;
+            bottom: 8px;
             display: grid;
             place-items: center;
             width: 44px;
@@ -91,28 +164,6 @@
             touch-action: manipulation;
         }
         .c2-turn-button:focus-visible { outline: 3px solid #f1c40f; outline-offset: 2px; }
-        /* Zero-height sticky strip after the canvas keeps undo at the visible bottom-right while the zoomed map scrolls. */
-        .c2-undo-anchor { position: sticky; left: 0; z-index: 3; width: 100%; height: 0; }
-        .c2-map-undo-button {
-            position: absolute;
-            right: 8px;
-            bottom: 8px;
-            display: grid;
-            place-items: center;
-            width: 44px;
-            height: 44px;
-            padding: 0;
-            border: 2px solid #fff;
-            border-radius: 50%;
-            background: #475569;
-            color: #fff;
-            font-size: 1.1rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-            cursor: pointer;
-            touch-action: manipulation;
-        }
-        .c2-map-undo-button:disabled { background: #b8c4bf; color: #eef3f1; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); cursor: not-allowed; }
-        .c2-map-undo-button:focus-visible { outline: 3px solid #f1c40f; outline-offset: 2px; }
         .c2-turn-button[data-state="waiting"] {
             background: radial-gradient(circle at 35% 35%, #ff8a80, #d32f2f 60%, #8e1b1b);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), 0 0 10px rgba(211, 47, 47, 0.6);
@@ -132,8 +183,17 @@
         }
         @media (prefers-reduced-motion: reduce) { .c2-turn-button { animation: none !important; } }
         @media (max-width: 768px) {
-            .c2-turn-button { top: 4px; left: 4px; width: 40px; height: 40px; font-size: 1.15rem; }
-            .c2-map-undo-button { right: 4px; bottom: 4px; width: 40px; height: 40px; font-size: 1rem; }
+            .c2-map-tools-top { top: 4px; left: 4px; gap: 4px; }
+            .c2-map-tools-row { gap: 6px; }
+            .c2-map-player-name { font-size: 0.95rem; padding: 2px 10px; }
+            .c2-build-control { left: 4px; bottom: 4px; }
+            .c2-build-menu { bottom: 50px; width: 40px; gap: 6px; }
+            .catan2-player-page .c2-build-menu .btn-tool { width: 36px; min-width: 36px; height: 36px; min-height: 36px; font-size: 0.95rem; }
+            .c2-turn-button { right: 4px; bottom: 4px; width: 40px; height: 40px; font-size: 1.15rem; }
+            .c2-map-undo-button,
+            .c2-map-zoom-button,
+            .c2-build-toggle { width: 40px; height: 40px; font-size: 1rem; }
+            .c2-map-zoom-button { font-size: 1.5rem; }
         }
         .c2-metropolis-markers {
             position: absolute;
@@ -322,6 +382,63 @@
         .catan2-player-page .hand-selection-btn:disabled { opacity: 0.45; cursor: not-allowed; }
         .catan2-player-page .hand-selection-drop:not(:disabled) { border-color: #b3261e !important; background: #b3261e !important; color: #fff !important; }
         .catan2-player-page .hand-selection-clear:not(:disabled) { border-color: #8a9590 !important; background: #f0f3f2 !important; color: #29453e !important; }
+        /* Selected-cards panel: floats at the bottom of the screen (visible however far you scroll)
+           and only exists while cards are selected, or while "Steal" is open. */
+        .catan2-player-page #transferDropButtons.c2-hand-actions {
+            display: none;
+            position: fixed;
+            z-index: 1100;
+            right: 12px;
+            bottom: max(12px, env(safe-area-inset-bottom));
+            left: 12px;
+            flex-direction: column;
+            gap: 10px;
+            width: min(520px, calc(100% - 24px));
+            margin: 0 auto;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid #c9d7d3;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 8px 28px rgba(15, 23, 42, 0.3);
+        }
+        .catan2-player-page #transferDropButtons.c2-hand-actions.is-open { display: flex; }
+        .c2-hand-actions-head { color: #29453e; font-size: 0.95rem; font-weight: 700; }
+        .c2-ha-steal-title { display: none; }
+        .c2-hand-actions.is-steal .c2-ha-selected { display: none; }
+        .c2-hand-actions.is-steal .c2-ha-steal-title { display: inline; }
+        .c2-hand-actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+        .c2-hand-actions.is-steal .c2-ha-commands,
+        .c2-hand-actions.no-targets .c2-ha-targets { display: none; }
+        .c2-ha-give-label { flex: 0 0 auto; color: #526660; font-size: 0.85rem; font-weight: 600; }
+        .catan2-player-page #transferDropButtons .btn-tool {
+            flex: 1 1 0;
+            width: auto !important;
+            min-width: 84px;
+            min-height: 44px;
+            padding: 6px 10px;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        /* seats that are not taken ("Player 2", ...) or empty: no button at all */
+        .catan2-player-page #transferDropButtons .transfer-btn:disabled { display: none; }
+        .c2-hand-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+        .c2-hand-title-row > h3 { margin: 0; }
+        .c2-steal-button {
+            min-height: 32px;
+            padding: 4px 12px;
+            border: 1px solid #c9d7d3;
+            border-radius: 6px;
+            background: #f3f7f6;
+            color: #29453e;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .c2-steal-button[aria-pressed="true"] { border-color: #176b5b; background: #176b5b; color: #fff; }
+        .c2-steal-button[hidden] { display: none; }
         .c2-deck-choice-modal.modal-content { width: auto; min-width: 0; max-width: max-content; padding: 12px; }
         .c2-deck-choices { display: flex; align-items: center; gap: 10px; }
         .c2-deck-choice {
@@ -603,7 +720,7 @@
         }
         .catan2-player-page #progressCards .c2-progress-card {
             width: 100%;
-            max-width: 64px;
+            max-width: none;
             height: auto;
             min-height: 0;
             aspect-ratio: 0.73;
@@ -633,10 +750,23 @@
             gap: 6px;
         }
         .catan2-player-page .player-decks-section .deck-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
             width: 100%;
             max-width: 950px;
             margin-inline: auto;
             box-sizing: border-box;
+        }
+        /* progress cards (row 1) and resource/commodity cards (rows 2-3) look like one hand:
+           same 5-column grid, same card size, no separate boxes */
+        .catan2-player-page #progressCards,
+        .catan2-player-page #handCards {
+            border: 0;
+            background: transparent;
+            padding: 0;
+            gap: 6px;
         }
         .catan2-player-page #handCards .card-item {
             width: 100%;
@@ -711,27 +841,11 @@
             .c2-metropolis-marker svg { width: 10px; height: 12px; }
             .c2-metropolis-marker-full { display: none; }
             .c2-metropolis-marker-short { display: inline; }
-            .catan2-player-page .player-action-toolbar {
-                display: grid;
-                grid-template-columns: repeat(9, minmax(0, 1fr));
-                width: 100%;
-                gap: 2px;
-                overflow: visible;
-            }
-            .catan2-player-page .player-action-toolbar .btn-tool,
-            .catan2-player-page .player-action-toolbar .map-zoom-toggle {
-                width: 100%;
-                min-width: 0;
-                min-height: 38px;
-                height: 38px;
-                padding: 0;
-                font-size: 1rem;
-                box-sizing: border-box;
-            }
             /* Offset the container's 12px flex gap so the books sit right under the map. */
             .catan2-player-page .c2-progress-books-section { order: 6; width: 100%; margin: -8px auto 0; }
             .catan2-player-page #handCards,
             .catan2-player-page #progressCards { max-width: none; }
+            .catan2-player-page .player-controls { order: 6; }
             .catan2-player-page .player-decks-section { order: 7; }
         }
     </style>
@@ -739,8 +853,6 @@
 <body class="catan-player-page catan2-player-page{% if player_color %} has-player-color{% endif %}" data-player-id="{{ player_id }}"{% if player_color %} style="--player-color: {{ player_color }}; --player-color-text: {{ '#1a1a1a' if player_color == '#F1C40F' else '#ffffff' }}"{% endif %}>
     
     <div class="container player-page-container">
-        <h1 class="c2-player-heading text-3xl font-bold text-gray-800 mb-4">Cities &amp; Knights Player: <span id="playerNameDisplay">{{ player_name }}</span></h1>
-
         {% if not player_color %}
         <section class="player-color-picker" aria-labelledby="player-color-title">
             <h2 id="player-color-title">Choose your placement color</h2>
@@ -760,54 +872,31 @@
         <div class="c2-awaiting-start-banner" id="awaitingStartBanner" role="status" hidden>Waiting for the game to start…</div>
         <button type="button" class="c2-player-start-button" id="startGameButton" title="Randomize the player order and start the game" hidden><i class="fas fa-play" aria-hidden="true"></i> Start game</button>
 
-        <div class="controls player-controls">
-            <div class="card-buttons mt-4">
-                <h3 class="text-xl font-semibold text-gray-700 mb-2">Take Resource or Commodity Cards:</h3>
-                <div class="resource-card-group">
-                    <!-- Resource Cards -->
-                    <div class="resource-card" data-resource-type="wood">
-                        <span class="card-text">Wood</span>
+        <div class="canvas-wrapper map-zoom-viewport">
+            <div class="c2-map-anchor-top">
+                <div class="c2-map-tools-top">
+                    <div class="c2-map-tools-row">
+                        <button type="button" class="c2-map-undo-button" id="undoButton" title="Undo unavailable" aria-label="Undo" aria-disabled="true" disabled><i class="fas fa-undo" aria-hidden="true"></i></button>
+                        <button type="button" class="c2-map-zoom-button" id="mapZoomToggle" aria-pressed="false" title="Zoom in" aria-label="Zoom in">+</button>
                     </div>
-                    <div class="resource-card" data-resource-type="paper" aria-label="Take paper commodity">
-                        <span class="card-text">Paper</span>
-                    </div>
-                    <div class="resource-card" data-resource-type="sheep">
-                        <span class="card-text">Sheep</span>
-                    </div>
-                    <div class="resource-card" data-resource-type="cloth" aria-label="Take cloth commodity">
-                        <span class="card-text">Cloth</span>
-                    </div>
-                    <div class="resource-card" data-resource-type="rock">
-                        <span class="card-text">Rock</span>
-                    </div>
-                    <div class="resource-card" data-resource-type="coin" aria-label="Take coin commodity">
-                        <span class="card-text">Coin</span>
-                    </div>
-                    <div class="resource-card" data-resource-type="brick">
-                        <span class="card-text">Brick</span>
-                    </div>
-                    <div class="resource-card" data-resource-type="hay">
-                        <span class="card-text">Hay</span>
-                    </div>
-                    <button type="button" class="btn btn-primary" id="progressCardButton" aria-label="Choose a progress card deck" title="Choose a progress card deck">Progress Card</button>
+                    <!-- keeps id playerNameDisplay: the game JS writes the player name here (shortened to 5 letters by the script at the bottom) -->
+                    <div class="c2-map-player-name" id="playerNameDisplay" title="{{ player_name }}">{{ player_name[:5] }}</div>
                 </div>
             </div>
-        </div>
-        <div class="player-action-toolbar" id="player-tool-select" role="toolbar" aria-label="Game actions">
-            <button type="button" class="btn-tool" data-tool="house" title="House" aria-label="House"><i class="fas fa-home" aria-hidden="true"></i></button>
-            <button type="button" class="btn-tool" data-tool="city" title="City" aria-label="City"><i class="fas fa-city" aria-hidden="true"></i></button>
-            <button type="button" class="btn-tool" data-tool="road" title="Road" aria-label="Road"><i class="fas fa-road" aria-hidden="true"></i></button>
-            <button type="button" class="btn-tool" data-tool="wall" title="Wall" aria-label="Wall"><i class="fas fa-chess-rook" aria-hidden="true"></i></button>
-            <button type="button" class="btn-tool" data-tool="knight" title="Knight" aria-label="Knight"><i class="fas fa-chess-knight" aria-hidden="true"></i></button>
-            <button type="button" class="map-zoom-toggle" id="mapZoomToggle" aria-pressed="false" title="Zoom map to 2x">2×</button>
-        </div>
-        <div class="canvas-wrapper map-zoom-viewport">
-            <div class="c2-end-turn-anchor">
-                <button type="button" class="c2-turn-button" id="turnButton" data-state="waiting" title="Not your turn" aria-label="Not your turn" aria-disabled="true"><i class="fas fa-dice" aria-hidden="true"></i></button>
-            </div>
             <canvas id="catanBoard"></canvas>
-            <div class="c2-undo-anchor">
-                <button type="button" class="c2-map-undo-button" id="undoButton" title="Undo unavailable" aria-label="Undo" aria-disabled="true" disabled><i class="fas fa-undo" aria-hidden="true"></i></button>
+            <div class="c2-map-anchor-bottom">
+                <!-- id must stay "player-tool-select": the game JS finds the tool buttons through it -->
+                <div class="c2-build-control" id="player-tool-select" role="toolbar" aria-label="Build">
+                    <div class="c2-build-menu" id="buildMenu" hidden>
+                        <button type="button" class="btn-tool" data-tool="house" title="House / Settlement" aria-label="House / Settlement"><i class="fas fa-home" aria-hidden="true"></i></button>
+                        <button type="button" class="btn-tool" data-tool="city" title="City" aria-label="City"><i class="fas fa-city" aria-hidden="true"></i></button>
+                        <button type="button" class="btn-tool" data-tool="road" title="Road" aria-label="Road"><i class="fas fa-road" aria-hidden="true"></i></button>
+                        <button type="button" class="btn-tool" data-tool="knight" title="Knight" aria-label="Knight"><i class="fas fa-chess-knight" aria-hidden="true"></i></button>
+                        <button type="button" class="btn-tool" data-tool="wall" title="Wall" aria-label="Wall"><i class="fas fa-chess-rook" aria-hidden="true"></i></button>
+                    </div>
+                    <button type="button" class="c2-build-toggle" id="buildMenuToggle" title="Build" aria-label="Build" aria-expanded="false" aria-controls="buildMenu"><i class="fas fa-hammer" aria-hidden="true"></i></button>
+                </div>
+                <button type="button" class="c2-turn-button" id="turnButton" data-state="waiting" title="Not your turn" aria-label="Not your turn" aria-disabled="true"><i class="fas fa-dice" aria-hidden="true"></i></button>
             </div>
             <div class="c2-metropolis-markers" aria-label="Metropolis ownership">
                 <svg width="0" height="0" aria-hidden="true" style="position:absolute"><symbol id="c2-metropolis-shape" viewBox="0 0 210 255">
@@ -850,23 +939,65 @@
 
         <div id="messageBox" class="message-box" hidden></div>
 
+        <div class="controls player-controls">
+            <div class="card-buttons mt-4">
+                <div class="resource-card-group">
+                    <!-- Resource Cards -->
+                    <div class="resource-card" data-resource-type="wood">
+                        <span class="card-text">Wood</span>
+                    </div>
+                    <div class="resource-card" data-resource-type="paper" aria-label="Take paper commodity">
+                        <span class="card-text">Paper</span>
+                    </div>
+                    <div class="resource-card" data-resource-type="sheep">
+                        <span class="card-text">Sheep</span>
+                    </div>
+                    <div class="resource-card" data-resource-type="cloth" aria-label="Take cloth commodity">
+                        <span class="card-text">Cloth</span>
+                    </div>
+                    <div class="resource-card" data-resource-type="rock">
+                        <span class="card-text">Rock</span>
+                    </div>
+                    <div class="resource-card" data-resource-type="coin" aria-label="Take coin commodity">
+                        <span class="card-text">Coin</span>
+                    </div>
+                    <div class="resource-card" data-resource-type="brick">
+                        <span class="card-text">Brick</span>
+                    </div>
+                    <div class="resource-card" data-resource-type="hay">
+                        <span class="card-text">Hay</span>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="progressCardButton" aria-label="Choose a progress card deck" title="Choose a progress card deck">Progress Card</button>
+                </div>
+            </div>
+        </div>
+
         <div class="player-decks-section">
             <div class="deck-display">
-                <h3 class="text-xl font-semibold text-gray-700">Progress Cards (<span id="progressCardCount">0/5</span>)</h3>
+                <div class="c2-hand-title-row">
+                    <h3 class="text-xl font-semibold text-gray-700">Your Hand (<span id="handCardCount">0</span> / <span id="progressCardCount">0</span>)</h3>
+                    <button type="button" class="c2-steal-button" id="openStealPanel" aria-pressed="false" title="Steal a random card from another player" hidden>Steal</button>
+                </div>
                 <div id="progressCards" class="card-list c2-progress-card-list" aria-live="polite"></div>
-                <h3 class="text-xl font-semibold text-gray-700">Your Hand (<span id="handCardCount">0</span>)</h3>
                 <div id="handCards" class="card-list">
                     <!-- Resource cards will be displayed here -->
                 </div>
-                <div class="selected-cards-info text-gray-700 font-medium mb-3">
-                        Selected: <span id="selectedCardCount">0</span> cards
-                </div>
-                <div id="transferDropButtons" class="button-group transfer-buttons">
-			 <button type="button" class="btn btn-tool transfer-btn" data-transfer-slot="0" disabled>&nbsp;</button>
-                    <button type="button" class="btn btn-tool transfer-btn" data-transfer-slot="1" disabled>&nbsp;</button>
-                    <button type="button" class="btn btn-tool transfer-btn" data-transfer-slot="2" disabled>&nbsp;</button>
-                    <button type="button" class="btn btn-tool hand-selection-btn hand-selection-drop" data-hand-action="drop" disabled>Drop</button>
-                    <button type="button" class="btn btn-tool hand-selection-btn hand-selection-clear" data-hand-action="clear" disabled>Clear</button>
+                <!-- id/ids below are used by the game JS: transferDropButtons, selectedCardCount, data-transfer-slot, data-hand-action -->
+                <div id="transferDropButtons" class="button-group transfer-buttons c2-hand-actions" role="group" aria-label="Actions for selected cards">
+                    <div class="c2-hand-actions-head">
+                        <span class="c2-ha-selected">Selected: <span id="selectedCardCount">0</span> cards</span>
+                        <span class="c2-ha-steal-title">Steal a random card from:</span>
+                    </div>
+                    <div class="c2-hand-actions-row c2-ha-targets">
+                        <span class="c2-ha-give-label">Give to</span>
+                        <button type="button" class="btn btn-tool transfer-btn" data-transfer-slot="0" disabled>&nbsp;</button>
+                        <button type="button" class="btn btn-tool transfer-btn" data-transfer-slot="1" disabled>&nbsp;</button>
+                        <button type="button" class="btn btn-tool transfer-btn" data-transfer-slot="2" disabled>&nbsp;</button>
+                    </div>
+                    <div class="c2-hand-actions-row c2-ha-commands">
+                        <button type="button" class="btn btn-tool hand-selection-btn hand-selection-drop" data-hand-action="drop" disabled>Drop</button>
+                        <button type="button" class="btn btn-tool hand-selection-btn hand-selection-clear" data-hand-action="clear" disabled>Clear</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -978,5 +1109,88 @@
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/catan2_game_logic.js') }}"></script>
+    <script>
+    // Build menu: open/close only. Tool selection itself is still handled by catan2_game_logic.js.
+    (function () {
+        const control = document.getElementById('player-tool-select');
+        const toggle = document.getElementById('buildMenuToggle');
+        const menu = document.getElementById('buildMenu');
+        if (!control || !toggle || !menu) return;
+        const toggleIcon = toggle.querySelector('i');
+        const defaultIconClass = toggleIcon.className;
+
+        function setOpen(open) {
+            menu.hidden = !open;
+            toggle.setAttribute('aria-expanded', String(open));
+            toggle.classList.toggle('is-open', open);
+        }
+        toggle.addEventListener('click', () => setOpen(menu.hidden));
+        menu.addEventListener('click', event => { if (event.target.closest('.btn-tool')) setOpen(false); });
+        document.addEventListener('click', event => { if (!control.contains(event.target)) setOpen(false); });
+        document.addEventListener('keydown', event => { if (event.key === 'Escape') setOpen(false); });
+
+        // Show the chosen tool on the build button (the game JS adds/removes .selected on the options).
+        function syncToggle() {
+            const selected = menu.querySelector('.btn-tool.selected');
+            toggle.classList.toggle('has-selection', Boolean(selected));
+            toggleIcon.className = selected ? selected.querySelector('i').className : defaultIconClass;
+            const label = selected ? `Building: ${selected.getAttribute('aria-label')}` : 'Build';
+            toggle.title = label;
+            toggle.setAttribute('aria-label', label);
+        }
+        new MutationObserver(syncToggle).observe(menu, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    })();
+
+    // Player name badge: the game JS writes the full name into #playerNameDisplay; keep only 5 letters.
+    (function () {
+        const el = document.getElementById('playerNameDisplay');
+        if (!el) return;
+        function shorten() {
+            const letters = Array.from(el.textContent.trim());
+            if (window.PLAYER_NAME) el.title = window.PLAYER_NAME;
+            if (letters.length > 5) el.textContent = letters.slice(0, 5).join('');
+        }
+        shorten();
+        new MutationObserver(shorten).observe(el, { childList: true, characterData: true, subtree: true });
+    })();
+
+    // Selected-cards panel: opens when cards are selected (the game JS updates #selectedCardCount),
+    // or on demand with "Steal". Buttons themselves are still wired up by catan2_game_logic.js.
+    (function () {
+        const panel = document.getElementById('transferDropButtons');
+        const countEl = document.getElementById('selectedCardCount');
+        const stealButton = document.getElementById('openStealPanel');
+        if (!panel || !countEl) return;
+        let stealMode = false;
+
+        const hasTargets = () => [...panel.querySelectorAll('.transfer-btn')].some(button => !button.disabled);
+        function sync() {
+            const selected = Number(countEl.textContent) || 0;
+            const targets = hasTargets();
+            if (selected > 0) stealMode = false;
+            panel.classList.toggle('is-open', selected > 0 || (stealMode && targets));
+            panel.classList.toggle('is-steal', selected === 0 && stealMode);
+            panel.classList.toggle('no-targets', !targets);
+            if (stealButton) {
+                stealButton.hidden = !targets;
+                stealButton.setAttribute('aria-pressed', String(stealMode && selected === 0));
+            }
+        }
+        new MutationObserver(sync).observe(countEl, { childList: true, characterData: true, subtree: true });
+        new MutationObserver(sync).observe(panel, { subtree: true, attributes: true, attributeFilter: ['disabled'] });
+
+        if (stealButton) stealButton.addEventListener('click', () => { stealMode = !stealMode; sync(); });
+        panel.addEventListener('click', event => {
+            if (stealMode && event.target.closest('.transfer-btn')) { stealMode = false; sync(); }
+        });
+        document.addEventListener('click', event => {
+            if (stealMode && !panel.contains(event.target) && event.target !== stealButton) { stealMode = false; sync(); }
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && stealMode) { stealMode = false; sync(); }
+        });
+        sync();
+    })();
+    </script>
 </body>
 </html>
