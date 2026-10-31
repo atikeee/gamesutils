@@ -1784,7 +1784,10 @@ function updatePlayerUI() {
 
     const playerNameDisplay = document.getElementById('playerNameDisplay');
     if (window.PLAYER_NAME) allPlayersData[PLAYER_ID].playerName = window.PLAYER_NAME;
-    if (playerNameDisplay) playerNameDisplay.textContent = allPlayersData[PLAYER_ID].playerName;
+	if (playerNameDisplay) playerNameDisplay.textContent = allPlayersData[PLAYER_ID].playerName;
+
+    const playerScoreDisplay = document.getElementById('playerScoreDisplay');
+    if (playerScoreDisplay) playerScoreDisplay.textContent = Number(allPlayersData[PLAYER_ID].score) || 0;
 
     const handCardsDiv = document.getElementById('handCards');
     if (handCardsDiv) {

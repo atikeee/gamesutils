@@ -1,1 +1,1 @@
-{"players": [{"seat": 1, "name": "a", "code": "NXG43", "passphrase_salt": "bad77176dfd2837532572e80f74f3df8", "passphrase_hash": "4f30c62976f1cda1addfb49e06221edda4744d9edbf74594621c1b5294f72770", "color": "#2563EB"}], "max_players": 6}
+{"players": [{"seat": 1, "name": "a", "code": "QNTG7", "passphrase_salt": "540035897e302182262924d12370ca62", "passphrase_hash": "000230b59d379216b585cd8a302cf5324118c0b9b283f7fbbf1070359c9627eb", "color": "#8B5FBF"}], "max_players": 6}

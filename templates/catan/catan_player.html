@@ -8,6 +8,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css', v='1.1') }}">
+	<style>
+    .catan-player-page .player-name-block { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+    .catan-player-page .player-score {
+        padding: 1px 10px;
+        border: 2px solid var(--player-color, #475569);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.95);
+        color: #1f2d29;
+        font-size: 0.95rem;
+        font-weight: 800;
+        line-height: 1.3;
+        white-space: nowrap;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+    @media (max-width: 768px) {
+        .catan-player-page .player-score { font-size: 0.85rem; padding: 0 8px; }
+    }
+	</style>
 </head>
 <body class="catan-player-page{% if player_color %} has-player-color{% endif %}" data-player-id="{{ player_id }}"{% if player_color %} style="--player-color: {{ player_color }}; --player-color-text: {{ '#1a1a1a' if player_color == '#F1C40F' else '#ffffff' }}"{% endif %}>
     
@@ -33,7 +51,10 @@
         <div class="player-map-shell">
         <div class="player-map-header">
             <button type="button" class="btn-tool map-undo" data-tool="undo-player" title="Undo unavailable" aria-label="Undo" disabled><i class="fas fa-undo" aria-hidden="true"></i></button>
-            <div class="player-heading text-[1.85625rem] font-bold capitalize text-gray-800" id="playerNameDisplay">{{ player_name }}</div>
+            <div class="player-name-block">
+			<div class="player-heading text-[1.85625rem] font-bold capitalize text-gray-800" id="playerNameDisplay">{{ player_name }}</div>
+			<div class="player-score" title="Victory points"><span id="playerScoreDisplay">0</span></div>
+			</div>
         </div>
         <div class="player-map-board">
         <div class="canvas-wrapper map-zoom-viewport">
