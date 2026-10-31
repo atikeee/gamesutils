@@ -5,7 +5,7 @@ const ROAD_WIDTH = 12;
 const HOUSE_SIZE = 20;
 const CITY_SIZE = 30;
 const PORT_SIZE = HEX_SIZE * 0.3;
-window.SHOW_PORT_INDEX = false;
+window.SHOW_PORT_INDEX = true;
 const PLAYER_COLORS = window.CATAN_PLAYER_COLORS || {
     'player1': '#F80000',
     'player2': '#0000CC',

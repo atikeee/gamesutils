@@ -182,6 +182,21 @@
         .catan-game-page #assignpoint tr.c2-score-inactive { opacity: 0.45; filter: grayscale(1); color: #8a9590; }
         .catan2-game-page .canvas-wrapper.map-zoom-viewport { position: relative; }
         .catan2-game-page .game-map { width: min(100%, 950px, calc((100svh - 96px) * 1.2)); }
+		 @media (min-width: 769px) {
+            .catan2-game-page .game-map { height: auto; max-width: 100% !important; }
+            .catan2-game-page .game-map .canvas-wrapper.map-zoom-viewport {
+                position: relative;
+                height: auto;
+                aspect-ratio: 1.2 / 1;
+            }
+            .catan2-game-page .game-map #catanBoard {
+                position: static;
+                display: block;
+                width: 100%;
+                height: auto;
+                aspect-ratio: 1.2 / 1;
+            }
+        }
         .catan-game-page #assignpoint tr.c2-score-active { color: #c62828; font-weight: 700; }
         .c2-progress-card-popup {
             position: absolute;

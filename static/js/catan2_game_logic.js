@@ -1103,22 +1103,49 @@ function drawBoard() {
         allJunctions = getAllJunctions();
     }
 
-    const perimeterJunctions = allJunctions.filter(junction => countTilesForJunction(junction, boardTiles) < 3);
-    perimeterJunctions.forEach((junction, index) => {
-        const portInfo = PORT_DATA[index];
-        if (portInfo && portInfo.length === 2) {
-            const [type, ratio] = portInfo;
-            const junctionX = junction.x + offsetX;
-            const junctionY = junction.y + offsetY;
-            const vecX = junctionX - (boardCenterRawX + offsetX);
-            const vecY = junctionY - (boardCenterRawY + offsetY);
-            const vecMagnitude = Math.sqrt(vecX * vecX + vecY * vecY);
-            const offsetDistance = HEX_SIZE * 0.4;
-            const portDrawX = junctionX + (vecX / vecMagnitude) * offsetDistance;
-            const portDrawY = junctionY + (vecY / vecMagnitude) * offsetDistance;
+        const portTiles = boardTiles.slice().sort((t1, t2) => (t1.q - t2.q) || (t1.r - t2.r));
+    const portJunctionMap = new Map();
+    portTiles.forEach(tile => {
+        const rawPixel = hexToRawPixel(tile.q, tile.r);
+        getHexVertices(rawPixel.x, rawPixel.y, TILE_RADIUS).forEach(v => {
+            const id = `${Math.round(v.x)},${Math.round(v.y)}`;
+            if (!portJunctionMap.has(id)) portJunctionMap.set(id, { x: v.x, y: v.y, id });
+        });
+    });
+    const perimeterJunctions = Array.from(portJunctionMap.values())
+        .filter(junction => countTilesForJunction(junction, boardTiles) < 3);
 
-            drawCirclePort(ctx, portDrawX, portDrawY, type, ratio);
-        }
+    if (window.SHOW_PORT_INDEX) {
+        perimeterJunctions.forEach((junction, index) => {
+            const lx = junction.x + offsetX, ly = junction.y + offsetY;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(lx, ly, 11, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.stroke();
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 12px Inter';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(index, lx, ly);
+            ctx.restore();
+        });
+    }
+
+    const portCx = boardCenterRawX + offsetX;
+    const portCy = boardCenterRawY + offsetY;
+    PORT_PAIRS_4P.forEach(p => {
+        const ja = perimeterJunctions[p.a];
+        const jb = perimeterJunctions[p.b];
+        if (!ja || !jb) return;   // bad number, skip
+        drawPortPair(
+            ctx,
+            { x: ja.x + offsetX, y: ja.y + offsetY },
+            { x: jb.x + offsetX, y: jb.y + offsetY },
+            p.type, p.ratio, portCx, portCy
+        );
     });
 
     if (isGamePage) {
@@ -2912,22 +2939,28 @@ function fitGameMap() {
     const available = window.innerHeight - (map.getBoundingClientRect().top + window.scrollY) - 12;
     map.style.maxWidth = `${Math.max(240, available * 1.2)}px`;
 }
-
 function resizeCanvas() {
     fitGameMap();
     if (isGamePage && canvas.parentElement.clientWidth === 0) return;
+
+    const MOBILE_MAP_ZOOM = 1.6;   // must match the 160% in catan_styles.css
+    const mobileZoomed = isPlayerPage && mapZoomLevel === 2
+        && window.matchMedia('(max-width: 768px)').matches;
+
     const containerWidth = canvas.parentElement.clientWidth;
     const containerHeight = canvas.parentElement.clientHeight;
-    console.log("c: w"+containerWidth+"h"+containerHeight);
     const aspectRatio = isPlayerPage && window.matchMedia('(max-width: 768px)').matches ? 0.95 : 1.2;
     let newWidth = containerWidth * mapZoomLevel;
     let newHeight = newWidth / aspectRatio;
 
-    if (newHeight > containerHeight) {
+    if (mobileZoomed) {
+        // grow both dimensions by the same factor so the shape isn't stretched
+        newWidth = containerWidth * MOBILE_MAP_ZOOM;
+        newHeight = newWidth / aspectRatio;
+    } else if (newHeight > containerHeight) {
         newHeight = containerHeight;
         newWidth = newHeight * aspectRatio;
     }
-    console.log("n: w"+newWidth+"h"+newHeight);
     canvas.width = newWidth;
     canvas.height = newHeight;
 
