@@ -5,6 +5,8 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+#btn-process[hidden], #btn-delete[hidden] { display: none !important; }
+
 :root {
   /* surface palette */
   --bg:          #0d0d12;
@@ -812,13 +814,19 @@ html, body {
 
 /* ── SMALL SCREEN ─────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  :root { --toolbar-h: 56px; --bar-h: 64px; --btn-size: 46px; }
+  :root { --toolbar-h: 104px; --bar-h: 64px; --btn-size: 46px; }
 
   .toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) repeat(4, auto);
+    grid-template-rows: 40px 40px;
+    align-content: center;
     gap: .45rem;
     padding-left:  calc(.6rem + var(--safe-left));
     padding-right: calc(.6rem + var(--safe-right));
   }
+  .toolbar .folder-picker { grid-column: 1 / -1; }
+  #btn-download-folder .folder-download-label { display: none; }
   .toolbar-logo { display: none; }
   .folder-input { height: 40px; font-size: 16px; }   /* <16px makes iOS zoom on focus */
   .folder-selected-tag.visible { display: none; }
@@ -864,8 +872,14 @@ html, body {
   .btn-process { padding: 0 .5rem; font-size: .75rem; }
 }
 
+@media (max-width: 340px) {
+  .action-bar { justify-content: flex-start; overflow-x: auto; scrollbar-width: none; }
+  .action-bar::-webkit-scrollbar { display: none; }
+}
+
 /* phone in landscape: reclaim vertical space */
 @media (max-height: 500px) and (orientation: landscape) {
+  .toolbar { display: flex; }
   :root { --toolbar-h: 48px; --bar-h: 54px; --btn-size: 40px; }
   .folder-input, .btn-process { height: 34px; }
   .folder-selected-tag.visible { display: none; }

@@ -7,8 +7,8 @@ messageBox?.addEventListener('click', () => {
     messageBox.textContent = '';
 });
 
-const isGamePage = window.location.pathname === '/catan/game';
-const isPlayerPage = window.location.pathname.startsWith('/catan/player/');
+const isGamePage = window.location.pathname === '/catan/1/game';
+const isPlayerPage = window.location.pathname.startsWith('/catan/1/player/');
 
 const PLAYER_ID = isPlayerPage && window.PLAYER_ID ? 'player' + window.PLAYER_ID : null;
 
@@ -41,11 +41,14 @@ let init_player_data = {
     'player2': { playerName: 'Player 2', hand: [], devCards: [], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0,score:0 },
     'player3': { playerName: 'Player 3', hand: [], devCards: [], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0,score:0 },
     'player4': { playerName: 'Player 4', hand: [], devCards: [], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0,score:0 },
-    'robber':{q:100,r:100}
+    'player5': { playerName: 'Player 5', hand: [], devCards: [], roads: [], structures: [], history: [], longestroad: 0, largestarmy: 0, knightplayed: 0, merchant: 0, victory_point: 0, score: 0 },
+    'player6': { playerName: 'Player 6', hand: [], devCards: [], roads: [], structures: [], history: [], longestroad: 0, largestarmy: 0, knightplayed: 0, merchant: 0, victory_point: 0, score: 0 },
+	'robber':{q:100,r:100}
 }; 
 let allPlayersData = init_player_data;
 allPlayersData._turnOrder = [];
 allPlayersData._currentTurnPlayerId = null;
+allPlayersData.max_players = 4; // Default
 const CARD_COSTS = {
     'road': { 'wood': 1, 'brick': 1 },
     'house': { 'wood': 1, 'brick': 1, 'sheep': 1, 'hay': 1 },
@@ -121,7 +124,9 @@ function setMapZoom(level) {
     mapZoomToggle.title = mapZoomLevel === 2 ? 'Zoom out' : 'Zoom in';
     mapZoomToggle.setAttribute('aria-label', mapZoomToggle.title);
     resizeCanvas();
-    zoomViewport.scrollLeft = 0;
+    zoomViewport.scrollLeft = mapZoomLevel === 2
+        ? (zoomViewport.scrollWidth - zoomViewport.clientWidth) / 2
+        : 0;
     zoomViewport.scrollTop = 0;
 }
 if (mapZoomToggle) {
@@ -206,7 +211,10 @@ function confirmReset() {
     const dialog = document.getElementById('resetDialog');
     return new Promise(resolve => {
         dialog.returnValue = '';
-        dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
+        dialog.addEventListener('close', () => {
+            const checked = dialog.querySelector('input[name="player_mode"]:checked');
+            resolve(dialog.returnValue === 'confirm' ? (checked ? checked.value : '4') : null);
+        }, { once: true });
         dialog.onclick = event => { if (event.target === dialog) dialog.close(); };
         dialog.showModal();
     });
@@ -377,26 +385,39 @@ function drawBoard() {
     }
 
     const perimeterJunctions = allJunctions.filter(junction => countTilesForJunction(junction, boardTiles) < 3);
+	
+    if (window.SHOW_PORT_INDEX) {
+        perimeterJunctions.forEach((junction, index) => {
+            const lx = junction.x + offsetX, ly = junction.y + offsetY;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(lx, ly, 11, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.stroke();
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 12px Inter';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(index, lx, ly);
+            ctx.restore();
+        });
+    }
 
-    perimeterJunctions.forEach((junction, index) => {
-        const portInfo = PORT_DATA[index];
-
-        if (portInfo && portInfo.length === 2) {
-            const [type, ratio] = portInfo;
-
-            const junctionX = junction.x + offsetX;
-            const junctionY = junction.y + offsetY;
-
-            const vecX = junctionX - (boardCenterRawX + offsetX);
-            const vecY = junctionY - (boardCenterRawY + offsetY);
-            const vecMagnitude = Math.sqrt(vecX * vecX + vecY * vecY);
-
-            const offsetDistance = HEX_SIZE * 0.4;
-            const portDrawX = junctionX + (vecX / vecMagnitude) * offsetDistance;
-            const portDrawY = junctionY + (vecY / vecMagnitude) * offsetDistance;
-
-            drawCirclePort(ctx, portDrawX, portDrawY, type, ratio);
-        }
+    const portPairs = allPlayersData.max_players === 6 ? PORT_PAIRS_6P : PORT_PAIRS_4P;
+    const portCx = boardCenterRawX + offsetX;
+    const portCy = boardCenterRawY + offsetY;
+    portPairs.forEach(p => {
+        const ja = perimeterJunctions[p.a];
+        const jb = perimeterJunctions[p.b];
+        if (!ja || !jb) return;   // bad number, skip
+        drawPortPair(
+            ctx,
+            { x: ja.x + offsetX, y: ja.y + offsetY },
+            { x: jb.x + offsetX, y: jb.y + offsetY },
+            p.type, p.ratio, portCx, portCy
+        );
     });
 
     if (isGamePage) {
@@ -585,7 +606,6 @@ function shuffleArray(array) {
         [array[i], array[j]] = [array[j], array[i]];
     }
 }
-
 function shuffleCells() {
     if (!isGamePage) return;
     if (!boardEditingAllowed) {
@@ -593,17 +613,38 @@ function shuffleCells() {
         return;
     }
 
-    const nonDesertTiles = boardTiles.filter(tile => tile.type !== 'desert');
-    const resourceTypes = nonDesertTiles.map(tile => tile.type);
-    const assignments = assignBoardValues(nonDesertTiles, resourceTypes, (first, second) => first === second);
+    // include the desert(s) in the shuffle
+    const wasDesert = new Map(boardTiles.map(tile => [tile, tile.type === 'desert']));
+    const resourceTypes = boardTiles.map(tile => tile.type);
+    const assignments = assignBoardValues(boardTiles, resourceTypes, (first, second) => first === second);
     if (!assignments) {
         showMessage('Could not shuffle resources without adjacent matches. Keep the current board or change its resource counts.', 'error');
         return;
     }
 
-    nonDesertTiles.forEach((tile, index) => {
-        tile.type = assignments[index];
+    // A tile that becomes desert gives up its number token;
+    // a tile that stops being desert takes one of those freed tokens.
+    const freedNumbers = [];
+    const needsNumber = [];
+    boardTiles.forEach((tile, index) => {
+        const nowDesert = assignments[index] === 'desert';
+        if (nowDesert && !wasDesert.get(tile)) freedNumbers.push(tile.number);
+        if (!nowDesert && wasDesert.get(tile)) needsNumber.push(tile);
     });
+    shuffleArray(freedNumbers);
+
+    boardTiles.forEach((tile, index) => {
+        tile.type = assignments[index];
+        if (tile.type === 'desert') tile.number = null;
+    });
+    needsNumber.forEach((tile, index) => {
+        tile.number = freedNumbers[index];
+    });
+
+    // robber starts on the (first) desert, same rule the server uses
+    const desert = boardTiles.find(tile => tile.type === 'desert');
+    if (desert) allPlayersData.robber = { q: desert.q, r: desert.r };
+
     saveBuilderState();
 
     showMessage('Cells shuffled with adjacent matches avoided.');
@@ -734,7 +775,6 @@ async function saveBoardTilesToBackend() {
         return false;
     }
 }
-
 async function loadBoardTilesFromBackend() {
     try {
         const response = await fetch('/catan/load_board');
@@ -745,62 +785,37 @@ async function loadBoardTilesFromBackend() {
             boardTiles = result.board_state.boardTiles;
             if (builderHistoryStack.length === 0) saveBuilderState();
         } else {
-            if (!isPlayerPage) showMessage((result.message || "No saved board tiles found.") + ' Displaying default board tiles.', 'info');
-            boardTiles = [
-                { q: 0, r: -2, type: 'rock', number: 10 },
-                { q: 1, r: -2, type: 'sheep', number: 2 },
-                { q: 2, r: -2, type: 'wood', number: 9 },
-                { q: -1, r: -1, type: 'brick', number: 12 },
-                { q: 0, r: -1, type: 'hay', number: 6 },
-                { q: 1, r: -1, type: 'rock', number: 4 },
-                { q: 2, r: -1, type: 'wood', number: 10 },
-                { q: -2, r: 0, type: 'wood', number: 9 },
-                { q: -1, r: 0, type: 'sheep', number: 11 },
-                { q: 0, r: 0, type: 'desert', number: null },
-                { q: 1, r: 0, type: 'brick', number: 3 },
-                { q: 2, r: 0, type: 'hay', number: 8 },
-                { q: -2, r: 1, type: 'rock', number: 8 },
-                { q: -1, r: 1, type: 'hay', number: 3 },
-                { q: 0, r: 1, type: 'wood', number: 4 },
-                { q: 1, r: 1, type: 'sheep', number: 5 },
-                { q: -2, r: 2, type: 'brick', number: 5 },
-                { q: -1, r: 2, type: 'sheep', number: 6 },
-                { q: 0, r: 2, type: 'hay', number: 11 }
-            ];
+            // Check if 6-player mode is active from play state
+            const isSixPlayer = allPlayersData.max_players === 6;
+
+            if (isSixPlayer) {
+                // Extended 30-Hex layout coordinates for 6 players
+                boardTiles = [
+                    { q: 0, r: -3, type: 'hay', number: 10 }, { q: 1, r: -3, type: 'rock', number: 8 }, { q: 2, r: -3, type: 'sheep', number: 11 },
+                    { q: -1, r: -2, type: 'wood', number: 5 }, { q: 0, r: -2, type: 'hay', number: 4 }, { q: 1, r: -2, type: 'wood', number: 3 }, { q: 2, r: -2, type: 'hay', number: 10 },
+                    { q: -2, r: -1, type: 'brick', number: 6 }, { q: -1, r: -1, type: 'sheep', number: 3 }, { q: 0, r: -1, type: 'rock', number: 11 }, { q: 1, r: -1, type: 'wood', number: 4 }, { q: 2, r: -1, type: 'brick', number: 8 },
+                    { q: -2, r: 0, type: 'sheep', number: 9 }, { q: -1, r: 0, type: 'rock', number: 5 }, { q: 0, r: 0, type: 'desert', number: null }, { q: 1, r: 0, type: 'hay', number: 6 }, { q: 2, r: 0, type: 'wood', number: 5 },
+                    { q: -2, r: 1, type: 'wood', number: 8 }, { q: -1, r: 1, type: 'brick', number: 10 }, { q: 0, r: 1, type: 'sheep', number: 9 }, { q: 1, r: 1, type: 'rock', number: 2 }, { q: 2, r: 1, type: 'hay', number: 4 },
+                    { q: -2, r: 2, type: 'rock', number: 3 }, { q: -1, r: 2, type: 'hay', number: 2 }, { q: 0, r: 2, type: 'brick', number: 9 }, { q: 1, r: 2, type: 'wood', number: 12 },
+                    { q: -1, r: 3, type: 'sheep', number: 8 }, { q: 0, r: 3, type: 'rock', number: 11 }, { q: 1, r: 3, type: 'brick', number: 5 }, { q: 2, r: 3, type: 'desert', number: null }
+                ];
+            } else {
+                // Standard 19-Hex board
+                boardTiles = [
+                    { q: 0, r: -2, type: 'rock', number: 10 }, { q: 1, r: -2, type: 'sheep', number: 2 }, { q: 2, r: -2, type: 'wood', number: 9 },
+                    { q: -1, r: -1, type: 'brick', number: 12 }, { q: 0, r: -1, type: 'hay', number: 6 }, { q: 1, r: -1, type: 'rock', number: 4 }, { q: 2, r: -1, type: 'wood', number: 10 },
+                    { q: -2, r: 0, type: 'wood', number: 9 }, { q: -1, r: 0, type: 'sheep', number: 11 }, { q: 0, r: 0, type: 'desert', number: null }, { q: 1, r: 0, type: 'brick', number: 3 }, { q: 2, r: 0, type: 'hay', number: 8 },
+                    { q: -2, r: 1, type: 'rock', number: 8 }, { q: -1, r: 1, type: 'hay', number: 3 }, { q: 0, r: 1, type: 'wood', number: 4 }, { q: 1, r: 1, type: 'sheep', number: 5 },
+                    { q: -2, r: 2, type: 'brick', number: 5 }, { q: -1, r: 2, type: 'sheep', number: 6 }, { q: 0, r: 2, type: 'hay', number: 11 }
+                ];
+            }
             if (builderHistoryStack.length === 0) saveBuilderState();
         }
         allJunctions = getAllJunctions();
         allEdges = getAllEdges();
         resizeCanvas();
     } catch (e) {
-        boardEditingAllowed = false;
-        updateBoardEditingUI();
-        if (!isPlayerPage) showMessage('Network error loading board tiles: ' + e.message + '. Displaying default board tiles.', 'error');
-        console.error('Error loading board tiles from backend:', e);
-        boardTiles = [
-            { q: 0, r: -2, type: 'rock', number: 10 },
-            { q: 1, r: -2, type: 'sheep', number: 2 },
-            { q: 2, r: -2, type: 'wood', number: 9 },
-            { q: -1, r: -1, type: 'brick', number: 12 },
-            { q: 0, r: -1, type: 'hay', number: 6 },
-            { q: 1, r: -1, type: 'rock', number: 4 },
-            { q: 2, r: -1, type: 'wood', number: 10 },
-            { q: -2, r: 0, type: 'wood', number: 9 },
-            { q: -1, r: 0, type: 'sheep', number: 11 },
-            { q: 0, r: 0, type: 'desert', number: null },
-            { q: 1, r: 0, type: 'brick', number: 3 },
-            { q: 2, r: 0, type: 'hay', number: 8 },
-            { q: -2, r: 1, type: 'rock', number: 8 },
-            { q: -1, r: 1, type: 'hay', number: 3 },
-            { q: 0, r: 1, type: 'wood', number: 4 },
-            { q: 1, r: 1, type: 'sheep', number: 5 },
-            { q: -2, r: 2, type: 'brick', number: 5 },
-            { q: -1, r: 2, type: 'sheep', number: 6 },
-            { q: 0, r: 2, type: 'hay', number: 11 }
-        ];
-        allJunctions = getAllJunctions();
-        allEdges = getAllEdges();
-        resizeCanvas();
+        console.error('Error loading board tiles from backend:', e); // <-- Fixed from '...'
     }
 }
 
@@ -846,6 +861,9 @@ async function loadAllPlayerStatesFromBackend() {
         const result = await response.json();
         if (result.status === 'success' && result.play_state) {
             const loadedStates = result.play_state;
+			if (result.play_state && result.play_state.max_players) {
+                allPlayersData.max_players = result.play_state.max_players;
+            }
             if (result.player_colors) window.CATAN_PLAYER_COLORS = result.player_colors;
             allPlayersData._started = Boolean(loadedStates._started);
             if (isPlayerPage) {
@@ -901,7 +919,7 @@ async function loadAllPlayerStatesFromBackend() {
             allPlayersData._freeRoads = loadedStates._freeRoads || 0;
             if (isGamePage && loadedStates._lastRoll) renderGameDiceResult(loadedStates._lastRoll.dice, allPlayersData[loadedStates._lastRoll.player]?.playerName);
             const deckCount = document.getElementById('devDeckCount');
-            if (deckCount) deckCount.textContent = loadedStates._devDeck?.length ?? 25;
+			if (deckCount) deckCount.textContent = loadedStates._devDeck?.length ?? (loadedStates.max_players === 6 ? 34 : 25);
             const devPile = document.querySelector('.player-controls .dev-card[data-resource-type="development"]');
             if (devPile) {
                 const empty = Boolean(loadedStates._devDeckInitialized) && Array.isArray(loadedStates._devDeck) && loadedStates._devDeck.length === 0;
@@ -952,19 +970,19 @@ async function loadAllPlayerStatesFromBackend() {
 }
 async function loadAllStatesFromBackend() {
     console.log("loading data");
-    await loadBoardTilesFromBackend();
     await loadAllPlayerStatesFromBackend();
+    await loadBoardTilesFromBackend();
     updateLargestArmyHolder();
     updateLongestRoadHolder();
     if (isGamePage) calculatepointsandcards();
     //await loadRobberStateFromBackend();
     drawBoard();
 }
-async function resetgame()
+async function resetgame(mode ='4')
 {
     let response;
     try {
-        response = await fetch('/catan/reset_game', { cache: 'no-store' });
+        response = await fetch(`/catan/reset_game?players=${mode}`, { cache: 'no-store' });
     } catch (e) {
         console.error('Network error:', e);
         showMessage('Network error resetting game: ' + e.message, 'error');
@@ -1467,7 +1485,9 @@ if (isGamePage) {
         } else if (tool === 'shuffle-numbers') {
             shuffleNumbers();
         } else if (tool === 'reset-game') {
-            if (await confirmReset()) await resetgame();
+			const mode = await confirmReset();
+			if (mode) await resetgame(mode);
+            
         }
         updateBoardEditingUI();
         drawBoard();
@@ -1673,24 +1693,45 @@ function fitGameMap() {
 function resizeCanvas() {
     fitGameMap();
     
+    const MOBILE_MAP_ZOOM = 1.6;   // 60% bigger
+    const mobileZoomed = mapZoomLevel === 2 && window.matchMedia('(max-width: 768px)').matches;
+    const gameMap = isGamePage ? document.querySelector('.game-map') : null;
+
+    // undo the mobile-zoom sizing first, so the measurements below are the normal ones
+    if (gameMap && !mobileZoomed) {
+        gameMap.style.paddingBottom = '';
+        canvas.style.removeProperty('width');
+        canvas.style.removeProperty('height');
+    }
+
     const containerWidth = canvas.parentElement.clientWidth;
     const containerHeight = canvas.parentElement.clientHeight;
-    console.log("c: w"+containerWidth+"h"+containerHeight);
     const aspectRatio = isPlayerPage && window.matchMedia('(max-width: 768px)').matches ? 0.95 : 1.2;
     let newWidth = containerWidth * mapZoomLevel;
     let newHeight = newWidth / aspectRatio;
 
-    if (isGamePage) {
+    if (isGamePage && mobileZoomed) {
+        // buffer and on-screen size are set together, 1.6x bigger, same 1.2 : 1 shape
+        newWidth = containerWidth * MOBILE_MAP_ZOOM;
+        newHeight = newWidth / aspectRatio;
+        gameMap.style.paddingBottom = (newHeight / containerWidth * 100) + '%';   // box grows taller
+        canvas.style.setProperty('width', newWidth + 'px', 'important');
+        canvas.style.setProperty('height', newHeight + 'px', 'important');
+    } else if (isGamePage) {
         // fill the whole map area; the board itself is scaled to fit below
         newWidth = containerWidth;
         newHeight = containerHeight || containerWidth / aspectRatio;
-    } else if (newHeight > containerHeight) {
-        newHeight = containerHeight;
-        newWidth = newHeight * aspectRatio;
+    } else if (mobileZoomed) {
+        // player page (this part is already working for you)
+        newWidth = containerWidth * MOBILE_MAP_ZOOM;
+        newHeight = newWidth / aspectRatio;
     }
-    console.log("n: w"+newWidth+"h"+newHeight);
     canvas.width = newWidth;
     canvas.height = newHeight;
+    if (!isGamePage) {
+        canvas.style.width = `${newWidth}px`;
+        canvas.style.height = `${newHeight}px`;
+    }
 
     let minRawX = Infinity, maxRawX = -Infinity, minRawY = Infinity, maxRawY = -Infinity;
     if (boardTiles.length > 0) {
@@ -2365,19 +2406,36 @@ async function playdevcard(currentPlayerId, item) {
 function renderGameScoreboard() {
     if (!isGamePage) return;
 
-    const seatPlayerIds = ['player1', 'player2', 'player3', 'player4'];
+    const maxPlayers = allPlayersData.max_players || 4;
+    const seatPlayerIds = Array.from({ length: maxPlayers }, (_, i) => `player${i + 1}`);
     const registeredOrder = Array.isArray(allPlayersData._turnOrder)
         ? allPlayersData._turnOrder.filter(playerId => seatPlayerIds.includes(playerId))
         : [];
     const playerIds = [...new Set([...registeredOrder, ...seatPlayerIds])];
-    const longestRoadOwner = seatPlayerIds.find(playerId => allPlayersData[playerId].longestroad) || '';
+    const longestRoadOwner = seatPlayerIds.find(playerId => allPlayersData[playerId]?.longestroad) || '';
     const scoreboardBody = document.querySelector('#assignpoint table tbody');
-    const activeIds = [];
+    if (!scoreboardBody) return;
 
+    // Ensure table rows match maxPlayers length
+    let existingRows = scoreboardBody.querySelectorAll('tr');
+    if (existingRows.length < maxPlayers) {
+        for (let i = existingRows.length + 1; i <= maxPlayers; i++) {
+            const tr = document.createElement('tr');
+            tr.dataset.playerId = `player${i}`;
+            tr.innerHTML = `<td>Player ${i}</td><td>0</td><td></td><td>0</td><td></td><td>0</td>`;
+            scoreboardBody.appendChild(tr);
+        }
+    } else {
+        existingRows.forEach((row, idx) => {
+            row.style.display = idx < maxPlayers ? '' : 'none';
+        });
+    }
+
+    const activeIds = [];
     playerIds.forEach(playerId => {
         const player = allPlayersData[playerId];
         const row = scoreboardBody.querySelector(`[data-player-id="${playerId}"]`);
-        if (!row) return;
+        if (!row || !player) return;
 
         row.cells[0].textContent = player.playerName;
         row.cells[1].textContent = player.score;
@@ -2402,9 +2460,11 @@ function renderGameScoreboard() {
     const currentPlayerId = allPlayersData._currentTurnPlayerId;
     const currentName = allPlayersData._started && allPlayersData[currentPlayerId]?.playerName;
     const title = document.getElementById('gameTurnTitle');
-    title.textContent = currentName
-        ? `Catan Game play (${currentName}'s Turn)` : 'Catan Game play (Waiting to start)';
-    title.style.color = currentName ? window.CATAN_PLAYER_COLORS?.[currentPlayerId] || '' : '';
+    if (title) {
+        title.textContent = currentName
+            ? `Catan Game play (${currentName}'s Turn)` : 'Catan Game play (Waiting to start)';
+        title.style.color = currentName ? window.CATAN_PLAYER_COLORS?.[currentPlayerId] || '' : '';
+    }
 }
 
 document.getElementById('longestRoadSelect')?.addEventListener('change', event => {

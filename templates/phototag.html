@@ -51,11 +51,14 @@
     <span class="lbl-long">Show raw</span><span class="lbl-short">Raw</span>
   </label>
 
-  <button class="btn-process" id="btn-process" disabled
+  <button class="btn-process" id="btn-process" disabled{% if not can_manage %} hidden{% endif %}
           title="Delete (d) / move best → b, good → g">Process</button>
 
   <button class="btn-process btn-download" id="btn-download" disabled
           title="Download marked photos (originals)" aria-label="Download marked photos">⬇ <span id="download-count">0</span></button>
+
+    <button class="btn-process btn-download" id="btn-download-folder" disabled
+      title="Download all original photos from this folder" aria-label="Download all photos from current folder">⬇ <span class="folder-download-label">Download all</span></button>
 
   <div class="toolbar-counter" id="counter-wrap">
     <button class="counter-btn" id="counter" aria-label="Jump to photo" aria-expanded="false" disabled>—</button>
@@ -147,7 +150,7 @@
   </button>
 
   <!-- tag: delete -->
-  <button class="icon-btn btn-delete" id="btn-delete" data-tip="Delete" aria-label="Mark for Delete">
+  <button class="icon-btn btn-delete" id="btn-delete" data-tip="Delete" aria-label="Mark for Delete"{% if not can_manage %} hidden disabled{% endif %}>
     🗑
     <span class="key-badge">D</span>
   </button>
@@ -165,6 +168,8 @@
 <!-- folder data from Flask -->
 <script>
   window.PHOTOTAG_FOLDERS = {{ folders | tojson }};
+  window.PHOTOTAG_ACCESS_EXPIRES = {{ access_expires | tojson }};
+  window.PHOTOTAG_CAN_MANAGE = {{ can_manage | tojson }};
 </script>
 <script src="{{ url_for('static', filename='js/phototag.js') }}"></script>
 </body>

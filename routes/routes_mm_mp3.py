@@ -5,11 +5,12 @@ from pathlib import Path
 from flask import Blueprint, render_template, request, jsonify, send_file, url_for
 
 bp_mm_mp3 = Blueprint("mm_mp3", __name__)
-DB_PATH = Path(__file__).resolve().parent.parent / "mp3.db"
+DB_PATH = Path(__file__).resolve().parent.parent / "data" / "mm" / "mp3.db"
 SUPPORTED_AUDIO_EXTS = {".mp3", ".m4a", ".flac", ".wav", ".ogg", ".aac", ".wma"}
 
 
 def get_db():
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
@@ -28,6 +29,7 @@ def init_db():
         category TEXT DEFAULT NULL,
         playlist TEXT NOT NULL,
         tag_list TEXT DEFAULT '',
+        chapter TEXT DEFAULT '',
         duration INTEGER DEFAULT 0,
         size_bytes INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -37,6 +39,8 @@ def init_db():
     cols = [r["name"] for r in cursor.fetchall()]
     if "category" not in cols:
         cursor.execute("ALTER TABLE tracks ADD COLUMN category TEXT DEFAULT NULL;")
+    if "chapter" not in cols:
+        cursor.execute("ALTER TABLE tracks ADD COLUMN chapter TEXT DEFAULT '';")
     cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_tracks_path ON tracks(path);")
     conn.commit()
     conn.close()
@@ -49,12 +53,13 @@ init_db()
 # 1. Main MP3 Player
 # -----------------------------------------------------------------------------
 @bp_mm_mp3.route("/mm/mp3")
-def mp3_player():
+def mp3_player(tv_mode=False):
     conn = get_db()
     cursor = conn.cursor()
 
     selected_playlist = request.args.get("playlist")
     selected_category = request.args.get("category", "").strip() or None
+    selected_artist = request.args.get("artist", "").strip() or None
 
     cursor.execute("SELECT DISTINCT playlist FROM tracks WHERE playlist IS NOT NULL AND playlist != '' ORDER BY playlist;")
     all_playlists = [row["playlist"] for row in cursor.fetchall()]
@@ -64,14 +69,17 @@ def mp3_player():
     cursor.execute("SELECT DISTINCT category FROM tracks WHERE playlist = ? AND category IS NOT NULL AND category != '' ORDER BY category;", (selected_playlist,))
     all_categories = [row["category"] for row in cursor.fetchall()]
 
+    conditions = "playlist = ?"
+    params = [selected_playlist]
     if selected_category:
-        query = "SELECT * FROM tracks WHERE playlist = ? AND category = ? ORDER BY title;"
-        params = (selected_playlist, selected_category)
-    else:
-        query = "SELECT * FROM tracks WHERE playlist = ? ORDER BY title;"
-        params = (selected_playlist,)
-
-    cursor.execute(query, params)
+        conditions += " AND category = ?"
+        params.append(selected_category)
+    cursor.execute(f"SELECT DISTINCT artist FROM tracks WHERE {conditions} AND artist IS NOT NULL AND artist != '' ORDER BY artist;", params)
+    all_artists = [row['artist'] for row in cursor.fetchall()]
+    if selected_artist:
+        conditions += " AND artist = ?"
+        params.append(selected_artist)
+    cursor.execute(f"SELECT * FROM tracks WHERE {conditions} ORDER BY title;", params)
     tracks = [dict(row) for row in cursor.fetchall()]
     conn.close()
 
@@ -82,7 +90,16 @@ def mp3_player():
         selected_playlist=selected_playlist,
         all_categories=all_categories,
         selected_category=selected_category,
+        all_artists=all_artists,
+        selected_artist=selected_artist,
+        selected_tags=[tag.strip() for tag in request.args.getlist('tag') if tag.strip()],
+        tv_mode=tv_mode,
     )
+
+
+@bp_mm_mp3.route('/mm/mp3/tv')
+def mp3_tv():
+    return mp3_player(tv_mode=True)
 
 
 # -----------------------------------------------------------------------------
@@ -116,6 +133,7 @@ def api_library():
     playlist = request.args.get("playlist", "").strip()
     category = request.args.get("category", "").strip()
     tag = request.args.get("tag", "").strip()
+    selected_tags = [value.strip() for value in request.args.getlist('tag') if value.strip()]
 
     conn = get_db()
     cursor = conn.cursor()
@@ -127,7 +145,7 @@ def api_library():
     cursor.execute("SELECT DISTINCT category FROM tracks WHERE playlist = ? AND category IS NOT NULL AND category != '' ORDER BY category;", (playlist,))
     categories = [r["category"] for r in cursor.fetchall()]
 
-    sql = "SELECT id, title, artist, album, category, playlist, tag_list, duration FROM tracks WHERE playlist = ?"
+    sql = "SELECT id, title, artist, album, category, playlist, tag_list, chapter, duration FROM tracks WHERE playlist = ?"
     params = [playlist]
     if category:
         sql += " AND category = ?"
@@ -138,8 +156,8 @@ def api_library():
 
     # tags offered are those of the playlist/category selection, before the tag filter
     tags = sorted({t for r in rows for t in _split_tags(r["tag_list"])}, key=str.lower)
-    if tag:
-        rows = [r for r in rows if tag in _split_tags(r["tag_list"])]
+    if selected_tags:
+        rows = [r for r in rows if all(value in _split_tags(r['tag_list']) for value in selected_tags)]
 
     tracks = [{
         "id": r["id"],
@@ -149,6 +167,7 @@ def api_library():
         "category": r["category"] or "",
         "playlist": r["playlist"],
         "tags": _split_tags(r["tag_list"]),
+        "chapter": r["chapter"] or "",
         "duration": r["duration"] or 0,
         "stream_url": url_for("mm_mp3.stream_audio", track_id=r["id"]),
     } for r in rows]
@@ -158,6 +177,7 @@ def api_library():
         "playlist": playlist,
         "category": category,
         "tag": tag,
+        "selected_tags": selected_tags,
         "playlists": playlists,
         "categories": categories,
         "tags": tags,
@@ -175,6 +195,8 @@ def update_track_metadata(track_id):
     new_playlist = data.get("playlist", "").strip()
     new_category = data.get("category", "").strip() or None
     new_tags = data.get("tag_list", "").strip()
+    new_chapter = str(data['chapter'] or '').strip() if 'chapter' in data else None
+    new_artist = str(data['artist'] or '').strip() if 'artist' in data else None
 
     if not new_playlist:
         return jsonify({"success": False, "error": "Playlist cannot be empty"}), 400
@@ -183,9 +205,9 @@ def update_track_metadata(track_id):
     cursor = conn.cursor()
     cursor.execute("""
     UPDATE tracks 
-    SET playlist = ?, category = ?, tag_list = ?
+    SET playlist = ?, category = ?, tag_list = ?, chapter = COALESCE(?, chapter), artist = COALESCE(?, artist)
     WHERE id = ?;
-    """, (new_playlist, new_category, new_tags, track_id))
+    """, (new_playlist, new_category, new_tags, new_chapter, new_artist, track_id))
     conn.commit()
     conn.close()
 
@@ -242,7 +264,6 @@ def scan_folder():
         for f in sorted(files):
             file_path = Path(root) / f
             if file_path.suffix.lower() in SUPPORTED_AUDIO_EXTS:
-                # Default playlist is the immediate parent directory of the file
                 parent_folder_name = file_path.parent.name
 
                 records.append({
@@ -250,8 +271,8 @@ def scan_folder():
                     "title": file_path.stem,          # Filename without extension
                     "artist": "",
                     "album": parent_folder_name,
-                    "category": "",
-                    "playlist": parent_folder_name,   # Default playlist = parent folder!
+                    "category": parent_folder_name,
+                    "playlist": file_path.parent.parent.name,
                     "tag_list": "",
                 })
 

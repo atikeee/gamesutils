@@ -55,7 +55,14 @@
                 <form method="dialog">
                     <div class="game-dialog-icon"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i></div>
                     <h2 id="resetDialogTitle">Reset game?</h2>
-                    <p id="resetDialogText">All player seats and progress will be cleared. The board layout is kept.</p>
+                    <p id="resetDialogText">All player seats and progress will be cleared.</p>
+                    
+                    <div style="margin: 12px 0; text-align: left; font-size: 0.95rem;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 6px;">Game Mode:</label>
+                        <label style="display: block; margin-bottom: 4px;"><input type="radio" name="player_mode" value="4" checked> 4 Players (Standard Board)</label>
+                        <label style="display: block;"><input type="radio" name="player_mode" value="6"> 6 Players (Extended 30-Hex Board)</label>
+                    </div>
+
                     <div class="game-dialog-actions">
                         <button type="submit" value="cancel" class="game-dialog-cancel" autofocus>Cancel</button>
                         <button type="submit" value="confirm" class="game-dialog-confirm"><i class="fas fa-power-off" aria-hidden="true"></i> Reset game</button>
@@ -147,6 +154,17 @@
             if (dlg.returnValue === 'confirm') setTimeout(function () { location.reload(); }, 1000);
         });
     })();
+	var dlg = document.getElementById('resetDialog');
+        dlg.addEventListener('close', function () {
+            if (dlg.returnValue === 'confirm') {
+                var selectedMode = dlg.querySelector('input[name="player_mode"]:checked').value;
+                setTimeout(function () { 
+                    fetch('/catan/reset_game?players=' + selectedMode)
+                        .then(res => res.json())
+                        .then(() => location.reload()); 
+                }, 1000);
+            }
+        });
     </script>
 </body>
 </html>

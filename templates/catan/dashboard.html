@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Catan</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_dashboard.css') }}">
+</head>
+<body>
+    <main class="catan-hub">
+        <header class="hub-header">
+            <h1>Catan</h1>
+            <a class="hub-back" href="{{ url_for('index') }}"><i class="fas fa-arrow-left" aria-hidden="true"></i> Game Hub</a>
+        </header>
+        {% for variant in [
+            {'number': '01', 'name': 'Catan', 'edition': 'Base Game', 'image': 'catan-board.png', 'game': 'catan_game', 'player': 'catan_player_lobby'},
+            {'number': '02', 'name': 'Cities & Knights', 'edition': 'Expansion', 'image': 'cities-knights-board.png', 'game': 'catan2_game', 'player': 'catan2_player_lobby'}
+        ] %}
+        <section class="edition" aria-labelledby="edition-{{ variant.number }}">
+            <div class="edition-heading">
+                <span class="edition-number">{{ variant.number }}</span>
+                <p class="edition-label">{{ variant.edition }}</p>
+                <h2 id="edition-{{ variant.number }}">{{ variant.name }}</h2>
+            </div>
+            <div class="edition-links">
+                <a class="destination" href="{{ url_for(variant.game) }}" aria-label="{{ variant.name }} game">
+                    <div class="destination-photo">
+                        <img src="{{ url_for('static', filename='images/catan/' + variant.image) }}" alt="{{ variant.name }} game board" width="900" height="750">
+                    </div>
+                    <span class="destination-label"><span><i class="fas fa-desktop" aria-hidden="true"></i> Game</span><i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                </a>
+                <a class="destination destination-player" href="{{ url_for(variant.player) }}" aria-label="{{ variant.name }} player">
+                    <div class="destination-photo">
+                        <img src="{{ url_for('static', filename='images/catan/' + variant.image) }}" alt="" width="900" height="750">
+                        <div class="resource-hand" aria-hidden="true">
+                            <img src="{{ url_for('static', filename='images/catan/wood.webp') }}" alt="" width="70" height="100">
+                            <img src="{{ url_for('static', filename='images/catan/brick.webp') }}" alt="" width="70" height="100">
+                            <img src="{{ url_for('static', filename='images/catan/' + ('coin.webp' if variant.number == '02' else 'sheep.webp')) }}" alt="" width="70" height="100">
+                        </div>
+                    </div>
+                    <span class="destination-label"><span><i class="fas fa-users" aria-hidden="true"></i> Player</span><i class="fas fa-arrow-right" aria-hidden="true"></i></span>
+                </a>
+            </div>
+        </section>
+        {% endfor %}
+    </main>
+</body>
+</html>

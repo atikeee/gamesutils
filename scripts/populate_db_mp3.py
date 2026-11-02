@@ -3,7 +3,7 @@
 populate_db_mp3.py
 ==================
 Command-line utility for scanning audio files, exporting to CSV for manual editing,
-and importing from CSV directly into SQLite mp3.db.
+and importing from CSV directly into SQLite data/mm/mp3.db.
 """
 
 import argparse
@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 SUPPORTED_EXTENSIONS = {".mp3", ".m4a", ".flac", ".wav", ".ogg"}
-DEFAULT_DB = Path(__file__).resolve().parent.parent / "mp3.db"
+DEFAULT_DB = Path(__file__).resolve().parent.parent / "data" / "mm" / "mp3.db"
 
 
 def init_db(conn: sqlite3.Connection):
@@ -84,6 +84,7 @@ def export_to_csv(records: List[Dict], csv_file: Path):
 
 def import_csv_to_db(csv_file: Path, db_path: Path):
     """Imports or updates tracks from CSV into SQLite database."""
+    db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
     init_db(conn)
     cursor = conn.cursor()

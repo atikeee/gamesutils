@@ -158,7 +158,7 @@ button, select { font-family: inherit; }
     .game-board-shell { width: 100%; }
     .game-map { height: 0; padding-bottom: 83.333%; }              /* keeps the 1.2 : 1 board shape */
     .canvas-wrapper.map-zoom-viewport { position: absolute; top: 0; left: 0; }
-    .map-zoom-viewport.map-zoomed { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: auto; }
+    .map-zoom-viewport.map-zoomed { overflow: auto; -webkit-overflow-scrolling: touch; scrollbar-width: auto; }
     .map-zoom-viewport.map-zoomed::-webkit-scrollbar { display: block; }
     .map-zoom-viewport.map-zoomed #catanBoard { width: 200% !important; height: 100% !important; }
     .map-tool { width: 40px; height: 40px; }

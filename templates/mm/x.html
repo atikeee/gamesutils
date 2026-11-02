@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Atiq's Stream Player</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm.css') }}">
+    <!-- Include Hls.js for .m3u8 playback in standard browsers -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+    <div class="mm-container" id="appContainer" data-page="{{ page }}" data-total-pages="{{ total_pages }}" data-playlist="{{ selected_playlist }}">
+        <header class="mm-header">
+            <select id="playlistFilterSelect" class="playlist-select" aria-label="Playlist">
+                {% for pl in all_playlists %}
+                    <option value="{{ pl }}" {% if selected_playlist == pl %}selected{% endif %}>{{ pl }}</option>
+                {% endfor %}
+            </select>
+
+            <div class="tag-filter-bar">
+                {% if all_tags %}
+                <span class="tag-filter-title">Tags</span>
+                {% for t in all_tags %}
+                    {% set is_selected = t.name in selected_tags %}
+                    {% set new_tags = (selected_tags | reject('equalto', t.name) | list) if is_selected else ((selected_tags + [t.name]) | list) %}
+                    <a href="{{ url_for('routes_mm.mm_x', playlist=selected_playlist, tags=new_tags|join(',')) }}" 
+                       class="tag-chip {% if is_selected %}active{% endif %}">
+                        {{ t.name }} <span class="tag-count">{{ t.count }}</span>
+                    </a>
+                {% endfor %}
+                {% endif %}
+            </div>
+			<div class="header-right">
+				<!-- Hidden file input for bulk text file uploads -->
+				<input type="file" id="bulkUploadInput" accept=".txt" style="display: none;">
+				
+				<!-- Upload Button with + icon -->
+				<button class="icon-btn" id="openUploadBtn" type="button" title="Upload links text file (+)">
+					📁+
+				</button>
+
+				<button class="icon-btn" id="openAddModalBtn" type="button" title="Add Video">+</button>
+			</div>
+
+        </header>
+
+        <div class="mm-main-layout">
+            <div class="player-column">
+                {% if videos %}
+                    {% set initial_vid = videos[0] %}
+                    <div class="active-video-container" id="activeVideoCard" 
+                         data-id="{{ initial_vid.id }}"
+                         data-out-url="{{ initial_vid.out_url }}">
+                        <!-- HTML5 Video element with HLS support -->
+                        <video id="main-hls-player" controls playsinline crossorigin="anonymous" style="width:100%; height:100%; background:#000;">
+                            Your browser does not support HTML5 video.
+                        </video>
+                    </div>
+
+                    <div class="player-controls-bar">
+                        <div class="buttons-row">
+                            <button class="ctrl-btn" id="prevTrackBtn" type="button">&#9198;</button>
+                            <button class="ctrl-btn" id="rev10sBtn" type="button">&#8634;</button>
+                            <button class="ctrl-btn play-main-btn" id="mainPlayBtn" type="button">
+                                <span class="icon-play">&#9658;</span>
+                                <span class="icon-pause">&#10074;&#10074;</span>
+                            </button>
+                            <button class="ctrl-btn" id="fwd10sBtn" type="button">&#8635;</button>
+                            <button class="ctrl-btn" id="nextTrackBtn" type="button">&#9197;</button>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <p>No videos found in this playlist.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="playlist-column">
+                <div class="playlist-header">
+                    <h3>{{ selected_playlist }} ({{ total_videos }} videos)</h3>
+                    <span class="page-indicator">Page {{ page }} of {{ total_pages }}</span>
+                </div>
+
+                <div class="playlist-items-list" id="playlistList">
+                    {% for v in videos %}
+                    <div class="playlist-item {% if loop.first %}active{% endif %}" 
+						 data-id="{{ v.id }}" 
+						 data-input-url="{{ v.input_url }}"
+						 data-out-url="{{ v.out_url }}"
+						 data-title="{{ v.title }}" 
+						 data-playlist="{{ v.playlist or selected_playlist }}">
+						<div class="item-info" style="padding: 8px;">
+							<h4 class="item-title">{{ v.title }}</h4>
+							<p class="item-artist" style="font-size: 0.75rem; color: #80cbc4; word-break: break-all;">{{ v.input_url }}</p>
+						</div>
+					</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Video Modal -->
+    <div class="modal-backdrop" id="addVideoModal" style="display:none;">
+        <div class="modal-card">
+            <h3>Add M3U Stream Video</h3>
+            <input type="text" id="newInputUrl" class="modal-input" placeholder="Input URL (e.g., https://www.x.com/view_video...)">
+            <input type="text" id="newOutUrl" class="modal-input" placeholder="Output M3U8 URL (e.g., https://hv-h.x.com/.../master.m3u8)">
+            <input type="text" id="newTitle" class="modal-input" placeholder="Title">
+            <input type="text" id="newPlaylist" class="modal-input" value="{{ selected_playlist }}" placeholder="Playlist">
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="cancelAddBtn">Cancel</button>
+                <button type="button" class="btn-submit" id="submitAddBtn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/mm_x.js') }}"></script>
+</body>
+</html>

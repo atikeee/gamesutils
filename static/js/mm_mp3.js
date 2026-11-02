@@ -2,13 +2,14 @@
 
 const appContainer = document.getElementById('appContainer');
 const allTracks = readJsonData(appContainer, 'tracks', []);
+const TV_MODE = readJsonData(appContainer, 'tvMode', false) === true;
 let filteredTracks = [...allTracks];
 let currentTrackIndex = -1;
 let currentTrack = null;
 
 let queuePage = 1;
 const songsPerPage = 10;
-let selectedTagFilter = '';
+const selectedTagFilters = new Set(readJsonData(appContainer, 'selectedTags', []));
 
 const audio = document.getElementById('audioEngine');
 
@@ -22,6 +23,37 @@ function formatTime(secs) {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
+function parseChapters(value) {
+    const timestamps = String(value || '').split(',').map(token => {
+        const parts = token.trim().split(':');
+        if (!token.trim() || parts.length > 3 || !parts.every(part => /^\d+(?:\.\d+)?$/.test(part))
+            || !parts.slice(0, -1).every(part => /^\d+$/.test(part))) return null;
+        const seconds = parts.reduce((total, part) => total * 60 + Number(part), 0);
+        return Number.isFinite(seconds) ? seconds : null;
+    }).filter(seconds => seconds !== null);
+    return [...new Set(timestamps)].sort((first, second) => first - second);
+}
+
+function getChapterTarget(direction) {
+    if (!audio || !currentTrack) return null;
+    const chapters = parseChapters(currentTrack.chapter).filter(seconds => !Number.isFinite(audio.duration) || seconds <= audio.duration);
+    if (direction > 0) return chapters.find(seconds => seconds > audio.currentTime + 0.05) ?? null;
+    const reached = chapters.filter(seconds => seconds <= audio.currentTime + 0.05);
+    return reached.length > 1 ? reached[reached.length - 2] : null;
+}
+
+function updateChapterButtons() {
+    document.getElementById('prevChapterBtn').disabled = getChapterTarget(-1) === null;
+    document.getElementById('nextChapterBtn').disabled = getChapterTarget(1) === null;
+}
+
+function seekChapter(direction) {
+    const target = getChapterTarget(direction);
+    if (target === null || audio.readyState === 0) return;
+    audio.currentTime = target;
+    updateChapterButtons();
+}
+
 // ── Track selection & playback ────────────────────────────────────────────────
 function selectAndPlayTrack(index, autoPlay = true) {
     if (index < 0 || index >= filteredTracks.length) return;
@@ -32,18 +64,33 @@ function selectAndPlayTrack(index, autoPlay = true) {
     if (page !== queuePage) queuePage = page;
     renderQueue();
 
-    document.getElementById('nowTitle').textContent = currentTrack.title || 'Untitled';
-    document.getElementById('nowArtist').textContent = (currentTrack.artist || 'Unknown Artist') +
-        (currentTrack.album ? ` — ${currentTrack.album}` : '');
+    updateCurrentTrackInfo();
+    const chapterInput = document.getElementById('chapterInput');
+    if (chapterInput) {
+        chapterInput.value = currentTrack.chapter || '';
+        chapterInput.disabled = false;
+        document.getElementById('saveChaptersBtn').disabled = false;
+        document.getElementById('chapterStatus').textContent = '';
+    }
 
     renderInlineValue(document.getElementById('playlistEdit'), currentTrack.playlist || '');
     renderInlineValue(document.getElementById('categoryEdit'), currentTrack.category || '');
+    renderInlineValue(document.getElementById('artistEdit'), currentTrack.artist || '');
     renderActiveTags();
 
     if (audio) {
         audio.src = `/mm/api/mp3/stream/${currentTrack.id}`;
+        updateChapterButtons();
         if (autoPlay) audio.play().catch(e => console.warn('[Playback]', e));
     }
+}
+
+function updateCurrentTrackInfo() {
+    if (!currentTrack) return;
+    document.getElementById('nowTitle').textContent = currentTrack.title || 'Untitled';
+    document.getElementById('nowArtist').textContent = (currentTrack.artist || 'Unknown Artist') +
+        (currentTrack.album ? ` — ${currentTrack.album}` : '');
+    document.querySelector('.mp3-now-playing').title = [currentTrack.title, currentTrack.artist, currentTrack.album].filter(Boolean).join(' - ');
 }
 
 function playNextTrack() {
@@ -82,16 +129,11 @@ function renderQueue() {
     document.getElementById('queueList').innerHTML = pageTracks.map((t, idx) => {
         const globalIdx = start + idx;
         const isPlaying = currentTrack && currentTrack.id === t.id;
-        const cat = t.category
-            ? `<span class="mini-tag">${escapeHtml(t.category)}</span>`
-            : '<span class="mini-tag muted">No Cat</span>';
+        const tags = splitTags(t.tag_list).map(tag => `<span class="mini-tag">${escapeHtml(tag)}</span>`).join('');
         return `
-            <div class="playlist-item${isPlaying ? ' active' : ''}${t._missing ? ' missing' : ''}" data-index="${globalIdx}">
-                <span class="item-index">${isPlaying ? '&#9658;' : globalIdx + 1}</span>
+            <div class="playlist-item${isPlaying ? ' active' : ''}${t._missing ? ' missing' : ''}" data-index="${globalIdx}" tabindex="0" role="button">
                 <div class="item-info">
-                    <h4 class="item-title">${escapeHtml(t.title || 'Untitled')}</h4>
-                    <p class="item-artist">${escapeHtml(t.artist || 'Unknown Artist')}</p>
-                    <div class="item-tags">${cat}</div>
+                    <span class="item-title">${escapeHtml(t.title || 'Untitled')}</span>${tags}
                 </div>
             </div>`;
     }).join('');
@@ -127,6 +169,9 @@ function goToQueuePage(page) {
 function buildTagChips() {
     const counts = new Map();
     allTracks.forEach(t => splitTags(t.tag_list).forEach(tag => counts.set(tag, (counts.get(tag) || 0) + 1)));
+    selectedTagFilters.forEach(tag => {
+        if (!counts.has(tag)) counts.set(tag, 0);
+    });
 
     const bar = document.getElementById('tagChipsBar');
     bar.innerHTML = '';
@@ -139,7 +184,9 @@ function buildTagChips() {
     const addChip = (tag, label, count) => {
         const chip = document.createElement('button');
         chip.type = 'button';
-        chip.className = 'tag-chip' + (selectedTagFilter === tag ? ' active' : '');
+        const selected = tag ? selectedTagFilters.has(tag) : selectedTagFilters.size === 0;
+        chip.className = 'tag-chip' + (selected ? ' active' : '');
+        chip.setAttribute('aria-pressed', String(selected));
         chip.dataset.tag = tag;
         chip.textContent = label;
         if (count !== undefined) {
@@ -154,18 +201,29 @@ function buildTagChips() {
     counts.forEach((count, tag) => addChip(tag, tag, count));
 
     const datalist = document.getElementById('trackTagsDatalist');
-    datalist.innerHTML = '';
-    counts.forEach((_, tag) => {
-        const opt = document.createElement('option');
-        opt.value = tag;
-        datalist.appendChild(opt);
-    });
+    if (datalist) {
+        datalist.innerHTML = '';
+        counts.forEach((_, tag) => {
+            const opt = document.createElement('option');
+            opt.value = tag;
+            datalist.appendChild(opt);
+        });
+    }
 }
 
 function filterByTag(tag) {
-    selectedTagFilter = tag;
+    if (!tag) selectedTagFilters.clear();
+    else if (selectedTagFilters.has(tag)) selectedTagFilters.delete(tag);
+    else selectedTagFilters.add(tag);
     buildTagChips();
-    filteredTracks = tag ? allTracks.filter(t => splitTags(t.tag_list).includes(tag)) : [...allTracks];
+    applyTagFilters();
+}
+
+function applyTagFilters() {
+    filteredTracks = allTracks.filter(track => {
+        const tags = splitTags(track.tag_list);
+        return [...selectedTagFilters].every(tag => tags.includes(tag));
+    });
     currentTrackIndex = currentTrack ? filteredTracks.indexOf(currentTrack) : -1;
     queuePage = 1;
     renderQueue();
@@ -173,13 +231,16 @@ function filterByTag(tag) {
 
 // ── Metadata saving (playlist / category / tags share one endpoint) ──────────
 function saveTrack(track) {
+    if (TV_MODE) return Promise.reject(new Error('Editing is unavailable in the TV player.'));
     return fetch(`/mm/api/mp3/track/${track.id}/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
             playlist: track.playlist || '',
             category: track.category || '',
-            tag_list: track.tag_list || ''
+            tag_list: track.tag_list || '',
+            chapter: track.chapter || '',
+            artist: track.artist || ''
         })
     }).then(r => r.json().then(data => {
         if (!r.ok || !data.success) throw new Error(data.error || 'Server could not save metadata');
@@ -197,6 +258,7 @@ function commitTrackField(el, value, previous) {
     saveTrack(track)
         .then(() => {
             addInlineOption(field, value);
+            if (track === currentTrack) updateCurrentTrackInfo();
             renderQueue();
         })
         .catch(err => {
@@ -209,15 +271,18 @@ function commitTrackField(el, value, previous) {
 
 function renderActiveTags() {
     const container = document.getElementById('activeTagList');
+    if (!container) return;
     container.innerHTML = '';
     if (!currentTrack) return;
     splitTags(currentTrack.tag_list).forEach(tag => container.appendChild(makeTagBadge(tag, removeTag)));
 }
 
 function updateTags(tags) {
+    if (TV_MODE) return;
     currentTrack.tag_list = tags.join(', ');
     renderActiveTags();
     buildTagChips();
+    applyTagFilters();
     saveTrack(currentTrack)
         .then(renderQueue)
         .catch(err => console.error('[Tags] sync error:', err));
@@ -240,7 +305,6 @@ function setPlayingUi(isPlaying) {
     const playBtn = document.getElementById('mainPlayBtn');
     playBtn.querySelector('.icon-play').style.display = isPlaying ? 'none' : 'inline';
     playBtn.querySelector('.icon-pause').style.display = isPlaying ? 'inline' : 'none';
-    document.getElementById('visualizer').classList.toggle('playing', isPlaying);
 }
 
 if (audio) {
@@ -254,7 +318,10 @@ if (audio) {
     audio.addEventListener('play', () => setPlayingUi(true));
     audio.addEventListener('pause', () => setPlayingUi(false));
     audio.addEventListener('ended', playNextTrack);
+    audio.addEventListener('loadedmetadata', updateChapterButtons);
+    audio.addEventListener('seeked', updateChapterButtons);
     audio.addEventListener('timeupdate', () => {
+        updateChapterButtons();
         if (!audio.duration) return;
         document.getElementById('scrubber').value = (audio.currentTime / audio.duration) * 100;
         document.getElementById('currTime').textContent = formatTime(audio.currentTime);
@@ -266,20 +333,37 @@ if (audio) {
 function onFilterChange() {
     const pl = document.getElementById('playlistSelect')?.value || '';
     const cat = document.getElementById('categorySelect')?.value || '';
-    window.location.href = `/mm/mp3?playlist=${encodeURIComponent(pl)}&category=${encodeURIComponent(cat)}`;
+    const artist = document.getElementById('artistSelect')?.value || '';
+    const params = new URLSearchParams({ playlist: pl, category: cat, artist });
+    selectedTagFilters.forEach(tag => params.append('tag', tag));
+    window.location.href = `${window.location.pathname}?${params}`;
 }
 
 document.getElementById('playlistSelect')?.addEventListener('change', onFilterChange);
 document.getElementById('categorySelect')?.addEventListener('change', onFilterChange);
+document.getElementById('artistSelect')?.addEventListener('change', onFilterChange);
 
 document.getElementById('tagChipsBar').addEventListener('click', (e) => {
     const chip = e.target.closest('.tag-chip');
-    if (chip) filterByTag(chip.dataset.tag);
+    if (chip) {
+        const restoreFocus = document.activeElement === chip;
+        filterByTag(chip.dataset.tag);
+        if (restoreFocus) [...document.querySelectorAll('.tag-chip')].find(button => button.dataset.tag === chip.dataset.tag)?.focus();
+    }
 });
 
 document.getElementById('queueList').addEventListener('click', (e) => {
     const row = e.target.closest('.playlist-item');
     if (row) selectAndPlayTrack(parseInt(row.dataset.index, 10), true);
+});
+document.getElementById('queueList').addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const row = event.target.closest('.playlist-item');
+    if (!row) return;
+    event.preventDefault();
+    const index = Number(row.dataset.index);
+    selectAndPlayTrack(index, true);
+    document.querySelector(`#queueList .playlist-item[data-index="${index}"]`)?.focus({ preventScroll: true });
 });
 
 document.getElementById('pageScrollTrack').addEventListener('click', (e) => {
@@ -294,12 +378,34 @@ document.getElementById('prevTrackBtn').addEventListener('click', playPrevTrack)
 document.getElementById('nextTrackBtn').addEventListener('click', playNextTrack);
 document.getElementById('rev30sBtn').addEventListener('click', () => skipSeconds(-30));
 document.getElementById('fwd30sBtn').addEventListener('click', () => skipSeconds(30));
+document.getElementById('prevChapterBtn').addEventListener('click', () => seekChapter(-1));
+document.getElementById('nextChapterBtn').addEventListener('click', () => seekChapter(1));
+document.getElementById('chapterForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!currentTrack) return;
+    const track = currentTrack;
+    const previous = track.chapter || '';
+    track.chapter = document.getElementById('chapterInput').value.trim();
+    const status = document.getElementById('chapterStatus');
+    const button = document.getElementById('saveChaptersBtn');
+    button.disabled = true;
+    try {
+        await saveTrack(track);
+        if (track === currentTrack) {
+            status.textContent = 'Saved';
+            updateChapterButtons();
+        }
+    } catch (error) {
+        track.chapter = previous;
+        if (track === currentTrack) status.textContent = 'Not saved';
+        console.error('[Chapters]', error);
+    } finally {
+        button.disabled = !currentTrack;
+    }
+});
 
 document.getElementById('scrubber').addEventListener('change', (e) => {
     if (audio && audio.duration) audio.currentTime = (e.target.value / 100) * audio.duration;
-});
-document.getElementById('volumeSlider').addEventListener('input', (e) => {
-    if (audio) audio.volume = e.target.value;
 });
 
 document.querySelectorAll('.inline-edit').forEach(el => setupInlineEdit(el, commitTrackField));
@@ -312,5 +418,5 @@ setupTagInput(
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 buildTagChips();
-renderQueue();
+applyTagFilters();
 if (filteredTracks.length > 0) selectAndPlayTrack(0, false);

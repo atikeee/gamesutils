@@ -30,10 +30,11 @@ rel_path stored in JSON is relative to the PICKED FOLDER:
 
 IGNORE
 ------
-Any folder containing a .ignore file is skipped entirely.
+Folders containing a .ignore file are skipped by ordinary passphrases.
+The reserved Info value .ignore opens only hidden top-level folders.
 """
 
-from flask import render_template, request, jsonify, send_file, abort, Response
+from flask import g, render_template, request, jsonify, send_file, abort, Response
 from collections import OrderedDict
 import io
 import os
@@ -59,7 +60,7 @@ PHOTO_ROOTS = [
     os.path.abspath(os.path.join(PROJECT_ROOT, "..", "Photos-temp")),
     '/Photo-temp',
     '/photos1',
-    # os.path.join(PROJECT_ROOT, "photos"),
+    os.path.join(PROJECT_ROOT,"..", "photos"),
     # "/mnt/nas/pictures",
 ]
 
@@ -120,6 +121,26 @@ def _has_ignore(dir_abs: str) -> bool:
     return os.path.exists(os.path.join(dir_abs, ".ignore"))
 
 
+def _hidden_only_access() -> bool:
+    grant = getattr(g, 'passphrase_access', None)
+    return bool(grant) and grant.get('info', '').casefold() == '.ignore'
+
+
+def _path_is_ignored(path: str, folder_abs: str) -> bool:
+    directory = path if os.path.isdir(path) else os.path.dirname(path)
+    while _is_within(directory, folder_abs):
+        if _has_ignore(directory):
+            return True
+        if directory == folder_abs:
+            break
+        directory = os.path.dirname(directory)
+    return False
+
+
+def _photo_path_allowed(path: str, folder_abs: str) -> bool:
+    return _is_within(path, folder_abs) and (_hidden_only_access() or not _path_is_ignored(path, folder_abs))
+
+
 def _tag_file(folder_abs: str) -> str:
     """tags.json lives inside the picked folder."""
     return os.path.join(folder_abs, "tags.json")
@@ -144,17 +165,42 @@ def _load_tags(folder_abs: str) -> dict:
     return tagged
 
 
-def _save_tags(folder_abs: str, tagged: dict) -> bool:
-    tf = _tag_file(folder_abs)
+def _load_original_paths(folder_abs: str) -> dict:
     try:
-        with open(tf, "w", encoding="utf-8") as f:
+        with open(_tag_file(folder_abs), 'r', encoding='utf-8') as source:
+            paths = json.load(source).get('original_paths', {})
+        return {key: value for key, value in paths.items() if isinstance(key, str) and isinstance(value, str)} if isinstance(paths, dict) else {}
+    except (OSError, ValueError, AttributeError):
+        return {}
+
+
+def _original_photo_path(rel_path: str, original_paths: dict) -> str:
+    if rel_path in original_paths:
+        return original_paths[rel_path]
+    parts = rel_path.replace('\\', '/').split('/', 1)
+    return parts[1] if len(parts) == 2 and parts[0] in PROCESS_DIRS.values() else rel_path
+
+
+def _save_tags(folder_abs: str, tagged: dict, original_paths=None) -> bool:
+    tf = _tag_file(folder_abs)
+    temporary_path = None
+    try:
+        if original_paths is None:
+            original_paths = _load_original_paths(folder_abs)
+        descriptor, temporary_path = tempfile.mkstemp(prefix='.phototag-tags-', suffix='.json', dir=folder_abs)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as f:
             json.dump(
-                {"folder": os.path.basename(folder_abs), "tagged": tagged},
+                {"folder": os.path.basename(folder_abs), "tagged": tagged, "original_paths": original_paths},
                 f, indent=2, ensure_ascii=False,
             )
+        os.replace(temporary_path, tf)
+        temporary_path = None
     except Exception as e:
         print(f"[phototag] Cannot write {tf}: {e}")
         return False
+    finally:
+        if temporary_path and os.path.exists(temporary_path):
+            os.remove(temporary_path)
     print(f"[phototag] Tags saved -> {tf}  ({len(tagged)} entries)")
     return True
 
@@ -170,7 +216,19 @@ def _folder_date_key(name: str, path: str) -> str:
         return "00000000"
 
 
-def _scan_folders(photo_roots: list) -> list[dict]:
+def _folder_allowed(folder_name: str) -> bool:
+    grant = getattr(g, 'passphrase_access', None)
+    if not grant:
+        return False
+    pattern = grant['info'].casefold()
+    return pattern in ('*', '.ignore') or pattern in folder_name.casefold()
+
+
+def _can_manage_photos() -> bool:
+    return getattr(g, 'passphrase_access', {}).get('info') == '*'
+
+
+def _scan_folders(photo_roots: list, hidden_only=False) -> list[dict]:
     """
     Return depth-1 subdirectories across all roots for the UI picker.
     Each entry: {label, root_name, root_abs, folder_abs, folder_rel}
@@ -184,7 +242,8 @@ def _scan_folders(photo_roots: list) -> list[dict]:
         if not os.path.isdir(root_abs):
             print(f"[phototag] Root not found: {root_abs}")
             continue
-        if _has_ignore(root_abs):
+        root_hidden = _has_ignore(root_abs)
+        if root_hidden and not hidden_only:
             continue
 
         root_name = os.path.basename(root_abs)
@@ -199,9 +258,11 @@ def _scan_folders(photo_roots: list) -> list[dict]:
             if not entry.is_dir(follow_symlinks=True):
                 continue
             entry_abs = os.path.realpath(entry.path)
+            if not _is_within(entry_abs, root_abs) or os.path.dirname(entry_abs) != root_abs:
+                continue
             if entry_abs in seen:
                 continue
-            if _has_ignore(entry_abs):
+            if (root_hidden or _has_ignore(entry_abs)) != hidden_only:
                 continue
             seen.add(entry_abs)
             folders.append({
@@ -225,6 +286,10 @@ def _resolve_folder(photo_roots: list, root_name: str, folder_rel: str):
     folder_rel is a depth-1 subdir name (e.g. "a1").
     Raises ValueError on unknown root, missing folder, or path traversal.
     """
+    if not folder_rel or folder_rel in ('.', '..') or '/' in folder_rel or '\\' in folder_rel:
+        raise ValueError('Select a single photo folder.')
+    if not _folder_allowed(folder_rel):
+        abort(403)
     print(f"[phototag] _resolve_folder: root_name={root_name!r} folder_rel={folder_rel!r}")
     print(f"[phototag] known roots: {photo_roots}")
 
@@ -243,19 +308,21 @@ def _resolve_folder(photo_roots: list, root_name: str, folder_rel: str):
         print(f"[phototag]   folder parent={os.path.dirname(folder_abs)!r} root={root_abs!r}")
 
         # Security: must be inside root (not necessarily direct child, handles symlinks)
-        if not folder_abs.startswith(root_abs):
+        if not _is_within(folder_abs, root_abs) or os.path.dirname(folder_abs) != root_abs:
             raise ValueError(f"Path traversal blocked: {folder_rel!r}")
+        if not _folder_allowed(os.path.basename(folder_abs)):
+            abort(403)
         if not os.path.isdir(folder_abs):
             raise ValueError(f"Folder not found: {folder_abs}")
-        if _has_ignore(folder_abs):
-            raise ValueError(f"Folder is ignored: {folder_rel!r}")
+        if (_has_ignore(root_abs) or _has_ignore(folder_abs)) != _hidden_only_access():
+            abort(403)
 
         return root_abs, folder_abs
 
     raise ValueError(f"Unknown root: {root_name!r} (known: {[os.path.basename(r) for r in photo_roots]})")
 
 
-def _scan_images(folder_abs: str, max_depth: int = MAX_DEPTH) -> list[str]:
+def _scan_images(folder_abs: str, max_depth: int = MAX_DEPTH, include_ignored=False) -> list[str]:
     """
     Recursively scan folder_abs for images up to max_depth.
     Returns paths RELATIVE TO folder_abs (not root), forward-slash separated.
@@ -267,7 +334,8 @@ def _scan_images(folder_abs: str, max_depth: int = MAX_DEPTH) -> list[str]:
 
     for dirpath, dirnames, filenames in os.walk(folder_abs, followlinks=True):
         # Skip ignored dirs
-        if _has_ignore(dirpath):
+        real_directory = os.path.realpath(dirpath)
+        if not _is_within(real_directory, folder_abs) or (not include_ignored and _path_is_ignored(real_directory, folder_abs)):
             dirnames.clear()
             continue
 
@@ -278,8 +346,10 @@ def _scan_images(folder_abs: str, max_depth: int = MAX_DEPTH) -> list[str]:
 
         dirnames.sort()
         for fn in sorted(filenames):
-            if _is_image(fn):
+            if _is_image(fn) and _is_within(os.path.realpath(os.path.join(dirpath, fn)), folder_abs):
                 full = os.path.join(dirpath, fn)
+                if not include_ignored and _path_is_ignored(os.path.realpath(full), folder_abs):
+                    continue
                 rel  = os.path.relpath(full, folder_abs).replace(os.sep, "/")
                 images.append(rel)
 
@@ -398,6 +468,7 @@ def _unique_dest(dest_dir: str, name: str) -> str:
 def _run_process(job: dict, folder_abs: str):
     with _tags_lock:
         tagged = _load_tags(folder_abs)
+        original_paths = _load_original_paths(folder_abs)
     # deletes first, then moves
     order = {"d": 0, "b": 1, "g": 2}
     items = sorted(tagged.items(), key=lambda kv: order.get(kv[1], 9))
@@ -406,6 +477,7 @@ def _run_process(job: dict, folder_abs: str):
     job["total"] = len(items)
     processed = {}   # rel → code handled (old entry removed from json at the end)
     moved     = {}   # new rel → code (added to json at the end)
+    moved_origins = {}
 
     folder_rel = os.path.basename(folder_abs)
     for rel, code in items:
@@ -418,6 +490,10 @@ def _run_process(job: dict, folder_abs: str):
         try:
             if not _is_within(src, folder_abs) or src == folder_abs:
                 raise ValueError("path outside folder")
+            if _path_is_ignored(src, folder_abs):
+                s['protected'] += 1
+                job['done'] += 1
+                continue
             if code == "d":
                 try:
                     os.remove(src)
@@ -427,6 +503,8 @@ def _run_process(job: dict, folder_abs: str):
                 processed[rel] = code
             elif code in PROCESS_DIRS:
                 dest_dir = os.path.realpath(os.path.join(folder_abs, PROCESS_DIRS[code]))
+                if not _is_within(dest_dir, folder_abs):
+                    raise ValueError('destination outside folder')
                 if not os.path.isfile(src):
                     s["missing"] += 1
                     processed[rel] = code
@@ -438,7 +516,9 @@ def _run_process(job: dict, folder_abs: str):
                     shutil.move(src, dest)
                     s["moved_best" if code == "b" else "moved_good"] += 1
                     processed[rel] = code
-                    moved[os.path.relpath(dest, folder_abs).replace(os.sep, "/")] = code
+                    destination_rel = os.path.relpath(dest, folder_abs).replace(os.sep, "/")
+                    moved[destination_rel] = code
+                    moved_origins[destination_rel] = _original_photo_path(rel, original_paths)
         except Exception as e:
             s["errors"].append(f"{rel}: {e}")
         job["done"] += 1
@@ -446,11 +526,14 @@ def _run_process(job: dict, folder_abs: str):
     # single json write at the end; keep entries re-tagged meanwhile or that failed
     with _tags_lock:
         current = _load_tags(folder_abs)
+        current_origins = _load_original_paths(folder_abs)
         for rel, code in processed.items():
             if current.get(rel) == code:
                 current.pop(rel)
+                current_origins.pop(rel, None)
         current.update(moved)
-        if not _save_tags(folder_abs, current):
+        current_origins.update(moved_origins)
+        if not _save_tags(folder_abs, current, current_origins):
             s["errors"].append("Failed to write tags.json")
 
     job["current"] = ""
@@ -463,9 +546,27 @@ def _run_process(job: dict, folder_abs: str):
 def configure_routes_phototag(app, socketio=None):
     photo_roots = [os.path.realpath(p) for p in PHOTO_ROOTS]
 
+    @app.before_request
+    def require_phototag_scope():
+        if request.path.rstrip('/') == '/phototag' or request.path.startswith('/phototag/'):
+            if not getattr(g, 'passphrase_access', None):
+                abort(403)
+            if not _can_manage_photos():
+                process_request = request.path in ('/phototag/api/process', '/phototag/api/process/status')
+                delete_request = request.path == '/phototag/api/tag' and (request.get_json(silent=True) or {}).get('tag') == 'delete'
+                if process_request or delete_request:
+                    return jsonify(status='error', message='Processing and deletion require wildcard access.'), 403
+
+    def accessible_folders():
+        return [folder for folder in _scan_folders(photo_roots, hidden_only=_hidden_only_access()) if _folder_allowed(folder['folder_rel'])
+                and _folder_allowed(os.path.basename(folder['folder_abs']))]
+
     # ── Debug page ────────────────────────────────────────────────
     @app.route("/phototag/debug")
     def phototag_debug():
+        if g.passphrase_access['info'] != '*':
+            abort(403)
+        folders = accessible_folders()
         lines = [
             "=== PHOTOTAG DEBUG ===",
             f"PROJECT_ROOT : {PROJECT_ROOT}",
@@ -476,12 +577,11 @@ def configure_routes_phototag(app, socketio=None):
             lines.append(f"ROOT [{('OK' if exists else 'MISSING')}] {root_abs}")
             if exists:
                 try:
-                    subs = [e.name for e in os.scandir(root_abs) if e.is_dir()]
+                    subs = [folder['folder_rel'] for folder in folders if folder['root_abs'] == root_abs]
                     lines.append(f"  subdirs : {sorted(subs)}")
                 except Exception as e:
                     lines.append(f"  ERROR   : {e}")
 
-        folders = _scan_folders(photo_roots)
         lines += ["", f"UI Picker folders ({len(folders)}):"]
         for f in folders:
             imgs = _scan_images(f["folder_abs"])
@@ -502,10 +602,10 @@ def configure_routes_phototag(app, socketio=None):
     # ── Test: visit /phototag/test to verify first image serves ──
     @app.route("/phototag/test")
     def phototag_test():
-        folders = _scan_folders(photo_roots)
+        folders = accessible_folders()
         lines   = ["<h2>PhotoTag — Image Serve Test</h2>"]
         for f in folders:
-            imgs = _scan_images(f["folder_abs"])
+            imgs = _scan_images(f["folder_abs"], include_ignored=_hidden_only_access())
             lines.append(f"<h3>{f['label']} ({len(imgs)} images)</h3>")
             lines.append(f"<code>folder_abs: {f['folder_abs']}</code><br>")
             for img in imgs[:3]:
@@ -524,10 +624,10 @@ def configure_routes_phototag(app, socketio=None):
                "\n".join(lines) + "</body></html>"
 
     # ── Main page ─────────────────────────────────────────────────
-    @app.route("/phototag")
+    @app.route("/phototag", strict_slashes=False)
     def phototag():
-        folders = _scan_folders(photo_roots)
-        return render_template("phototag.html", folders=folders)
+        folders = accessible_folders()
+        return render_template("phototag.html", folders=folders, access_expires=g.passphrase_access_expires, can_manage=_can_manage_photos())
 
     # ── API: image list ───────────────────────────────────────────
     @app.route("/phototag/api/images")
@@ -543,8 +643,9 @@ def configure_routes_phototag(app, socketio=None):
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 400
 
-        images = _scan_images(folder_abs)
-        tags   = {rel: CODE_TO_TAG[c] for rel, c in _load_tags(folder_abs).items()}
+        images = _scan_images(folder_abs, include_ignored=_hidden_only_access())
+        visible_paths = set(images)
+        tags   = {rel: CODE_TO_TAG[c] for rel, c in _load_tags(folder_abs).items() if rel in visible_paths}
 
         print(f"[phototag] /api/images  folder={folder_abs}  "
               f"images={len(images)}  tags={len(tags)}")
@@ -575,6 +676,8 @@ def configure_routes_phototag(app, socketio=None):
         if not root_name or not folder_rel or not rel_path:
             print(f"[phototag]   → 400 missing params")
             abort(400)
+        if not _is_image(rel_path):
+            abort(404)
 
         try:
             root_abs, folder_abs = _resolve_folder(photo_roots, root_name, folder_rel)
@@ -589,7 +692,7 @@ def configure_routes_phototag(app, socketio=None):
         print(f"[phototag]   is_file   ={os.path.isfile(full)}")
 
         # Security: must stay inside folder_abs
-        if not _is_within(full, folder_abs):
+        if not _photo_path_allowed(full, folder_abs):
             print(f"[phototag]   → 403 traversal blocked")
             abort(403)
 
@@ -643,7 +746,7 @@ def configure_routes_phototag(app, socketio=None):
             return jsonify({"status": "error", "message": str(e)}), 400
 
         full = os.path.realpath(os.path.join(folder_abs, rel_path))
-        if not _is_within(full, folder_abs):
+        if not _photo_path_allowed(full, folder_abs):
             return jsonify({"status": "error", "message": "Path outside selected folder"}), 403
         if not os.path.isfile(full):
             return jsonify({"status": "error", "message": "Image not found"}), 404
@@ -704,17 +807,41 @@ def configure_routes_phototag(app, socketio=None):
         except ValueError as e:
             return jsonify({"status": "error", "message": str(e)}), 400
 
-        with _tags_lock:
-            tagged = _load_tags(folder_abs)
-            if tag:
-                tagged[rel_path] = TAG_TO_CODE[tag]
-            else:
-                tagged.pop(rel_path, None)
-            ok = _save_tags(folder_abs, tagged)
+        full = os.path.realpath(os.path.join(folder_abs, rel_path))
+        if not _photo_path_allowed(full, folder_abs):
+            abort(403)
+        restored_from = None
+        with _jobs_lock:
+            if any(job['folder_abs'] == folder_abs and job['state'] == 'running' for job in _jobs.values()):
+                return jsonify(status='error', message='Wait for this folder to finish processing.'), 409
+            with _tags_lock:
+                tagged = _load_tags(folder_abs)
+                original_paths = _load_original_paths(folder_abs)
+                if tag:
+                    tagged[rel_path] = TAG_TO_CODE[tag]
+                else:
+                    original_rel = _original_photo_path(rel_path, original_paths) if tagged.get(rel_path) in ('b', 'g') else rel_path
+                    if original_rel != rel_path:
+                        destination = os.path.realpath(os.path.join(folder_abs, original_rel))
+                        if not _photo_path_allowed(destination, folder_abs) or _is_protected(folder_rel, original_rel):
+                            abort(403)
+                        if os.path.exists(destination):
+                            return jsonify(status='error', message='The original path already contains a file; nothing was overwritten.'), 409
+                        if not os.path.isfile(full):
+                            return jsonify(status='error', message='The marked photo no longer exists.'), 404
+                        os.makedirs(os.path.dirname(destination), exist_ok=True)
+                        shutil.move(full, destination)
+                        restored_from = rel_path
+                        rel_path = original_rel
+                    tagged.pop(restored_from or rel_path, None)
+                    original_paths.pop(restored_from or rel_path, None)
+                ok = _save_tags(folder_abs, tagged, original_paths)
+                if not ok and restored_from:
+                    shutil.move(destination, full)
 
         if ok:
             print(f"[phototag] Tagged {rel_path!r} → {tag!r} in {folder_abs}")
-            return jsonify({"status": "success", "path": rel_path, "tag": tag})
+            return jsonify({"status": "success", "path": rel_path, "previous_path": restored_from, "tag": tag})
         return jsonify({"status": "error", "message": "Failed to write tags.json"}), 500
 
     # ── API: process tags (delete / move) in background ───────────
@@ -756,6 +883,8 @@ def configure_routes_phototag(app, socketio=None):
         job = _jobs.get(request.args.get("job", ""))
         if not job:
             return jsonify({"status": "error", "message": "Unknown job"}), 404
+        if not _folder_allowed(os.path.basename(job['folder_abs'])):
+            abort(403)
         return jsonify({
             "status":  "success",
             "state":   job["state"],

@@ -38,9 +38,10 @@
         .catan2-game-page #assignpoint td { padding: 6px 2px; font-size: 0.72rem; line-height: 1.2; overflow-wrap: anywhere; }
         .catan2-game-page .c2-game-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
         .catan2-game-page .c2-game-heading h1 { min-width: 0; margin: 0; }
-        .catan2-game-page .dice-roll-section { flex: 0 0 auto; width: min(100%, 142px); }
+        .catan2-game-page .dice-roll-section { flex: 0 0 auto; width: min(100%, 210px); }
+        .c2-dice-player { flex: 0 0 auto; font-size: 0.85rem; white-space: nowrap; }
         .catan2-game-page #diceroll { width: 100%; min-height: 62px; }
-        .catan2-game-page #diceroll .dice-result { min-height: 52px; gap: 11px; }
+        .catan2-game-page #diceroll .dice-result { min-height: 52px; gap: 8px; }
         .catan2-game-page #diceroll .dice-face,
         .catan2-game-page #diceroll .catan2-event-die-face { width: 37px; height: 37px; }
         .catan2-game-page #diceroll .dice-face { padding: 6px; }
@@ -73,6 +74,11 @@
         .catan2-game-page .c2-activity-section h2 { margin: 0 0 6px; color: #29453e; font-size: 1.05rem; font-weight: 700; }
         .catan2-game-page .c2-activity-log { flex: 1 1 auto; min-height: 0; margin: 0; padding: 0; list-style: none; overflow-y: auto; }
         .catan2-game-page .c2-activity-log li {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            min-height: 64px;
             padding: 4px 2px;
             border-bottom: 1px solid #e7efeb;
             color: #29453e;
@@ -80,6 +86,13 @@
             line-height: 1.35;
             overflow-wrap: anywhere;
         }
+        .c2-activity-player { flex: 0 0 auto; white-space: nowrap; font-size: 1.8rem; font-weight: 800; line-height: 1.1; text-transform: uppercase; text-shadow: 0 0 1px #172329; }
+        .c2-activity-card { position: relative; display: inline-block; flex: 0 0 38px; width: 38px; height: 52px; }
+        .c2-activity-card img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 3px; }
+        .c2-activity-card > span { position: absolute; right: -3px; bottom: -2px; min-width: 18px; padding: 0 3px; border-radius: 3px; background: #29453e; color: #fff; font-size: 0.7rem; font-weight: 700; text-align: center; }
+        .c2-activity-card.c2-activity-named-front { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 3px; border: 1px solid #8da49a; border-radius: 3px; background: #f7faf9; color: #29453e; }
+        .c2-activity-named-front strong { max-width: 100%; font-size: 0.53rem; line-height: 1.1; text-align: center; overflow-wrap: anywhere; }
+        .c2-activity-piece { display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 40px; font-size: 1.65rem; color: #29453e; }
         .c2-game-mobile-tabs { display: none; }
         .c2-barbarian-track-section {
             display: grid;
@@ -179,9 +192,24 @@
         .catan-game-page #assignpoint .c2-progress-levels { white-space: nowrap; font-variant-numeric: tabular-nums; }
         .catan-game-page #assignpoint tr.c2-score-leader { background: #e1f1df; color: #244b39; font-weight: 700; }
         .catan-game-page #assignpoint tr.c2-score-leader td:first-child { box-shadow: inset 4px 0 #c49c26; }
-        .catan-game-page #assignpoint tr.c2-score-inactive { opacity: 0.45; filter: grayscale(1); color: #8a9590; }
+        .catan-game-page #assignpoint tr[hidden], .c2-vp-choice[hidden] { display: none; }
         .catan2-game-page .canvas-wrapper.map-zoom-viewport { position: relative; }
         .catan2-game-page .game-map { width: min(100%, 950px, calc((100svh - 96px) * 1.2)); }
+		 @media (min-width: 769px) {
+            .catan2-game-page .game-map { height: auto; max-width: 100% !important; }
+            .catan2-game-page .game-map .canvas-wrapper.map-zoom-viewport {
+                position: relative;
+                height: auto;
+                aspect-ratio: 1.2 / 1;
+            }
+            .catan2-game-page .game-map #catanBoard {
+                position: static;
+                display: block;
+                width: 100%;
+                height: auto;
+                aspect-ratio: 1.2 / 1;
+            }
+        }
         .catan-game-page #assignpoint tr.c2-score-active { color: #c62828; font-weight: 700; }
         .c2-progress-card-popup {
             position: absolute;
@@ -217,7 +245,7 @@
         .c2-vp-log .c2-vp-log-empty { color: #657972; }
         .c2-vp-log .c2-vp-log-empty::before { background: #c9d7d3; }
         @media (max-width: 900px) {
-            body.catan2-game-page { padding: 8px !important; }
+            body.catan2-game-page { height: auto; min-height: 100vh; padding: 8px !important; overflow-x: hidden; overflow-y: auto; }
             .c2-game-mobile-tabs { display: flex; height: 40px; gap: 4px; margin-bottom: 8px; }
             .c2-game-mobile-tabs button {
                 flex: 1;
@@ -236,6 +264,26 @@
             .catan2-game-page[data-game-view="log"] .right-column { display: flex; }
             .catan2-game-page .c2-barbarian-track { width: min(100%, 286px, 42vh, calc(90dvh - 310px)); }
             .catan2-game-page .c2-game-heading h1 { margin: 0; font-size: 1.1rem; }
+            .catan2-game-page .game-map { flex: 0 0 auto; width: 100%; height: auto; padding-bottom: 0; }
+            .catan2-game-page .game-map .canvas-wrapper.map-zoom-viewport {
+                position: relative;
+                width: 100%;
+                height: 0;
+                padding-bottom: 83.333333%;
+                aspect-ratio: auto;
+            }
+            .catan2-game-page .game-map #catanBoard {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                max-width: none;
+            }
+            .catan2-game-page .game-map .map-zoom-viewport.map-zoomed { overflow: auto; }
+            .catan2-game-page .game-map .map-zoom-viewport.map-zoomed #catanBoard { width: 200% !important; height: 200% !important; }
+            .catan2-game-page[data-game-view="map"] .main-container { height: auto; }
+            .catan2-game-page[data-game-view="map"] .main-container > .left-column { height: auto; overflow: visible; }
         }
     </style>
 </head>
@@ -322,7 +370,7 @@
                     </thead>
                     <tbody class="text-gray-600 text-sm font-light">
                         <!-- Row 1 -->
-                        <tr class="border-b border-gray-200 hover:bg-gray-100" data-player-id="player1">
+                        <tr class="border-b border-gray-200 hover:bg-gray-100" data-player-id="player1" hidden>
                             <td class="result" id="cell-0-0">Player 1</td>
                             <td class="result" id="cell-0-1">0</td>
                             <td class="result" id="cell-0-2">0-0</td>
@@ -332,7 +380,7 @@
                             <td class="result c2-progress-levels" id="cell-0-6">1-1-1</td>
                         </tr>
                         <!-- Row 2 -->
-                        <tr class="border-b border-gray-200 hover:bg-gray-100" data-player-id="player2">
+                        <tr class="border-b border-gray-200 hover:bg-gray-100" data-player-id="player2" hidden>
                             <td class="result" id="cell-1-0">Player 2</td>
                             <td class="result" id="cell-1-1">0</td>
                             <td class="result" id="cell-1-2">0-0</td>
@@ -342,7 +390,7 @@
                             <td class="result c2-progress-levels" id="cell-1-6">1-1-1</td>
                         </tr>
                         <!-- Row 3 -->
-                        <tr class="border-b border-gray-200 hover:bg-gray-100" data-player-id="player3">
+                        <tr class="border-b border-gray-200 hover:bg-gray-100" data-player-id="player3" hidden>
                             <td class="result" id="cell-2-0">Player 3</td>
                             <td class="result" id="cell-2-1">0</td>
                             <td class="result" id="cell-2-2">0-0</td>
@@ -352,7 +400,7 @@
                             <td class="result c2-progress-levels" id="cell-2-6">1-1-1</td>
                         </tr>
                         <!-- Row 4 -->
-                        <tr class="hover:bg-gray-100" data-player-id="player4">
+                        <tr class="hover:bg-gray-100" data-player-id="player4" hidden>
                             <td class="result" id="cell-3-0">Player 4</td>
                             <td class="result" id="cell-3-1">0</td>
                             <td class="result" id="cell-3-2">0-0</td>
@@ -389,10 +437,10 @@
         <div class="modal-content">
             <h2 id="awardVpTitle">Victory Point</h2>
             <div class="c2-vp-choices" id="awardVpChoices">
-                <button type="button" class="c2-vp-choice" data-award-vp="player1">Player 1</button>
-                <button type="button" class="c2-vp-choice" data-award-vp="player2">Player 2</button>
-                <button type="button" class="c2-vp-choice" data-award-vp="player3">Player 3</button>
-                <button type="button" class="c2-vp-choice" data-award-vp="player4">Player 4</button>
+                <button type="button" class="c2-vp-choice" data-award-vp="player1" hidden></button>
+                <button type="button" class="c2-vp-choice" data-award-vp="player2" hidden></button>
+                <button type="button" class="c2-vp-choice" data-award-vp="player3" hidden></button>
+                <button type="button" class="c2-vp-choice" data-award-vp="player4" hidden></button>
                 <button type="button" class="c2-vp-choice c2-vp-cancel" id="cancelAwardVp">Cancel</button>
             </div>
         </div>
@@ -411,10 +459,10 @@
         <div class="modal-content">
             <h2 id="metropolisPlayerTitle">Choose Player</h2>
             <div class="c2-vp-choices">
-                <button type="button" class="c2-vp-choice" data-metropolis-player="player1">Player 1</button>
-                <button type="button" class="c2-vp-choice" data-metropolis-player="player2">Player 2</button>
-                <button type="button" class="c2-vp-choice" data-metropolis-player="player3">Player 3</button>
-                <button type="button" class="c2-vp-choice" data-metropolis-player="player4">Player 4</button>
+                <button type="button" class="c2-vp-choice" data-metropolis-player="player1" hidden></button>
+                <button type="button" class="c2-vp-choice" data-metropolis-player="player2" hidden></button>
+                <button type="button" class="c2-vp-choice" data-metropolis-player="player3" hidden></button>
+                <button type="button" class="c2-vp-choice" data-metropolis-player="player4" hidden></button>
                 <button type="button" class="c2-vp-choice c2-vp-cancel" id="cancelMetropolisPlayer">Cancel</button>
             </div>
         </div>
@@ -423,10 +471,10 @@
         <div class="modal-content">
             <h2 id="titlePlayerTitle">Longest Road</h2>
             <div class="c2-vp-choices">
-                <button type="button" class="c2-vp-choice" data-title-player="player1">Player 1</button>
-                <button type="button" class="c2-vp-choice" data-title-player="player2">Player 2</button>
-                <button type="button" class="c2-vp-choice" data-title-player="player3">Player 3</button>
-                <button type="button" class="c2-vp-choice" data-title-player="player4">Player 4</button>
+                <button type="button" class="c2-vp-choice" data-title-player="player1" hidden></button>
+                <button type="button" class="c2-vp-choice" data-title-player="player2" hidden></button>
+                <button type="button" class="c2-vp-choice" data-title-player="player3" hidden></button>
+                <button type="button" class="c2-vp-choice" data-title-player="player4" hidden></button>
                 <button type="button" class="c2-vp-choice c2-vp-cancel" id="cancelTitlePlayer">Cancel</button>
             </div>
         </div>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Access</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/passphrase_router.css') }}">
+</head>
+<body class="access-page">
+    <main class="access-shell">
+        <div class="access-mark" aria-hidden="true"></div>
+        <h1>Access</h1>
+        {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+        {% if ready %}
+        <form method="post" action="{{ url_for('passphrase_router.home') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label for="passphrase">Passphrase</label>
+            <input id="passphrase" name="passphrase" type="password" autocomplete="current-password" maxlength="256" required autofocus>
+            <button type="submit">Continue <span aria-hidden="true">&rarr;</span></button>
+        </form>
+        {% endif %}
+    </main>
+</body>
+</html>

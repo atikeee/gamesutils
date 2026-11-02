@@ -13,9 +13,16 @@ python app.py
 
 Open these pages on the server, replacing `localhost` with the server's address when connecting from another device:
 
-- Board builder: <http://localhost:5000/catan_board>
-- Player seats and sign-in: <http://localhost:5000/catan_player/>
-- Shared game overview: <http://localhost:5000/catan_game>
+- Catan dashboard: <http://localhost:5000/catan>
+- Base Catan shared game: <http://localhost:5000/catan/1/game>
+- Base Catan player seats and sign-in: <http://localhost:5000/catan/1/player>
+- Cities & Knights shared game: <http://localhost:5000/catan/2/game>
+- Cities & Knights player seats and sign-in: <http://localhost:5000/catan/2/player>
+
+Player-seat links use `/catan/1/player/<code>` and `/catan/2/player/<code>`.
+The previous game/player page URLs have been removed. Internal save/load APIs and
+Socket.IO event names are unchanged. Passphrase destinations stay exactly as
+configured; update any old URLs manually in `/passphrases`.
 
 ## Start a game
 

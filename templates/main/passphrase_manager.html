@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Passphrase Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/passphrase_router.css') }}">
+</head>
+<body>
+    <main class="manager-shell">
+        <header>
+            <h1>Passphrases</h1>
+            <form method="post" action="{{ url_for('passphrase_router.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="secondary" type="submit">Sign out</button>
+            </form>
+        </header>
+        {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Configured passphrases">
+            <table>
+                <thead><tr><th>Index</th><th>Passphrase</th><th>Info</th><th>URL</th><th>Actions</th></tr></thead>
+                <tbody>
+                    {% for entry in entries %}
+                    <tr>
+                        <td>{{ entry.id }}</td>
+                        <td><span class="status">Configured{% if entry.is_master %} &middot; Master{% endif %}</span></td>
+                        <td>{{ entry.info }}</td>
+                        <td><code>{{ entry.url }}</code></td>
+                        <td>
+                            <details>
+                                <summary>Edit</summary>
+                                <form class="edit-form" method="post" action="{{ url_for('passphrase_router.save') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="id" value="{{ entry.id }}">
+                                    <label for="info-{{ entry.id }}">Info</label>
+                                    <input id="info-{{ entry.id }}" name="info" value="{{ entry.info }}" maxlength="200" required>
+                                    <label for="url-{{ entry.id }}">URL</label>
+                                    <input id="url-{{ entry.id }}" name="url" value="{{ entry.url }}" maxlength="2048" {% if entry.is_master %}readonly{% else %}required{% endif %}>
+                                    <label for="phrase-{{ entry.id }}">New passphrase (optional)</label>
+                                    <input id="phrase-{{ entry.id }}" name="passphrase" type="password" autocomplete="new-password" minlength="8" maxlength="256">
+                                    {% if entry.is_master %}
+                                    <label for="master-{{ entry.id }}">Current master passphrase</label>
+                                    <input id="master-{{ entry.id }}" name="current_master" type="password" autocomplete="current-password" maxlength="256">
+                                    {% endif %}
+                                    <button type="submit">Save changes</button>
+                                </form>
+                                {% if not entry.is_master %}
+                                <form class="delete-form" method="post" action="{{ url_for('passphrase_router.delete') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="id" value="{{ entry.id }}">
+                                    <label class="confirm-delete"><input type="checkbox" required> Confirm deletion</label>
+                                    <button class="danger" type="submit">Delete entry</button>
+                                </form>
+                                {% endif %}
+                            </details>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <section class="new-entry">
+            <h2>New destination</h2>
+            <form method="post" action="{{ url_for('passphrase_router.save') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div><label for="new-passphrase">Passphrase</label><input id="new-passphrase" name="passphrase" type="password" autocomplete="new-password" minlength="8" maxlength="256" required></div>
+                <div><label for="new-info">Info</label><input id="new-info" name="info" maxlength="200" required></div>
+                <div><label for="new-url">URL</label><input id="new-url" name="url" placeholder="/index" maxlength="2048" required></div>
+                <button type="submit">Add destination</button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

@@ -2612,3 +2612,18 @@ body.tv-mode #activityLog .log-entry:last-child {
 .catan-game-page .map-last-roll #diceroll .dice-face,
 .catan-game-page .map-last-roll .catan2-event-die-face { flex: 0 0 auto; width: 34px; height: 34px; padding: 5px; }
 .catan-game-page #mapZoomToggle { flex: 0 0 auto; }
+
+
+@media (max-width: 768px) {
+    .catan-player-page .canvas-wrapper.map-zoom-viewport.map-zoomed {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+    .catan-player-page .canvas-wrapper.map-zoom-viewport.map-zoomed #catanBoard {
+        width: 160% !important;
+        max-width: none !important;
+        height: auto !important;
+        aspect-ratio: 0.95 / 1;   /* same ratio the JS uses on mobile */
+    }
+}

@@ -2,8 +2,8 @@ const canvas = document.getElementById('catanBoard');
 const ctx = canvas.getContext('2d');
 const messageBox = document.getElementById('messageBox');
 
-const isGamePage = window.location.pathname === '/catan2/game';
-const isPlayerPage = window.location.pathname.startsWith('/catan2/player/');
+const isGamePage = window.location.pathname === '/catan/2/game';
+const isPlayerPage = window.location.pathname.startsWith('/catan/2/player/');
 if (isPlayerPage && messageBox.parentElement !== document.body) {
     document.body.appendChild(messageBox);
 }
@@ -22,6 +22,85 @@ if (isGamePage) {
 
 const PLAYER_ID = isPlayerPage && window.PLAYER_ID ? 'player' + window.PLAYER_ID : null;
 
+function shortPlayerName(name) {
+    return Array.from(String(name || '').trim()).slice(0, 5).join('');
+}
+
+function isActiveCatanPlayer(playerId) {
+    const name = String(allPlayersData[playerId]?.playerName || '').trim();
+    return Boolean(name) && !/^(player|playe$)/i.test(name);
+}
+
+function getSetupAction() {
+    if (allPlayersData._turnPhase !== 'setup') return null;
+    const order = allPlayersData._turnOrder || [];
+    const index = Number(allPlayersData._setupIndex) || 0;
+    const cityStage = index >= order.length * 2;
+    const stageOrder = cityStage ? [...order].reverse() : order;
+    const pair = Math.floor((index % (order.length * 2)) / 2);
+    return { player: stageOrder[pair], piece: index % 2 ? 'road' : cityStage ? 'city' : 'house', stage: cityStage ? 'city' : 'house' };
+}
+
+let setupPlacementPending = false;
+let setupControlsActive = false;
+
+function updateSetupControls() {
+    if (!isPlayerPage) return;
+    const step = getSetupAction();
+    const isSetup = Boolean(step);
+    document.querySelectorAll('.c2-progress-books-section, .player-controls, .player-decks-section').forEach(section => {
+        section.inert = isSetup;
+        section.classList.toggle('c2-setup-disabled', isSetup);
+    });
+    document.querySelectorAll('#player-tool-select .btn-tool').forEach(button => {
+        if (isSetup || setupControlsActive) {
+            button.disabled = isSetup && (setupPlacementPending || step.player !== PLAYER_ID || button.dataset.tool !== step.piece);
+            button.classList.toggle('selected', isSetup ? !button.disabled : button.dataset.tool === selectedPlayerTool);
+        }
+    });
+    setupControlsActive = isSetup;
+    if (isSetup) {
+        selectedPlayerTool = step.player === PLAYER_ID ? step.piece : null;
+        selectedHandCards = [];
+        pendingResourceCards = [];
+        document.getElementById('resourceSelectionTray').hidden = true;
+        document.getElementById('selectedCardCount').textContent = '0';
+    }
+}
+
+async function placeSetupPiece(mouseX, mouseY, threshold) {
+    const step = getSetupAction();
+    if (!step || setupPlacementPending) return;
+    if (step.player !== PLAYER_ID) {
+        showMessage('Wait for your setup turn.', 'error');
+        return;
+    }
+    const junction = step.piece === 'road' ? null : getClosestJunction(mouseX, mouseY, threshold);
+    const edge = step.piece === 'road' ? getClosestEdge(mouseX, mouseY, threshold) : null;
+    if (!junction && !edge) {
+        showMessage(step.piece === 'road' ? 'Choose an edge beside your new house or city.' : 'Choose an empty intersection.', 'error');
+        return;
+    }
+    setupPlacementPending = true;
+    updateSetupControls();
+    try {
+        const response = await fetch('/catan2/setup_piece', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ player_id: PLAYER_ID, piece: step.piece, junction_id: junction?.id, edge_id: edge?.id })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Could not place the setup piece.');
+        selectedPlayerTool = null;
+        selectedRoadStartJunction = null;
+        await loadAllStatesFromBackend();
+        updatePlayerUI();
+    } catch (error) {
+        showMessage(error.message, 'error');
+    } finally {
+        setupPlacementPending = false;
+        updateSetupControls();
+    }
+}
 
 let loadedResourceImages = {};
 let boardTiles = [];
@@ -34,7 +113,7 @@ let diceAnimationTimeout = null;
 let diceOverlayHideTimeout = null;
 
 const socket = io();
-const STARTING_HAND = ['wood', 'wood', 'wood', 'brick', 'brick', 'brick', 'sheep', 'hay', 'hay', 'hay', 'rock', 'rock', 'rock'];
+const STARTING_HAND = [];
 let init_player_data = {
     'player1': { playerName: 'Player 1', hand: [...STARTING_HAND], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0,score:0 },
     'player2': { playerName: 'Player 2', hand: [...STARTING_HAND], roads: [], structures: [], history: [],longestroad: 0,largestarmy:0,knightplayed:0,merchant:0,victory_point:0,score:0 },
@@ -157,6 +236,7 @@ function formatCardName(cardName) {
 function getOpponentChoices(includePlayer) {
     return Object.keys(allPlayersData)
         .filter(playerId => playerId.startsWith('player') && playerId !== PLAYER_ID && allPlayersData[playerId])
+        .filter(isActiveCatanPlayer)
         .filter(playerId => includePlayer(allPlayersData[playerId]))
         .map(playerId => ({ value: playerId, label: `${allPlayersData[playerId].playerName || playerId} (${Number(allPlayersData[playerId].score) || 0} VP)` }));
 }
@@ -192,7 +272,7 @@ function getProgressCardActionConfig(cardName) {
     if (cardName === 'trade_monopoly') {
         return {
             title: displayName,
-            message: 'Choose a commodity to ask every opponent for 1 of.',
+            message: 'Take 1 selected commodity from each opponent who has it.',
             choices: ['paper', 'coin', 'cloth'].map(value => ({ value, label: formatCardName(value), image: `/static/images/catan/${value}.webp` }))
         };
     }
@@ -281,6 +361,10 @@ function showProgressCardActionModal(config, cardName) {
                 selected.push(choice.value);
                 selections[groupIndex] = selected.slice(-(group.pickLimit || 1));
                 buttons.forEach(({ element, value }) => element.classList.toggle('selected', selections[groupIndex].includes(value)));
+                if (choice.description !== undefined) {
+                    notesDisplay.textContent = `${choice.label}: ${choice.description}`;
+                    notesDisplay.hidden = false;
+                }
                 refreshConfirm();
             });
             groupElement.appendChild(button);
@@ -379,8 +463,26 @@ async function handleMasterMerchantProgressCard({ choice }) {
     );
 }
 
+let tradeMonopolyRequestPending = false;
+
 async function handleTradeMonopolyProgressCard({ choice }) {
-    await playSimpleProgressCard('trade_monopoly', `Ask each opponent for 1 ${choice}.`, `is asking for 1 ${choice}`, choice);
+    if (tradeMonopolyRequestPending) return;
+    tradeMonopolyRequestPending = true;
+    try {
+        const response = await fetch('/catan2/progress_card/trade_monopoly', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ player_id: PLAYER_ID, commodity: choice })
+        });
+        const result = await response.json();
+        if (!response.ok || result.status !== 'success') throw new Error(result.message || 'Could not play Trade Monopoly.');
+        await loadAllStatesFromBackend();
+        updatePlayerUI();
+    } catch (error) {
+        showMessage(error.message, 'error');
+    } finally {
+        tradeMonopolyRequestPending = false;
+    }
 }
 
 async function handleResourceMonopolyProgressCard({ choice }) {
@@ -424,7 +526,12 @@ async function handleSpyProgressCard({ choice }) {
     const selection = await showProgressCardActionModal({
         title: `${opponentName}'s Progress Cards`,
         message: 'Choose 1 card to take. Victory point cards cannot be taken.',
-        choices: stealable.map(({ card, index }) => ({ value: index, label: formatCardName(card), image: resolveProgressCardImageUrl(card) })),
+        choices: stealable.map(({ card, index }) => ({
+            value: index,
+            label: formatCardName(card),
+            image: resolveProgressCardImageUrl(card),
+            description: window.CATAN2_PROGRESS_CARD_NOTES?.[card] || 'No description available.'
+        })),
         confirmLabel: 'Take card'
     }, 'spy');
     if (!selection.confirmed || selection.choice === null) return;
@@ -526,8 +633,9 @@ function setMapZoom(level) {
         mapZoomToggle.title = mapZoomLevel === 2 ? 'Zoom out' : 'Zoom in';
         mapZoomToggle.setAttribute('aria-label', mapZoomToggle.title);
     } else {
-        mapZoomToggle.textContent = mapZoomLevel === 2 ? 'Fit' : '2×';
-        mapZoomToggle.title = mapZoomLevel === 2 ? 'Return map to fit' : 'Zoom map to 2x';
+        mapZoomToggle.textContent = mapZoomLevel === 2 ? '−' : '+';
+        mapZoomToggle.title = mapZoomLevel === 2 ? 'Zoom out' : 'Zoom in';
+        mapZoomToggle.setAttribute('aria-label', mapZoomToggle.title);
     }
     resizeCanvas();
     zoomViewport.scrollLeft = 0;
@@ -864,7 +972,10 @@ async function applyKnightAction(action) {
     modal.classList.add('hidden');
     setKnightMenuToolbarLock(false);
     showMessage(`You ${actionMessage}.`);
-    socket.emit('catan2_game_action_log', { pid: PLAYER_ID, message: actionMessage });
+    socket.emit('catan2_game_action_log', {
+        pid: PLAYER_ID, message: actionMessage, piece: 'knight',
+        action: action === 'free-up' || action === 'pay-up' ? 'upgraded' : action === 'activate' ? 'activated' : 'removed'
+    });
     drawBoard();
     updatePlayerUI();
     await saveAllPlayerStatesToBackend();
@@ -940,6 +1051,11 @@ function dismissPlayerMessage() {
 }
 
 function showMessage(message, type = 'info') {
+    if (![
+        'Click a hex to move the robber.',
+        'No opponent has a house or city beside this hex.',
+        'That player no longer has a card available to steal.'
+    ].includes(message)) return;
     if (isGamePage) {
         const notification = document.createElement('div');
         notification.className = `game-toast ${type === 'error' ? 'game-toast-error' : 'game-toast-info'}`;
@@ -1103,22 +1219,49 @@ function drawBoard() {
         allJunctions = getAllJunctions();
     }
 
-    const perimeterJunctions = allJunctions.filter(junction => countTilesForJunction(junction, boardTiles) < 3);
-    perimeterJunctions.forEach((junction, index) => {
-        const portInfo = PORT_DATA[index];
-        if (portInfo && portInfo.length === 2) {
-            const [type, ratio] = portInfo;
-            const junctionX = junction.x + offsetX;
-            const junctionY = junction.y + offsetY;
-            const vecX = junctionX - (boardCenterRawX + offsetX);
-            const vecY = junctionY - (boardCenterRawY + offsetY);
-            const vecMagnitude = Math.sqrt(vecX * vecX + vecY * vecY);
-            const offsetDistance = HEX_SIZE * 0.4;
-            const portDrawX = junctionX + (vecX / vecMagnitude) * offsetDistance;
-            const portDrawY = junctionY + (vecY / vecMagnitude) * offsetDistance;
+        const portTiles = boardTiles.slice().sort((t1, t2) => (t1.q - t2.q) || (t1.r - t2.r));
+    const portJunctionMap = new Map();
+    portTiles.forEach(tile => {
+        const rawPixel = hexToRawPixel(tile.q, tile.r);
+        getHexVertices(rawPixel.x, rawPixel.y, TILE_RADIUS).forEach(v => {
+            const id = `${Math.round(v.x)},${Math.round(v.y)}`;
+            if (!portJunctionMap.has(id)) portJunctionMap.set(id, { x: v.x, y: v.y, id });
+        });
+    });
+    const perimeterJunctions = Array.from(portJunctionMap.values())
+        .filter(junction => countTilesForJunction(junction, boardTiles) < 3);
 
-            drawCirclePort(ctx, portDrawX, portDrawY, type, ratio);
-        }
+    if (window.SHOW_PORT_INDEX) {
+        perimeterJunctions.forEach((junction, index) => {
+            const lx = junction.x + offsetX, ly = junction.y + offsetY;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(lx, ly, 11, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.stroke();
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 12px Inter';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(index, lx, ly);
+            ctx.restore();
+        });
+    }
+
+    const portCx = boardCenterRawX + offsetX;
+    const portCy = boardCenterRawY + offsetY;
+    PORT_PAIRS_4P.forEach(p => {
+        const ja = perimeterJunctions[p.a];
+        const jb = perimeterJunctions[p.b];
+        if (!ja || !jb) return;   // bad number, skip
+        drawPortPair(
+            ctx,
+            { x: ja.x + offsetX, y: ja.y + offsetY },
+            { x: jb.x + offsetX, y: jb.y + offsetY },
+            p.type, p.ratio, portCx, portCy
+        );
     });
 
     if (isGamePage) {
@@ -1313,19 +1456,22 @@ function updateRollButton() {
     const colorsReady = allPlayersData._colorsReady !== false;
     const state = !isMyTurn ? 'waiting'
         : turnRequestPending ? 'busy'
+        : isSetup ? 'setup'
         : allPlayersData._turnRolled === true ? 'end'
         : colorsReady ? 'roll' : 'waiting';
     button.dataset.state = state;
-    button.querySelector('i').className = `fas ${state === 'end' ? 'fa-check' : state === 'busy' ? 'fa-spinner fa-spin' : 'fa-dice'}`;
+    button.querySelector('i').className = `fas ${state === 'setup' ? 'fa-hammer' : state === 'end' ? 'fa-check' : state === 'busy' ? 'fa-spinner fa-spin' : 'fa-dice'}`;
     button.title = {
         waiting: !gameStarted ? 'Waiting for the game to start'
             : isMyTurn ? 'Waiting for every player to choose a color' : `Not your turn. Waiting for ${currentPlayerName} to finish`,
         busy: 'Please wait…',
         roll: 'Roll dice',
+        setup: `Place a free ${getSetupAction()?.piece || 'setup piece'}`,
         end: isSetup ? 'Finish your setup turn' : 'End your turn'
     }[state];
     button.setAttribute('aria-label', button.title);
-    button.setAttribute('aria-disabled', String(state === 'waiting' || state === 'busy'));
+    button.disabled = ['waiting', 'busy', 'setup'].includes(state);
+    button.setAttribute('aria-disabled', String(button.disabled));
 }
 
 async function onTurnButtonClick() {
@@ -1412,6 +1558,7 @@ function selectRobberTool() {
 }
 
 async function undoPlayerLastAction() {
+    if (allPlayersData._turnPhase === 'setup') return;
     const undoStack = Array.isArray(allPlayersData._undoStack) ? allPlayersData._undoStack : [];
     if (!isPlayerPage || undoStack.length === 0) {
         showMessage('No actions to undo since the last dice roll.', 'error');
@@ -1720,7 +1867,7 @@ async function loadAllPlayerStatesFromBackend() {
             if (result.player_colors) Object.assign(PLAYER_COLORS, result.player_colors);
             for (const pId in loadedStates) {
                 if (pId.startsWith('player') && allPlayersData[pId]) {
-                    allPlayersData[pId].playerName = loadedStates[pId].playerName || `Player ${pId.replace('player', '')}`;
+                    allPlayersData[pId].playerName = shortPlayerName(loadedStates[pId].playerName || `Player ${pId.replace('player', '')}`);
                     allPlayersData[pId].hand = (loadedStates[pId].hand || []).map(resource => resource === 'ore' ? 'rock' : resource);
                     allPlayersData[pId].roads = loadedStates[pId].roads || [];
                     allPlayersData[pId].structures = loadedStates[pId].structures || [];
@@ -1742,6 +1889,7 @@ async function loadAllPlayerStatesFromBackend() {
             allPlayersData._turnRolled = loadedStates._turnRolled === true;
             allPlayersData._gameStarted = loadedStates._gameStarted !== false;
             allPlayersData._turnPhase = loadedStates._turnPhase || null;
+            allPlayersData._setupIndex = Number(loadedStates._setupIndex) || 0;
             allPlayersData._colorsReady = result.colors_ready !== false;
             allPlayersData._robberMoveAvailable = loadedStates._robberMoveAvailable === true;
             allPlayersData._robberMovePlayerId = loadedStates._robberMovePlayerId || null;
@@ -1966,6 +2114,43 @@ function isRobberAdjacentToJunction(junction) {
     return getTilesAdjacentToJunction(junction).some(tile => tile.q === robber.q && tile.r === robber.r);
 }
 
+function getRobberVictimChoices(tile) {
+    return Object.keys(allPlayersData)
+        .filter(playerId => playerId.startsWith('player') && playerId !== PLAYER_ID && isActiveCatanPlayer(playerId))
+        .filter(playerId => (allPlayersData[playerId].structures || []).some(structure =>
+            ['house', 'city'].includes(structure.type) && structure.junction
+            && getTilesAdjacentToJunction(structure.junction).some(adjacent => adjacent.q === tile.q && adjacent.r === tile.r)
+        ))
+        .map(playerId => ({
+            value: playerId,
+            label: shortPlayerName(allPlayersData[playerId].playerName),
+            disabled: !(allPlayersData[playerId].hand || []).length
+        }));
+}
+
+async function chooseRobberVictim(tile) {
+    const choices = getRobberVictimChoices(tile);
+    if (!choices.length) {
+        showMessage('No opponent has a house or city beside this hex.');
+        return;
+    }
+    const canSteal = choices.some(choice => !choice.disabled);
+    const result = await showProgressCardActionModal({
+        title: 'Steal a card',
+        message: canSteal ? 'Choose a player beside the robber.' : 'These players have no cards to steal.',
+        choices,
+        confirmLabel: canSteal ? 'Steal card' : 'OK',
+        unavailable: !canSteal
+    });
+    if (!result.confirmed || !canSteal) return;
+    const victim = getRobberVictimChoices(tile).find(choice => choice.value === result.choice && !choice.disabled);
+    if (!victim) {
+        showMessage('That player no longer has a card available to steal.');
+        return;
+    }
+    await stealCards(PLAYER_ID, victim.value);
+}
+
 function finishRobberMove(tile) {
     const currentRobber = allPlayersData.robber;
     if (currentRobber && currentRobber.q === tile.q && currentRobber.r === tile.r) {
@@ -2060,6 +2245,10 @@ canvas.addEventListener('click', async (event) => {
     const mouseY = (event.clientY - rect.top) * scaleY / boardScale;
 
     if (isPlayerPage) {
+        if (allPlayersData._turnPhase === 'setup') {
+            await placeSetupPiece(mouseX, mouseY, 20 * Math.max(scaleX, scaleY) / boardScale);
+            return;
+        }
         const clickedJunction = getClosestJunction(mouseX, mouseY);
         if (selectedRoadToMove) {
             const movingRoad = selectedRoadToMove;
@@ -2509,7 +2698,11 @@ canvas.addEventListener('click', async (event) => {
                 robber: 'moved the robber'
             };
             if (actionMessages[toolAtClick]) {
-                socket.emit('catan2_game_action_log', { pid: PLAYER_ID, message: actionMessages[toolAtClick] });
+                socket.emit('catan2_game_action_log', {
+                    pid: PLAYER_ID, message: actionMessages[toolAtClick], piece: toolAtClick,
+                    action: toolAtClick === 'city' ? 'upgraded' : toolAtClick === 'knight' ? 'placed'
+                        : toolAtClick === 'robber' ? 'moved' : toolAtClick === 'merchant' ? 'played' : 'built'
+                });
             }
             if (toolAtClick === 'merchant') {
                 const merchantTile = boardTiles.find(tile => tile.q === allPlayersData.merchant?.q && tile.r === allPlayersData.merchant?.r);
@@ -2520,7 +2713,8 @@ canvas.addEventListener('click', async (event) => {
             }
             console.log("trying to save playerstate");
             //await saveAllPlayerStatesToBackend();
-            saveAllPlayerStatesToBackend();  
+            await saveAllPlayerStatesToBackend();
+            if (toolAtClick === 'robber') await chooseRobberVictim(allPlayersData.robber);
             //fix : add code to show in game play. 
         } else if (isGamePage) {
             saveBuilderState();
@@ -2631,7 +2825,7 @@ if (isPlayerPage) {
 
     document.getElementById('player-tool-select').addEventListener('click', (event) => {
         const target = event.target.closest('.btn-tool');
-        if (!target) return;
+        if (!target || target.disabled) return;
 
         const toolbarButtons = document.querySelectorAll('#player-tool-select .btn-tool');
         const toolMessages = {
@@ -2663,6 +2857,7 @@ if (isPlayerPage) {
     const resourceCardButtons = document.querySelectorAll('.resource-card');
     resourceCardButtons.forEach(button => {
         button.addEventListener('click', () => {
+            if (allPlayersData._turnPhase === 'setup') return;
             if (selectedHandCards.length > 0) {
                 showMessage('Clear your hand selection before taking new resources.');
                 return;
@@ -2785,11 +2980,10 @@ if (isPlayerPage) {
         progressCardModal.classList.add('hidden');
         const state = allPlayersData[PLAYER_ID].citiesAndKnights;
         if (state.pendingProgressReplacement) {
-            const discardedName = state.pendingDiscardedProgressCard?.replaceAll('_', ' ') || 'a Progress card';
             state.pendingProgressReplacement = false;
             state.pendingDiscardedProgressCard = null;
             await saveAllPlayerStatesToBackend();
-            socket.emit('catan2_game_action_log', { pid: PLAYER_ID, message: `dropped ${discardedName}` });
+            socket.emit('catan2_game_action_log', { pid: PLAYER_ID, message: 'dropped a progress card', action: 'progress_drop' });
         }
     });
     document.getElementById('cancelProgressCardDiscard').addEventListener('click', () => {
@@ -2837,6 +3031,7 @@ if (isPlayerPage) {
 }
 
 function checkAndDeductCards(playerId, actionType, recordUndo = false) {
+    if (allPlayersData._turnPhase === 'setup') return false;
     const playerHand = allPlayersData[playerId].hand;
     const requiredCards = CARD_COSTS[actionType];
 
@@ -2881,11 +3076,12 @@ function renderTransferDropButtons() {
 	  const slots = document.querySelectorAll('#transferDropButtons [data-transfer-slot]');
     if (!slots.length) return;
 
-    const otherPlayerIds = ['player1', 'player2', 'player3', 'player4'].filter(pId => pId !== PLAYER_ID && allPlayersData[pId]);
+    const otherPlayerIds = ['player1', 'player2', 'player3', 'player4'].filter(pId => pId !== PLAYER_ID && isActiveCatanPlayer(pId));
     slots.forEach((button, index) => {
         const pId = otherPlayerIds[index];
         const name = pId ? String(allPlayersData[pId].playerName || pId) : '';
-        const inactive = !pId || /^player/i.test(name.trim());
+        const inactive = !pId;
+        button.hidden = inactive;
         button.dataset.targetPlayer = pId || '';
         button.textContent = name || '\u00a0';
         button.disabled = inactive;
@@ -2912,24 +3108,34 @@ function fitGameMap() {
     const available = window.innerHeight - (map.getBoundingClientRect().top + window.scrollY) - 12;
     map.style.maxWidth = `${Math.max(240, available * 1.2)}px`;
 }
-
 function resizeCanvas() {
     fitGameMap();
     if (isGamePage && canvas.parentElement.clientWidth === 0) return;
-    const containerWidth = canvas.parentElement.clientWidth;
+
+    const MOBILE_MAP_ZOOM = 1.6;   // must match the 160% in catan_styles.css
+    const mobileZoomed = isPlayerPage && mapZoomLevel === 2
+        && window.matchMedia('(max-width: 768px)').matches;
+
+    const containerWidth = isPlayerPage
+        ? canvas.parentElement.offsetWidth - canvas.parentElement.clientLeft * 2
+        : canvas.parentElement.clientWidth;
     const containerHeight = canvas.parentElement.clientHeight;
-    console.log("c: w"+containerWidth+"h"+containerHeight);
-    const aspectRatio = isPlayerPage && window.matchMedia('(max-width: 768px)').matches ? 0.95 : 1.2;
+    const aspectRatio = 1.2;
+    if (isPlayerPage) {
+        canvas.parentElement.style.height = `${containerWidth / aspectRatio}px`;
+    }
     let newWidth = containerWidth * mapZoomLevel;
     let newHeight = newWidth / aspectRatio;
 
-    if (newHeight > containerHeight) {
-        newHeight = containerHeight;
-        newWidth = newHeight * aspectRatio;
+    if (mobileZoomed) {
+        // grow both dimensions by the same factor so the shape isn't stretched
+        newWidth = containerWidth * MOBILE_MAP_ZOOM;
+        newHeight = newWidth / aspectRatio;
     }
-    console.log("n: w"+newWidth+"h"+newHeight);
     canvas.width = newWidth;
     canvas.height = newHeight;
+    canvas.style.width = `${newWidth}px`;
+    canvas.style.height = `${newHeight}px`;
 
     let minRawX = Infinity, maxRawX = -Infinity, minRawY = Infinity, maxRawY = -Infinity;
     if (boardTiles.length > 0) {
@@ -2981,8 +3187,10 @@ function updatePlayerUI() {
     if (!isPlayerPage || !allPlayersData[PLAYER_ID]) return;
 
     const playerNameDisplay = document.getElementById('playerNameDisplay');
-    if (window.PLAYER_NAME) allPlayersData[PLAYER_ID].playerName = window.PLAYER_NAME;
+    if (window.PLAYER_NAME) allPlayersData[PLAYER_ID].playerName = shortPlayerName(window.PLAYER_NAME);
     if (playerNameDisplay) playerNameDisplay.textContent = allPlayersData[PLAYER_ID].playerName;
+    const scoreDisplay = document.getElementById('playerScoreDisplay');
+    if (scoreDisplay) scoreDisplay.textContent = String(Number(allPlayersData[PLAYER_ID].score) || 0);
 
     const handCardsDiv = document.getElementById('handCards');
     if (handCardsDiv) {
@@ -3030,6 +3238,7 @@ function updatePlayerUI() {
         updateRollButton();
         updateRobberToolAvailability();
         updateCitiesAndKnightsTracker();
+        updateSetupControls();
         
 }
 
@@ -3161,10 +3370,11 @@ function updateCitiesAndKnightsTracker() {
         }
     }
     const progressCardCount = document.getElementById('progressCardCount');
-    if (progressCardCount) progressCardCount.textContent = `${state.progressCards.length}/5`;
+    if (progressCardCount) progressCardCount.textContent = String(state.progressCards.length);
 }
 
 async function activateProgressCard(cardIndex) {
+    if (allPlayersData._turnPhase === 'setup') return;
     const player = allPlayersData[PLAYER_ID];
     const progressCards = player?.citiesAndKnights?.progressCards;
     const cardName = progressCards?.[cardIndex];
@@ -3252,6 +3462,7 @@ function clearResourceSelection(forcedMode) {
 }
 
 async function commitPendingResourceCards() {
+    if (allPlayersData._turnPhase === 'setup') return;
     if (pendingResourceCards.length === 0) return;
 
     const selectedResources = [...pendingResourceCards];
@@ -3299,6 +3510,7 @@ function toggleCardSelection(cardElement, resourceType) {
     console.log('Selected cards:', selectedHandCards);
 }
 async function transferOrDropSelectedCards(currentPlayerId, targetPlayerId) {
+    if (allPlayersData._turnPhase === 'setup') return;
     if (selectedHandCards.length === 0) {
         showMessage('No cards selected to transfer/drop.', 'error');
         return;
@@ -3339,14 +3551,19 @@ async function transferOrDropSelectedCards(currentPlayerId, targetPlayerId) {
     const actionMessage = targetPlayerId === 'NA'
         ? `dropped ${cardSummary}`
         : `gave ${cardSummary} to ${allPlayersData[targetPlayerId].playerName}`;
-    socket.emit('catan2_game_action_log', { pid: currentPlayerId, message: actionMessage });
+    socket.emit('catan2_game_action_log', {
+        pid: currentPlayerId, message: actionMessage, cards: cardCounts,
+        action: targetPlayerId === 'NA' ? 'dropped' : 'gave',
+        target: targetPlayerId === 'NA' ? null : targetPlayerId
+    });
     await saveAllPlayerStatesToBackend(); // Save changes to backend
     updatePlayerUI(); 
     showMessage('Card operation completed.');
 }
 async function stealCards(currentPlayerId, targetPlayerId) {
+    if (allPlayersData._turnPhase === 'setup') return;
     savePlayerStateToHistory(); // Save current state before modification
-    targetHandCards = allPlayersData[targetPlayerId].hand;
+    const targetHandCards = allPlayersData[targetPlayerId].hand;
     let stolenCard = null;
     if (targetHandCards.length > 0) {
         const randomIndex = Math.floor(Math.random() * targetHandCards.length);
@@ -3406,10 +3623,10 @@ function getDiceFaceHTML(value, color) {
 }
 
 const CITIES_AND_KNIGHTS_EVENT_FACE_ASSETS = {
-    green_city: { label: 'Green city', image: 'diceg.webp' },
-    yellow_city: { label: 'Yellow city', image: 'dicey.webp' },
-    blue_city: { label: 'Blue city', image: 'diceb.webp' },
-    black_ship: { label: 'Black ship', image: 'dices.webp' }
+    green_city: { label: 'Green city', image: 'diceg.webp', color: '#37844a' },
+    yellow_city: { label: 'Yellow city', image: 'dicey.webp', color: '#e2bc29' },
+    blue_city: { label: 'Blue city', image: 'diceb.webp', color: '#3275bc' },
+    black_ship: { label: 'Black ship', image: 'dices.webp', color: '#151919' }
 };
 
 function getEventDieFaceHTML(eventFace) {
@@ -3428,13 +3645,31 @@ function setEventDieFace(element, eventFace) {
     const faceType = CITIES_AND_KNIGHTS_EVENT_FACE_ASSETS[eventFace] ? eventFace : 'black_ship';
     element.className = `catan2-event-die-face event-${faceType}`;
     element.setAttribute('aria-label', face.label);
-    element.innerHTML = `<img src="/static/images/catan/${face.image}" alt="">`;
+    element.style.backgroundColor = face.color;
+    let image = element.querySelector('img');
+    if (!image) {
+        image = document.createElement('img');
+        image.alt = '';
+        element.appendChild(image);
+    }
+    if (image.dataset.face !== faceType) {
+        image.src = `/static/images/catan/${face.image}`;
+        image.dataset.face = faceType;
+    }
 }
 
-function renderGameDiceResult(dice, eventFace) {
+function renderGameDiceResult(dice, eventFace, playerName = '') {
     const displayElement = document.getElementById('diceroll');
     if (!displayElement) return;
     displayElement.innerHTML = `<div class="dice-result" aria-live="polite">${getDiceFaceHTML(dice[0], 'red')}${getDiceFaceHTML(dice[1], 'yellow')}${getEventDieFaceHTML(eventFace)}</div>`;
+    const name = shortPlayerName(playerName || allPlayersData.lastDiceRoll?.player_name
+        || allPlayersData[allPlayersData.lastDiceRoll?.player]?.playerName);
+    if (isGamePage && name && !/^(player|playe$)/i.test(name)) {
+        const label = document.createElement('strong');
+        label.className = 'c2-dice-player';
+        label.textContent = name;
+        displayElement.querySelector('.dice-result').prepend(label);
+    }
     displayElement.classList.remove('rolling');
     displayElement.classList.add('final-roll');
 }
@@ -3444,7 +3679,7 @@ function renderLastGameDiceRoll() {
     if (Array.isArray(lastRoll?.dice) && lastRoll.dice.length === 2
         && lastRoll.dice.every(value => Number.isInteger(value) && value >= 1 && value <= 6)
         && CITIES_AND_KNIGHTS_EVENT_DIE.includes(lastRoll.event_die)) {
-        renderGameDiceResult(lastRoll.dice, lastRoll.event_die);
+        renderGameDiceResult(lastRoll.dice, lastRoll.event_die, lastRoll.player_name || allPlayersData[lastRoll.player]?.playerName);
     } else {
         const displayElement = document.getElementById('diceroll');
         if (displayElement) displayElement.replaceChildren();
@@ -3462,8 +3697,7 @@ function getDiceRollOverlay() {
     overlay.setAttribute('role', 'status');
     overlay.setAttribute('aria-live', 'polite');
     overlay.setAttribute('tabindex', '0');
-    overlay.title = 'Click to dismiss the dice result';
-    overlay.innerHTML = '<div class="dice-roll-panel"><span class="dice-roll-caption">Rolling Cities &amp; Knights dice</span><div class="dice-overlay-dice"><div class="dice-face dice-red" role="img" aria-label="Red die"></div><div class="dice-face dice-yellow" role="img" aria-label="Yellow die"></div><div class="catan2-event-die-face event-black_ship" role="img" aria-label="Event die"></div></div></div>';
+    overlay.innerHTML = '<div class="dice-roll-panel"><div class="dice-overlay-dice"><div class="dice-face dice-red" role="img" aria-label="Red die"></div><div class="dice-face dice-yellow" role="img" aria-label="Yellow die"></div><div class="catan2-event-die-face event-black_ship" role="img" aria-label="Event die"></div></div></div>';
     overlay.addEventListener('click', dismissDiceRollOverlay);
     overlay.addEventListener('keydown', event => {
         if (event.key === 'Escape' && overlay.classList.contains('is-result')) {
@@ -3491,15 +3725,16 @@ function showSharedDiceRoll(finalDice, finalEventFace, fixedNumberDice = false) 
     const overlay = getDiceRollOverlay();
     const faces = overlay.querySelectorAll('.dice-face');
     const eventDie = overlay.querySelector('.catan2-event-die-face');
-    const caption = overlay.querySelector('.dice-roll-caption');
     overlay.hidden = false;
     overlay.classList.remove('is-result');
     overlay.classList.add('is-visible', 'is-rolling');
-    caption.textContent = fixedNumberDice ? 'Alchemist roll' : 'Rolling dice';
 
+    let previousEventFace = null;
     const randomizeFaces = () => {
         faces.forEach((face, index) => setDiceFaceValue(face, fixedNumberDice ? finalDice[index] : getRandomInt(1, 6)));
-        setEventDieFace(eventDie, getRandomCitiesAndKnightsEventFace());
+        const eventFaces = Object.keys(CITIES_AND_KNIGHTS_EVENT_FACE_ASSETS).filter(face => face !== previousEventFace);
+        previousEventFace = eventFaces[getRandomInt(0, eventFaces.length - 1)];
+        setEventDieFace(eventDie, previousEventFace);
     };
     randomizeFaces();
     diceAnimationInterval = window.setInterval(randomizeFaces, 115);
@@ -3509,7 +3744,6 @@ function showSharedDiceRoll(finalDice, finalEventFace, fixedNumberDice = false) 
         diceAnimationInterval = null;
         faces.forEach((face, index) => setDiceFaceValue(face, finalDice[index]));
         setEventDieFace(eventDie, finalEventFace);
-        caption.textContent = 'Roll result · click to dismiss';
         overlay.classList.remove('is-rolling');
         overlay.classList.add('is-result');
 
@@ -3529,7 +3763,6 @@ function rolldice()
         updateRollButton();
         return;
     }
-    showMessage('Rolling dice...');
     markTurnRequestPending();
     socket.emit('catan2_roll_dice', { player_id: PLAYER_ID });
 
@@ -3607,7 +3840,10 @@ socket.on('catan2_roll_dice_broadcast', (data) => {
     allPlayersData._turnRolled = true;
     allPlayersData._robberMoveAvailable = data?.robber_move_available === true;
     allPlayersData._robberMovePlayerId = data?.robber_move_player || null;
-    allPlayersData.lastDiceRoll = { dice, event_die: eventFace };
+    allPlayersData.lastDiceRoll = {
+        dice, event_die: eventFace, player: data.current_player,
+        player_name: shortPlayerName(data.player_name || allPlayersData[data.current_player]?.playerName)
+    };
     clearTurnRequestPending();
     updateRobberToolAvailability();
     renderGameScoreboard();
@@ -3626,6 +3862,7 @@ function hideProgressCardPopup() {
 socket.on('catan2_progress_card_played_broadcast', data => {
     const popup = document.getElementById('progressCardPopup');
     if (!isGamePage || !popup || typeof data?.card !== 'string') return;
+    if (!isActiveCatanPlayer(data.pid)) return;
     const cardLabel = data.card.replaceAll('_', ' ').replace(/\b\w/g, character => character.toUpperCase());
     const playerName = allPlayersData[data.pid]?.playerName || data.pid;
     document.getElementById('progressCardPopupPlayer').textContent = data.target ? `${playerName} > ${data.target}` : playerName;
@@ -3684,6 +3921,7 @@ function renderVpAwardLog() {
         return;
     }
     awards.slice().reverse().forEach(award => {
+        if (/^(player|playe$)/i.test(String(award.playerName || '').trim())) return;
         const item = document.createElement('li');
         const description = document.createElement('span');
         description.textContent = award.type === 'metropolis'
@@ -3709,10 +3947,107 @@ function renderActivityLog() {
         log.appendChild(empty);
         return;
     }
-    entries.slice().reverse().forEach(entry => {
+    const displayEntries = entries.slice().reverse();
+    for (let index = 0; index < displayEntries.length - 1; index++) {
+        const received = displayEntries[index];
+        const played = displayEntries[index + 1];
+        if (received.action === 'received' && played.action === 'played'
+            && played.card === 'trade_monopoly' && received.pid === played.pid) {
+            [displayEntries[index], displayEntries[index + 1]] = [played, received];
+            index++;
+        }
+    }
+    displayEntries.forEach(entry => {
+        if (entry.pid ? !isActiveCatanPlayer(entry.pid) : /^(player|playe$)/i.test(String(entry.player || '').trim())) return;
         const item = document.createElement('li');
-        item.textContent = `${entry.player || 'Player'} ${entry.message || ''}`.trim();
-        item.title = item.textContent;
+        const actor = document.createElement('strong');
+        actor.className = 'c2-activity-player';
+        actor.textContent = shortPlayerName(entry.player || allPlayersData[entry.pid]?.playerName || 'Player');
+        const color = PLAYER_COLORS[entry.pid];
+        if (color) actor.style.color = color;
+        item.appendChild(actor);
+        const action = entry.action;
+        const label = document.createElement('span');
+        label.textContent = ({ picked: 'took', dropped: 'dropped', gave: 'gave', stole: 'stole from', received: 'got',
+            built: 'built', placed: 'placed', upgraded: 'upgraded', activated: 'activated', removed: 'removed',
+            moved: 'moved', played: 'played', progress_draw: 'took', progress_drop: 'dropped', progress_replace: 'replaced' })[action] || entry.message || '';
+        item.appendChild(label);
+        const appendCard = (source, count, description, played = false) => {
+            const card = document.createElement('span');
+            card.className = 'c2-activity-card';
+            card.title = description;
+            if (played && source.endsWith('/dev_card.webp')) {
+                card.classList.add('c2-activity-named-front');
+                const symbol = document.createElement('i');
+                symbol.className = `fas ${{ spy: 'fa-user-secret', warlord: 'fa-chess-knight', harbor: 'fa-anchor' }[entry.card] || 'fa-scroll'}`;
+                symbol.setAttribute('aria-hidden', 'true');
+                const name = document.createElement('strong');
+                name.textContent = description;
+                card.append(symbol, name);
+            } else {
+                const image = document.createElement('img');
+                image.src = source;
+                image.alt = description;
+                card.appendChild(image);
+            }
+            if (count > 1) {
+                const badge = document.createElement('span');
+                badge.textContent = count;
+                card.appendChild(badge);
+            }
+            item.appendChild(card);
+        };
+        Object.entries(entry.cards || {}).forEach(([resource, count]) => {
+            if (['wood', 'brick', 'rock', 'sheep', 'hay', 'paper', 'cloth', 'coin'].includes(resource) && count > 0) {
+                appendCard(`/static/images/catan/${resource}.webp`, count, `${count} ${resource}`);
+            }
+        });
+        if (action === 'received') {
+            if (!Object.keys(entry.cards || {}).length) label.textContent = 'got 0';
+            const sources = (entry.sources || []).filter(name => !/^(player|playe$)/i.test(name));
+            if (sources.length) {
+                const from = document.createElement('span');
+                from.textContent = 'from';
+                item.appendChild(from);
+                sources.forEach((name, index) => {
+                    if (index) item.appendChild(document.createTextNode(', '));
+                    const source = document.createElement('strong');
+                    source.className = 'c2-activity-player';
+                    source.textContent = shortPlayerName(name);
+                    item.appendChild(source);
+                });
+            }
+        }
+        if (['progress_draw', 'progress_drop', 'progress_replace'].includes(action)
+            || action === 'picked' && entry.kind === 'pick' && !Object.keys(entry.cards || {}).length) {
+            appendCard('/static/images/catan/dev_card.webp', 1, 'Progress card');
+            if (action === 'progress_replace') {
+                const arrow = document.createElement('i');
+                arrow.className = 'fas fa-arrow-right';
+                arrow.setAttribute('aria-hidden', 'true');
+                item.appendChild(arrow);
+                appendCard('/static/images/catan/dev_card.webp', 1, 'Progress card');
+            }
+        } else if (action === 'played' && entry.card) {
+            appendCard(resolveProgressCardImageUrl(entry.card), 1, formatCardName(entry.card), true);
+        } else if (entry.piece) {
+            const icons = { house: 'fa-home', city: 'fa-city', road: 'fa-road', wall: 'fa-chess-rook', knight: 'fa-chess-knight', robber: 'fa-user-secret', merchant: 'fa-user-tie' };
+            const icon = document.createElement('i');
+            icon.className = `fas ${icons[entry.piece] || 'fa-hammer'} c2-activity-piece`;
+            icon.setAttribute('role', 'img');
+            icon.setAttribute('aria-label', entry.piece);
+            icon.title = formatCardName(entry.piece);
+            item.appendChild(icon);
+        }
+        if (entry.target_name && !/^(player|playe$)/i.test(entry.target_name)) {
+            const arrow = document.createElement('i');
+            arrow.className = 'fas fa-arrow-right';
+            arrow.setAttribute('aria-hidden', 'true');
+            const target = document.createElement('strong');
+            target.className = 'c2-activity-player';
+            target.textContent = shortPlayerName(entry.target_name);
+            item.append(arrow, target);
+        }
         item.dataset.kind = entry.kind || 'action';
         log.appendChild(item);
     });
@@ -3739,15 +4074,26 @@ function renderGameScoreboard() {
         : [];
     const playerIds = [...new Set([...registeredOrder, ...seatPlayerIds])];
     const scoreboardBody = document.querySelector('#assignpoint table tbody');
-    const highestScore = Math.max(0, ...playerIds.map(playerId => Number(allPlayersData[playerId]?.score) || 0));
+    const highestScore = Math.max(0, ...playerIds.filter(isActiveCatanPlayer).map(playerId => Number(allPlayersData[playerId]?.score) || 0));
 
     playerIds.forEach(playerId => {
         const player = allPlayersData[playerId];
         const row = scoreboardBody.querySelector(`[data-player-id="${playerId}"]`);
         if (!row) return;
+        const active = isActiveCatanPlayer(playerId);
+        row.hidden = !active;
+        document.querySelectorAll(`[data-award-vp="${playerId}"], [data-metropolis-player="${playerId}"], [data-title-player="${playerId}"]`).forEach(button => {
+            button.hidden = !active;
+            button.disabled = !active;
+            button.textContent = active ? player.playerName : '';
+        });
+        if (!active) {
+            [...row.cells].forEach(cell => { cell.textContent = ''; });
+            return;
+        }
 
         row.classList.toggle('c2-score-leader', highestScore > 0 && Number(player.score) === highestScore);
-        row.classList.toggle('c2-score-inactive', /^player/i.test(String(player.playerName || '').trim()));
+        row.classList.toggle('c2-score-inactive', /^playe/i.test(String(player.playerName || '').trim()));
         row.classList.toggle('c2-score-active', playerId === allPlayersData._currentTurnPlayerId);
         row.cells[0].textContent = player.playerName;
         row.cells[1].textContent = player.score;
@@ -3989,7 +4335,7 @@ if (awardTitleButton) {
 }
 async function onCatanPlayerPageLoad() {
     await loadAllStatesFromBackend();
-    const registeredName = window.PLAYER_NAME;
+    const registeredName = shortPlayerName(window.PLAYER_NAME);
     if (registeredName && allPlayersData[PLAYER_ID].playerName !== registeredName) {
         allPlayersData[PLAYER_ID].playerName = registeredName;
         await saveAllPlayerStatesToBackend();

@@ -24,11 +24,53 @@ PLAYER_COLOR_OPTIONS = [
     {"name": "Purple", "value": "#8B5FBF"},
     {"name": "Blue", "value": "#2563EB"},
 ]
-DEFAULT_PLAYER_COLORS = [option["value"] for option in PLAYER_COLOR_OPTIONS[:4]]
+
+BOARD_COLUMNS = {
+    4: {q: (max(-2, -2 - q), min(2, 2 - q)) for q in range(-2, 3)},
+    6: {-3: (0, 2), -2: (-1, 2), -1: (-2, 2), 0: (-3, 2), 1: (-3, 1), 2: (-3, 0), 3: (-3, -1)},
+}
+TILE_COUNTS = {
+    4: {'wood': 4, 'sheep': 4, 'hay': 4, 'brick': 3, 'rock': 3, 'desert': 1},
+    6: {'wood': 6, 'sheep': 6, 'hay': 6, 'brick': 5, 'rock': 5, 'desert': 2},
+}
+NUMBER_TOKENS = {
+    4: [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12],
+    6: [2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11, 12, 12],
+}
+
+
+#DEFAULT_PLAYER_COLORS = [option["value"] for option in PLAYER_COLOR_OPTIONS[:4]]
+DEFAULT_PLAYER_COLORS = [option["value"] for option in PLAYER_COLOR_OPTIONS]
+#f"player{seat}": DEFAULT_PLAYER_COLORS[(seat - 1) % len(DEFAULT_PLAYER_COLORS)]
+
 STARTING_HAND = []
 CATAN_REGISTRY_LOCK = RLock()
+BOARD_COLUMNS = {
+    4: {q: (max(-2, -2 - q), min(2, 2 - q)) for q in range(-2, 3)},
+    6: {-3: (0, 2), -2: (-1, 2), -1: (-2, 2), 0: (-3, 2), 1: (-3, 1), 2: (-3, 0), 3: (-3, -1)},
+}
+TILE_COUNTS = {
+    4: {'wood': 4, 'sheep': 4, 'hay': 4, 'brick': 3, 'rock': 3, 'desert': 1},
+    6: {'wood': 6, 'sheep': 6, 'hay': 6, 'brick': 5, 'rock': 5, 'desert': 2},
+}
+NUMBER_TOKENS = {
+    4: [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12],
+    6: [2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 8, 8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11, 12, 12],
+}
 
-
+def generate_catan_board(player_count):
+    positions = [(q, r) for q, (first, last) in BOARD_COLUMNS[player_count].items()
+                 for r in range(first, last + 1)]
+    types = [t for t, n in TILE_COUNTS[player_count].items() for _ in range(n)]
+    numbers = NUMBER_TOKENS[player_count][:]
+    random.shuffle(types)
+    random.shuffle(numbers)
+    tiles = []
+    for (q, r), tile_type in zip(positions, types):
+        tiles.append({'q': q, 'r': r, 'type': tile_type,
+                      'number': None if tile_type == 'desert' else numbers.pop()})
+    return {'boardTiles': tiles, 'robberTile': None}
+    
 def catan_registry_locked(handler):
     @wraps(handler)
     def locked_handler(*args, **kwargs):
@@ -54,29 +96,32 @@ def write_file_atomic(path, text):
             time.sleep(0.05 * (attempt + 1))
 DEV_CARD_COUNTS = {'knight': 14, 'victory_point': 5, 'road_building': 2, 'year_of_plenty': 2, 'monopoly': 2}
 #DEV_CARD_COUNTS = {'knight': 1, 'victory_point': 1, 'road_building': 1, 'year_of_plenty': 2, 'monopoly': 2}
-
+DEV_CARD_COUNTS_6P = {'knight': 20, 'victory_point': 5, 'road_building': 3, 'year_of_plenty': 3, 'monopoly': 3}
+def get_dev_card_counts(max_players):
+    return DEV_CARD_COUNTS_6P if max_players == 6 else DEV_CARD_COUNTS
 
 def ensure_catan_dev_deck(state):
     if isinstance(state.get('_devDeck'), list):
         return False
     used = Counter()
-    for seat in range(1, 5):
+    max_players = state.get('max_players', 4)
+    counts = get_dev_card_counts(max_players)                      # NEW
+    for seat in range(1, max_players+1):
         player = state.get(f'player{seat}', {})
         used.update(card for card in player.get('devCards', []) if card in DEV_CARD_COUNTS)
         used['victory_point'] += int(player.get('victory_point', 0))
     for entry in state.get('_activityLog', []):
         if entry.get('action') == 'played' and entry.get('cardType') in DEV_CARD_COUNTS and entry['cardType'] != 'victory_point':
             used[entry['cardType']] += 1
-    deck = [card for card, count in DEV_CARD_COUNTS.items() for _ in range(max(0, count - used[card]))]
+    deck = [card for card, count in counts.items() for _ in range(max(0, count - used[card]))]   # CHANGED
     purchases = sum(entry.get('action') == 'bought' or entry.get('message') == 'bought a Development Card'
                     for entry in state.get('_activityLog', []))
-    while len(deck) > sum(DEV_CARD_COUNTS.values()) - max(sum(used.values()), purchases):
+    while len(deck) > sum(counts.values()) - max(sum(used.values()), purchases):                 # CHANGED
         deck.pop()
     random.shuffle(deck)
     state['_devDeck'] = deck
     state['_devDeckInitialized'] = True
     return True
-
 
 def load_catan_player_registry():
     if not os.path.exists(PLAYER_REGISTRY_FILE):
@@ -155,7 +200,8 @@ def advance_catan_setup(state):
 
 
 def update_catan_scores(state):
-    seat_ids = [f'player{seat}' for seat in range(1, 5) if f'player{seat}' in state]
+    max_players = state.get('max_players', 4)
+    seat_ids = [f'player{seat}' for seat in range(1, max_players+1) if f'player{seat}' in state]
     holder = next((player_id for player_id in seat_ids if state[player_id].get('largestarmy')), None)
     highest = max((state[player_id].get('knightplayed', 0) for player_id in seat_ids), default=0)
     if highest < 3:
@@ -178,9 +224,14 @@ def get_catan_player_colors():
         players = load_catan_player_registry()["players"]
     except (OSError, ValueError, json.JSONDecodeError):
         players = []
+    try:
+        play_state = json.loads(load_play_state_from_json() or '{}')
+        max_players = play_state.get('max_players', 4)
+    except Exception:
+        max_players = 4
     colors = {
-        f"player{seat}": DEFAULT_PLAYER_COLORS[seat - 1]
-        for seat in range(1, 5)
+        f"player{seat}": DEFAULT_PLAYER_COLORS[(seat - 1) % len(DEFAULT_PLAYER_COLORS)]
+        for seat in range(1, max_players + 1)
     }
     valid_colors = {option["value"] for option in PLAYER_COLOR_OPTIONS}
     for player in players:
@@ -307,7 +358,12 @@ def configure_routes_catan(app,socketio):
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    @app.route("/catan/game")
+    @app.route('/catan', strict_slashes=False)
+    @dashboard_tile(section='board', title='Catan', description='Choose Catan or Cities & Knights game and player pages.', icon='island', order=19)
+    def catan_dashboard():
+        return render_template('catan/dashboard.html')
+
+    @app.route("/catan/1/game")
     @dashboard_tile(section="board", title="Catan Game", description="Open the shared Catan game view.", icon="island", order=20)
     def catan_game():
         return render_template("catan/catan_game.html", player_colors=get_catan_player_colors())
@@ -360,7 +416,7 @@ def configure_routes_catan(app,socketio):
         socketio.emit('catan_update')
         return jsonify({'status': 'success'})
 
-    @app.route('/catan/player/', methods=['GET', 'POST'], strict_slashes=False)
+    @app.route('/catan/1/player', methods=['GET', 'POST'], strict_slashes=False)
     @dashboard_tile(section="board", title="Catan Player", description="Register a player or open an existing player seat.", icon="players", order=30)
     @catan_registry_locked
     def catan_player_lobby():
@@ -370,8 +426,11 @@ def configure_routes_catan(app,socketio):
         except (OSError, ValueError, json.JSONDecodeError) as exception:
             return f"Could not load player slots: {exception}", 500
 
+        # Load max_players from current saved state first
+        state = json.loads(load_play_state_from_json() or '{}')
+        max_players = state.get('max_players', 4)
+
         if request.method == 'POST':
-            state = json.loads(load_play_state_from_json() or '{}')
             name = (request.form.get('name') or '').strip()
             passphrase = request.form.get('passphrase') or ''
             if not name or len(name) > 40 or not passphrase:
@@ -390,11 +449,11 @@ def configure_routes_catan(app,socketio):
                     error = 'That name is already registered. Enter its passphrase to open the player link.'
                 elif state.get('_started'):
                     error = 'The game has started. New players cannot join.'
-                elif len(registry['players']) >= 4:
-                    error = 'All four player seats are filled. Use your registered name and passphrase to open your link.'
+                elif len(registry['players']) >= max_players:
+                    error = f'All {max_players} player seats are filled. Use your registered name and passphrase to open your link.'
                 else:
                     occupied_seats = {player['seat'] for player in registry['players']}
-                    seat = next(number for number in range(1, 5) if number not in occupied_seats)
+                    seat = next(number for number in range(1, max_players + 1) if number not in occupied_seats)
                     alphabet = string.ascii_uppercase + string.digits
                     existing_codes = {player['code'] for player in registry['players']}
                     code = ''.join(secrets.choice(alphabet) for _ in range(5))
@@ -430,8 +489,9 @@ def configure_routes_catan(app,socketio):
                                     'victory_point': 0,
                                     'score': 0,
                                 }
-                                for player_seat in range(1, 5)
+                                for player_seat in range(1, max_players + 1)
                             }
+                            state['max_players'] = max_players
                             state['robber'] = catan_desert_position()
                             state['_undoStack'] = []
                         for registered_player in registry['players']:
@@ -451,20 +511,19 @@ def configure_routes_catan(app,socketio):
                         registry['players'].remove(player)
                         error = f"Could not create the player seat: {exception}"
 
-        state = json.loads(load_play_state_from_json() or '{}')
         players_by_seat = {player['seat']: player for player in registry['players']}
         seats = [
             {'seat': seat, 'name': players_by_seat.get(seat, {}).get('name'), 'color': players_by_seat.get(seat, {}).get('color')}
-            for seat in range(1, 5)
+            for seat in range(1, max_players + 1)
         ]
+        
         return render_template(
             'catan/catan_player_lobby.html',
             seats=seats,
             error=error,
             game_started=state.get('_started', False),
         )
-
-    @app.route('/catan/player/<player_code>', methods=['GET', 'POST'])
+    @app.route('/catan/1/player/<player_code>', methods=['GET', 'POST'])
     @catan_registry_locked
     def catan_player(player_code):
         if len(player_code) != 5 or any(character not in string.ascii_uppercase + string.digits for character in player_code):
@@ -712,6 +771,10 @@ def configure_routes_catan(app,socketio):
     @app.route('/catan/reset_game')
     @catan_registry_locked
     def reset_game():
+        player_count = int(request.args.get('players', 4))
+        if player_count not in (4, 6):
+            player_count = 4
+
         reset_state = {
             f"player{player_number}": {
                 "playerName": f"Player {player_number}",
@@ -728,8 +791,11 @@ def configure_routes_catan(app,socketio):
                 "victory_point": 0,
                 "score": 0,
             }
-            for player_number in range(1, 5)
+            for player_number in range(1, player_count + 1)
         }
+        reset_state["max_players"] = player_count
+        if not save_catan_board_state_to_json(json.dumps(generate_catan_board(player_count))):
+            return jsonify({"status": "error", "message": "Failed to generate board."}), 500
         reset_state["robber"] = catan_desert_position()
         reset_state["_undoStack"] = []
         reset_state["_turnOrder"] = []
@@ -742,7 +808,7 @@ def configure_routes_catan(app,socketio):
             return jsonify({"status": "error", "message": "Failed to reset game state."}), 500
 
         try:
-            save_catan_player_registry({"players": []})
+            save_catan_player_registry({"players": [], "max_players": player_count})
             session.pop('catan_player_access', None)
         except OSError as e:
             return jsonify({"status": "error", "message": f"Game reset, but player seats could not be cleared: {e}"}), 500
@@ -752,7 +818,7 @@ def configure_routes_catan(app,socketio):
         socketio.emit('catan_update')
         return jsonify({
             "status": "success",
-            "message": "Game reset. Player seats were cleared; new players start with no resource cards.",
+            "message": f"Game reset for {player_count} players. Player seats were cleared.",
         }), 200
 
     @app.route('/catan/longest_road', methods=['POST'])
@@ -763,7 +829,9 @@ def configure_routes_catan(app,socketio):
         player_id = (request.json or {}).get('player_id')
         if player_id not in state.get('_turnOrder', []) or state[player_id].get('playerName', '').strip().lower().startswith('player'):
             return jsonify({'status': 'error', 'message': 'Choose an active player.'}), 400
-        for seat_id in ('player1', 'player2', 'player3', 'player4'):
+        
+        max_players = state.get('max_players', 4)
+        for seat_id in [f'player{i}' for i in range(1, max_players + 1)]:
             state[seat_id]['longestroad'] = int(seat_id == player_id)
             state[seat_id]['longestroadmanual'] = int(seat_id == player_id)
         update_catan_scores(state)
@@ -773,6 +841,8 @@ def configure_routes_catan(app,socketio):
 
     def append_activity(player_id, message, **details):
         state = json.loads(load_play_state_from_json() or '{}')
+        max_players = state.get('max_players', 4)
+        
         if player_id not in state.get('_turnOrder', []):
             return
         entries = state.setdefault('_activityLog', [])

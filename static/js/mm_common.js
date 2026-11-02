@@ -20,7 +20,8 @@ window.MM_OPTIONS = (() => {
     const c = document.getElementById('appContainer');
     return {
         playlist: readJsonData(c, 'playlistOptions', []),
-        category: readJsonData(c, 'categoryOptions', [])
+        category: readJsonData(c, 'categoryOptions', []),
+        artist: readJsonData(c, 'artistOptions', [])
     };
 })();
 
@@ -28,7 +29,7 @@ window.MM_OPTIONS = (() => {
 // Click the value → editable input with a suggestion list; Enter/pick saves, Esc cancels.
 // onCommit(el, newValue, previousValue) persists the change.
 
-const INLINE_EMPTY_LABEL = { playlist: '', category: '+ category' };
+const INLINE_EMPTY_LABEL = { playlist: '', category: '+ category', artist: '+ artist' };
 
 function renderInlineValue(el, value) {
     if (!el) return;
@@ -60,11 +61,29 @@ function openInlineEdit(el, onCommit) {
     const input = document.createElement('input');
     input.className = 'inline-edit-input';
     input.value = current;
-    input.placeholder = field === 'category' ? 'category (empty = none)' : 'playlist';
+    input.placeholder = field === 'category' ? 'category (empty = none)' : field === 'artist' ? 'artist' : 'playlist';
     input.autocomplete = 'off';
     const list = document.createElement('div');
     list.className = 'inline-suggest';
-    el.append(input, list);
+    const floatingList = document.body.classList.contains('mp3-page');
+    const positionList = () => {
+        const bounds = el.getBoundingClientRect();
+        const width = Math.min(220, window.innerWidth - 16);
+        Object.assign(list.style, {
+            position: 'fixed', top: `${bounds.bottom + 3}px`,
+            left: `${Math.max(8, Math.min(bounds.left, window.innerWidth - width - 8))}px`,
+            width: `${width}px`, zIndex: '2000'
+        });
+    };
+    if (floatingList) {
+        el.appendChild(input);
+        document.body.appendChild(list);
+        positionList();
+        window.addEventListener('scroll', positionList, true);
+        window.addEventListener('resize', positionList);
+    } else {
+        el.append(input, list);
+    }
 
     const renderOptions = () => {
         const typed = input.value.trim().toLowerCase();
@@ -81,8 +100,13 @@ function openInlineEdit(el, onCommit) {
     const finish = (save, picked) => {
         if (done) return;
         done = true;
+        if (floatingList) {
+            list.remove();
+            window.removeEventListener('scroll', positionList, true);
+            window.removeEventListener('resize', positionList);
+        }
         const value = (picked ?? input.value).trim();
-        const changed = value !== current && (value || field === 'category');
+        const changed = value !== current && (value || field === 'category' || field === 'artist');
         if (save && changed) onCommit(el, value, current);
         else renderInlineValue(el, current);
     };

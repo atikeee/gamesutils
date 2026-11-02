@@ -17,6 +17,27 @@
 
 // ── All folder data injected by Flask ─────────────────────────────────────────
 const ALL_FOLDERS = window.PHOTOTAG_FOLDERS || [];
+const CAN_MANAGE_PHOTOS = window.PHOTOTAG_CAN_MANAGE === true;
+const accessExpires = Number(window.PHOTOTAG_ACCESS_EXPIRES) * 1000;
+
+function checkAccessExpiry() {
+  if (!Number.isFinite(accessExpires) || Date.now() >= accessExpires) {
+    window.location.replace('/');
+  }
+}
+
+window.setTimeout(checkAccessExpiry, Math.max(0, accessExpires - Date.now()));
+document.addEventListener('visibilitychange', checkAccessExpiry);
+window.addEventListener('pageshow', checkAccessExpiry);
+
+async function phototagFetch(url, options) {
+  const response = await fetch(url, options);
+  if (response.status === 401) {
+    window.location.replace('/');
+    throw new Error('Passphrase access expired.');
+  }
+  return response;
+}
 
 // ── App state ─────────────────────────────────────────────────────────────────
 const state = {
@@ -78,6 +99,7 @@ const processClose   = document.getElementById("process-close");
 const btnMark        = document.getElementById("btn-mark");
 const markBadge      = document.getElementById("mark-badge");
 const btnDownload    = document.getElementById("btn-download");
+const btnDownloadFolder = document.getElementById("btn-download-folder");
 const downloadCount  = document.getElementById("download-count");
 const downloadModal  = document.getElementById("download-modal");
 const downloadTitle  = document.getElementById("download-title");
@@ -288,6 +310,7 @@ async function loadFolder(root, folder) {
   state.index    = 0;
   Object.keys(imgCache).forEach(k => delete imgCache[k]);
   btnProcess.disabled = true;
+  btnDownloadFolder.disabled = true;
 
   showMessage("loading");
   setNavState();
@@ -301,7 +324,7 @@ async function loadFolder(root, folder) {
     const apiUrl  = `/phototag/api/images?${params}`;
     console.log("[phototag] loadFolder → GET", apiUrl);
 
-    const res  = await fetch(apiUrl);
+    const res  = await phototagFetch(apiUrl);
     console.log("[phototag] response status :", res.status, res.statusText);
 
     const json = await res.json();
@@ -311,7 +334,8 @@ async function loadFolder(root, folder) {
 
     state.allImages = json.images;
     state.tags      = json.tags || {};
-    btnProcess.disabled = false;
+    btnProcess.disabled = !CAN_MANAGE_PHOTOS;
+    btnDownloadFolder.disabled = state.allImages.length === 0;
 
     console.log("[phototag] images received :", state.allImages.length);
     console.log("[phototag] first 5 paths   :", state.allImages.slice(0, 5));
@@ -501,7 +525,7 @@ async function rotateImage() {
   btnRotate.disabled = true;
 
   try {
-    const res = await fetch("/phototag/api/rotate", {
+    const res = await phototagFetch("/phototag/api/rotate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ root: state.root, folder: state.folder, path: relPath }),
@@ -532,32 +556,55 @@ btnBest.addEventListener("click",   () => applyTag("best"));
 btnGood.addEventListener("click",   () => applyTag("good"));
 btnDelete.addEventListener("click", () => applyTag("delete"));
 
+let tagRequestPending = false;
+
 async function applyTag(tag) {
-  if (!state.images.length) return;
+  if (tag === 'delete' && !CAN_MANAGE_PHOTOS) return;
+  if (!state.images.length || tagRequestPending) return;
   const relPath    = state.images[state.index];
   if (isProtected(relPath)) return;
+  const root = state.root;
+  const folder = state.folder;
   const currentTag = state.tags[relPath] || "";
   const newTag     = currentTag === tag ? "" : tag;  // toggle off if same
 
   // Optimistic update
+  tagRequestPending = true;
   state.tags[relPath] = newTag;
   applyTagUI(newTag);
   updateFilmstripThumbTag(state.index, newTag);
 
   try {
-    const res  = await fetch("/phototag/api/tag", {
+    const res  = await phototagFetch("/phototag/api/tag", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ root: state.root, folder: state.folder, path: relPath, tag: newTag }),
+      body:    JSON.stringify({ root, folder, path: relPath, tag: newTag }),
     });
     const json = await res.json();
     if (json.status !== "success") throw new Error(json.message);
+    if (state.root !== root || state.folder !== folder) return;
+    if (json.path && json.path !== relPath) {
+      state.allImages = state.allImages.map(path => path === relPath ? json.path : path);
+      delete state.tags[relPath];
+      if (newTag) state.tags[json.path] = newTag;
+      delete imgCache[relPath];
+      delete imageVersions[relPath];
+      const previousMark = marked.get(markKey(relPath));
+      if (previousMark) {
+        marked.delete(markKey(relPath));
+        marked.set(markKey(json.path), { ...previousMark, path: json.path });
+      }
+      refreshImageList(json.path);
+    }
   } catch (err) {
     console.error("[phototag] Tag save failed:", err);
+    if (state.root !== root || state.folder !== folder) return;
     // Revert
     state.tags[relPath] = currentTag;
     applyTagUI(currentTag);
     updateFilmstripThumbTag(state.index, currentTag);
+  } finally {
+    tagRequestPending = false;
   }
 }
 
@@ -581,7 +628,7 @@ function clearTagUI() { applyTagUI(""); }
 
 function setTagButtonsEnabled(enabled) {
   [btnBest, btnGood, btnDelete].forEach(b => {
-    b.disabled = !enabled;
+    b.disabled = !enabled || (b === btnDelete && !CAN_MANAGE_PHOTOS);
     b.title = enabled ? "" : "Protected (e/edit folder)";
   });
 }
@@ -663,6 +710,7 @@ processClose.addEventListener("click", () => {
 });
 
 async function startProcess() {
+  if (!CAN_MANAGE_PHOTOS) return;
   btnProcess.blur();
   if (!state.root || !state.folder) return;
 
@@ -674,7 +722,7 @@ async function startProcess() {
   processModal.classList.add("open");
 
   try {
-    const res  = await fetch("/phototag/api/process", {
+    const res  = await phototagFetch("/phototag/api/process", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ root: state.root, folder: state.folder }),
@@ -689,7 +737,7 @@ async function startProcess() {
 
 async function pollProcess(jobId) {
   try {
-    const res  = await fetch(`/phototag/api/process/status?job=${encodeURIComponent(jobId)}`);
+    const res  = await phototagFetch(`/phototag/api/process/status?job=${encodeURIComponent(jobId)}`);
     const json = await res.json();
     if (json.status !== "success") throw new Error(json.message);
 
@@ -821,7 +869,7 @@ async function saveToDirectory(dir, items) {
     const st = downloadList.children[i].querySelector(".download-item-state");
     downloadStatus.textContent = `${i + 1} / ${items.length}  ${it.path}`;
     try {
-      const res = await fetch(origUrl(it));
+      const res = await phototagFetch(origUrl(it));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const fh = await dir.getFileHandle(await uniqueName(dir, it.path.split("/").pop()), { create: true });
       await res.body.pipeTo(await fh.createWritable());
@@ -850,7 +898,7 @@ async function prepareForShare(items) {
     const st = downloadList.children[i].querySelector(".download-item-state");
     downloadStatus.textContent = `${i + 1} / ${items.length}  ${it.path}`;
     try {
-      const res = await fetch(origUrl(it));
+      const res = await phototagFetch(origUrl(it));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       if (token !== dlToken) return;
@@ -916,9 +964,8 @@ async function directDownload(items) {
   downloadClear.hidden = false;
 }
 
-async function startDownload() {
+async function startDownload(items = [...marked.values()]) {
   btnDownload.blur();
-  const items = [...marked.values()];
   if (!items.length) return;
 
   if (IS_IOS) return prepareForShare(items);
@@ -967,7 +1014,13 @@ function closeDownloadModal() {
 }
 
 downloadClose.addEventListener("click", closeDownloadModal);
-btnDownload.addEventListener("click", startDownload);
+btnDownload.addEventListener("click", () => startDownload());
+btnDownloadFolder.addEventListener("click", () => {
+  btnDownloadFolder.blur();
+  if (!state.root || !state.folder || !state.allImages.length) return;
+  const items = state.allImages.map(path => ({ root: state.root, folder: state.folder, path }));
+  startDownload(items);
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // KEYBOARD SHORTCUTS

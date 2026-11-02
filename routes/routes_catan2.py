@@ -7,6 +7,9 @@ import os
 import secrets
 import string
 import random
+import re
+import math
+from functools import wraps
 from collections import Counter
 from threading import Lock
 
@@ -16,6 +19,7 @@ JSON_PLAY_STATE_FILE = os.path.join(CATAN2_DATA_DIR, "catan_play_state.json")
 JSON_ACTIVITY_LOG_FILE = os.path.join(CATAN2_DATA_DIR, "catan_activity_log.json")
 PLAYER_REGISTRY_FILE = os.path.join(CATAN2_DATA_DIR, "catan_player_registry.json")
 ACTIVITY_LOG_LOCK = Lock()
+SETUP_LOCK = Lock()
 PLAYER_COLOR_OPTIONS = [
     {"name": "Red", "value": "#D64545"},
     {"name": "Black", "value": "#000000"},
@@ -25,7 +29,131 @@ PLAYER_COLOR_OPTIONS = [
     {"name": "Teal", "value": "#168E9A"},
 ]
 DEFAULT_PLAYER_COLORS = [option["value"] for option in PLAYER_COLOR_OPTIONS[:4]]
-STARTING_HAND = ["wood"] * 3 + ["brick"] * 3 + ["sheep"] + ["hay"] * 3 + ["rock"] * 3
+STARTING_HAND = []
+
+
+def catan2_setup_sequence(turn_order):
+    return [
+        {'player': player_id, 'piece': piece, 'stage': stage}
+        for stage, players in (('house', turn_order), ('city', turn_order[::-1]))
+        for player_id in players
+        for piece in (stage, 'road')
+    ]
+
+
+def catan2_setup_action(state):
+    if state.get('_turnPhase') != 'setup':
+        return None
+    steps = catan2_setup_sequence(state.get('_turnOrder') or [])
+    index = state.get('_setupIndex', 0)
+    return steps[index] if type(index) is int and 0 <= index < len(steps) else None
+
+
+def catan2_setup_locked(handler):
+    @wraps(handler)
+    def locked(*args, **kwargs):
+        with SETUP_LOCK:
+            return handler(*args, **kwargs)
+    return locked
+
+
+def catan2_board_geometry(board):
+    junctions, edges = {}, {}
+    for tile in board.get('boardTiles', []):
+        center_x = 120 * tile['q']
+        center_y = 80 * math.sqrt(3) * (tile['r'] + tile['q'] / 2)
+        vertices = []
+        for corner in range(6):
+            angle = math.pi * corner / 3
+            vertex = {'x': center_x + 80 * math.cos(angle), 'y': center_y + 80 * math.sin(angle)}
+            vertex['id'] = f"{round(vertex['x'])},{round(vertex['y'])}"
+            junctions.setdefault(vertex['id'], vertex)
+            vertices.append(vertex)
+        for first, second in zip(vertices, vertices[1:] + vertices[:1]):
+            edge_id = '-'.join(sorted((first['id'], second['id'])))
+            edges.setdefault(edge_id, {'id': edge_id, 'x1': first['x'], 'y1': first['y'],
+                                      'x2': second['x'], 'y2': second['y'],
+                                      'junctions': [first['id'], second['id']]})
+    return junctions, edges
+
+
+def short_player_name(name):
+    return str(name or '').strip()[:5]
+
+
+def normalize_catan2_names(value):
+    changed = False
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if isinstance(item, str) and (key in ('playerName', 'previousOwnerName', 'player_name', 'target_name')
+                                          or key == 'player' and not re.fullmatch(r'player\d+', item)):
+                short = short_player_name(item)
+                if short != item:
+                    value[key] = short
+                    changed = True
+            elif isinstance(item, (dict, list)):
+                changed = normalize_catan2_names(item) or changed
+    elif isinstance(value, list):
+        for item in value:
+            changed = normalize_catan2_names(item) or changed
+    return changed
+
+
+def visual_activity_details(message, details=None):
+    result = {}
+    details = details if isinstance(details, dict) else {}
+    resources = ('wood', 'brick', 'rock', 'sheep', 'hay', 'paper', 'cloth', 'coin')
+    cards = details.get('cards')
+    if isinstance(cards, dict):
+        result['cards'] = {card: count for card, count in cards.items()
+                           if card in resources and type(count) is int and 0 < count <= 999}
+    else:
+        result['cards'] = {card.lower(): int(count) for count, card in re.findall(
+            r'(\d+)\s+(wood|brick|rock|sheep|hay|paper|cloth|coin)\b', message, re.I)}
+    action = details.get('action')
+    if action in ('picked', 'dropped', 'gave', 'stole', 'received', 'built', 'placed', 'upgraded', 'activated', 'removed', 'moved', 'played', 'progress_draw', 'progress_drop', 'progress_replace'):
+        result['action'] = action
+    else:
+        lower = message.lower()
+        verbs = [('upgraded', ('upgraded', 'leveled up', 'level up')), ('built', ('built',)),
+                 ('placed', ('placed',)), ('activated', ('activated',)), ('removed', ('removed',)),
+                 ('moved', ('moved',)), ('picked', ('picked', 'drew')), ('dropped', ('dropped',)),
+                 ('gave', ('gave',)), ('stole', ('stole',)), ('played', ('played',))]
+        for verb, prefixes in verbs:
+            if any(re.search(r'\b' + re.escape(prefix) + r'\b', lower) for prefix in prefixes):
+                result['action'] = verb
+                break
+    piece = details.get('piece')
+    if piece not in ('house', 'city', 'road', 'wall', 'knight', 'robber', 'merchant'):
+        piece = next((name for name in ('knight', 'city', 'wall', 'house', 'road', 'robber', 'merchant')
+                      if re.search(r'\b' + name + r'\b', message, re.I)), None)
+    if piece:
+        result['piece'] = piece
+    card = details.get('card')
+    if isinstance(card, str) and card in PROGRESS_CARD_TYPES:
+        result['card'] = card
+    elif result.get('action') == 'played':
+        candidate = message.removeprefix('played ').strip().replace(' ', '_')
+        if candidate in PROGRESS_CARD_TYPES:
+            result['card'] = candidate
+        else:
+            played = next((name for name in sorted(PROGRESS_CARD_TYPES, key=len, reverse=True)
+                           if message.lower().startswith('played ' + name) or message.lower().startswith('played ' + name.replace('_', ' '))), None)
+            if played:
+                result['card'] = played
+    elif result.get('action') == 'dropped' and not result['cards']:
+        result['action'] = 'progress_drop'
+    target = details.get('target_name')
+    if isinstance(target, str):
+        result['target_name'] = short_player_name(target)
+    elif result.get('action') in ('gave', 'stole'):
+        match = re.search(r'\b(?:to|from)\s+(.+)$', message)
+        if match:
+            result['target_name'] = short_player_name(match.group(1))
+    sources = details.get('sources')
+    if isinstance(sources, list):
+        result['sources'] = [short_player_name(name) for name in sources if isinstance(name, str) and name.strip()]
+    return result
 
 
 def normalize_legacy_hand_resources(play_state):
@@ -43,7 +171,7 @@ def normalize_legacy_hand_resources(play_state):
     return changed
 
 
-def append_catan2_activity(play_state, player_id, message, kind='action'):
+def append_catan2_activity(play_state, player_id, message, kind='action', **details):
     player = play_state.get(player_id)
     if not isinstance(player, dict) or not isinstance(message, str) or not message.strip():
         return
@@ -51,9 +179,11 @@ def append_catan2_activity(play_state, player_id, message, kind='action'):
     if not isinstance(entries, list):
         entries = []
     entries.append({
-        'player': player.get('playerName') or player_id,
+        'pid': player_id,
+        'player': str(player.get('playerName') or player_id).strip()[:5],
         'message': message.strip(),
         'kind': kind,
+        **visual_activity_details(message, details),
     })
     play_state['activityLog'] = entries
 
@@ -64,9 +194,13 @@ def load_catan2_activity_log(play_state=None):
             entries = json.load(activity_file)
         if not isinstance(entries, list):
             raise ValueError('Invalid Catan 2 activity log.')
-        return entries
-    entries = (play_state or {}).get('activityLog')
-    return entries if isinstance(entries, list) else []
+    else:
+        entries = (play_state or {}).get('activityLog')
+        entries = entries if isinstance(entries, list) else []
+    normalize_catan2_names(entries)
+    for entry in entries:
+        entry.update(visual_activity_details(entry.get('message', ''), entry))
+    return entries
 
 
 def save_catan2_activity_log(entries):
@@ -77,10 +211,10 @@ def save_catan2_activity_log(entries):
     os.replace(temporary_file, JSON_ACTIVITY_LOG_FILE)
 
 
-def record_catan2_activity(play_state, player_id, message, kind='action'):
+def record_catan2_activity(play_state, player_id, message, kind='action', **details):
     with ACTIVITY_LOG_LOCK:
         play_state['activityLog'] = load_catan2_activity_log(play_state)
-        append_catan2_activity(play_state, player_id, message, kind)
+        append_catan2_activity(play_state, player_id, message, kind, **details)
         save_catan2_activity_log(play_state['activityLog'])
         return play_state['activityLog']
 
@@ -235,10 +369,16 @@ def load_catan_player_registry():
         registry = json.load(registry_file)
     if not isinstance(registry, dict) or not isinstance(registry.get('players'), list):
         raise ValueError('Invalid Catan player registry.')
+    if any(player.get('name') != short_player_name(player.get('name')) for player in registry['players']):
+        for player in registry['players']:
+            player['name'] = short_player_name(player.get('name'))
+        save_catan_player_registry(registry)
     return registry
 
 
 def save_catan_player_registry(registry):
+    for player in registry['players']:
+        player['name'] = short_player_name(player.get('name'))
     os.makedirs(CATAN2_DATA_DIR, exist_ok=True)
     temporary_path = f"{PLAYER_REGISTRY_FILE}.tmp"
     with open(temporary_path, 'w', encoding='utf-8') as registry_file:
@@ -247,7 +387,8 @@ def save_catan_player_registry(registry):
 
 
 def is_inactive_player_name(name):
-    return str(name or '').strip().casefold().startswith('player')
+    value = str(name or '').strip().casefold()
+    return not value or value.startswith('player') or value == 'playe'
 
 
 def all_active_players_have_colors(players):
@@ -297,6 +438,8 @@ def get_catan_player_colors():
     }
     valid_colors = {option["value"] for option in PLAYER_COLOR_OPTIONS}
     for player in players:
+        if is_inactive_player_name(player.get('name')):
+            continue
         color = player.get("color")
         if color in valid_colors:
             colors[f"player{player['seat']}"] = color
@@ -349,6 +492,9 @@ def save_play_state_to_json(player_state_json):
     """Saves a player's current state to a JSON file."""
 
     try:
+        state = json.loads(player_state_json)
+        normalize_catan2_names(state)
+        player_state_json = json.dumps(state)
         os.makedirs(CATAN2_DATA_DIR, exist_ok=True)
         with open(JSON_PLAY_STATE_FILE, 'w', encoding='utf-8') as f:
             f.write(player_state_json)
@@ -422,14 +568,14 @@ def configure_routes_catan2(app, socketio):
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    @app.route("/catan2/game")
+    @app.route("/catan/2/game")
     @dashboard_tile(section="board", title="Cities & Knights Game", description="Open the independent Cities & Knights game.", icon="island", order=50)
     def catan2_game():
         #board_json = load_latest_catan_board_state_from_json()
 
         return render_template("catan2/catan_game.html", player_colors=get_catan_player_colors())
 
-    @app.route('/catan2/player/', methods=['GET', 'POST'], strict_slashes=False)
+    @app.route('/catan/2/player', methods=['GET', 'POST'], strict_slashes=False)
     @dashboard_tile(section="board", title="Cities & Knights Player", description="Register or open an independent player seat.", icon="players", order=60)
     def catan2_player_lobby():
         error = None
@@ -444,13 +590,15 @@ def configure_routes_catan2(app, socketio):
             return f"Could not load game state: {exception}", 500
 
         if request.method == 'POST':
-            name = (request.form.get('name') or '').strip()
+            name = short_player_name(request.form.get('name'))
             passphrase = request.form.get('passphrase') or ''
-            if not name or len(name) > 40 or not passphrase:
-                error = 'Enter a player name and passphrase. Names may be up to 40 characters.'
+            if is_inactive_player_name(request.form.get('name')):
+                error = 'Choose a player name that does not start with Player.'
+            elif not name or len(name) > 40 or not passphrase:
+                error = 'Enter a player name and passphrase.'
             else:
                 existing_player = next(
-                    (player for player in registry['players'] if player['name'].strip().casefold() == name.casefold()),
+                    (player for player in registry['players'] if not is_inactive_player_name(player.get('name')) and player['name'].strip().casefold() == name.casefold()),
                     None,
                 )
                 if existing_player:
@@ -462,10 +610,10 @@ def configure_routes_catan2(app, socketio):
                     error = 'That name is already registered. Enter its passphrase to open the player link.'
                 elif game_started:
                     error = 'The game has already started. New players cannot join.'
-                elif len(registry['players']) >= 4:
+                elif sum(not is_inactive_player_name(player.get('name')) for player in registry['players']) >= 4:
                     error = 'All four player seats are filled. Use your registered name and passphrase to open your link.'
                 else:
-                    occupied_seats = {player['seat'] for player in registry['players']}
+                    occupied_seats = {player['seat'] for player in registry['players'] if not is_inactive_player_name(player.get('name'))}
                     seat = next(number for number in range(1, 5) if number not in occupied_seats)
                     alphabet = string.ascii_uppercase + string.digits
                     existing_codes = {player['code'] for player in registry['players']}
@@ -507,6 +655,8 @@ def configure_routes_catan2(app, socketio):
                             state['_undoStack'] = []
                             state['_gameStarted'] = False
                         for registered_player in registry['players']:
+                            if is_inactive_player_name(registered_player.get('name')):
+                                continue
                             player_state = state.setdefault(f"player{registered_player['seat']}", {})
                             player_state['playerName'] = registered_player['name']
                             player_state.setdefault('hand', STARTING_HAND.copy())
@@ -526,7 +676,7 @@ def configure_routes_catan2(app, socketio):
                         registry['players'].remove(player)
                         error = f"Could not create the player seat: {exception}"
 
-        players_by_seat = {player['seat']: player for player in registry['players']}
+        players_by_seat = {player['seat']: player for player in registry['players'] if not is_inactive_player_name(player.get('name'))}
         seats = [
             {'seat': seat, 'name': players_by_seat.get(seat, {}).get('name'), 'code': players_by_seat.get(seat, {}).get('code')}
             for seat in range(1, 5)
@@ -538,7 +688,7 @@ def configure_routes_catan2(app, socketio):
             error=error,
         )
 
-    @app.route('/catan2/player/<player_code>', methods=['GET', 'POST'])
+    @app.route('/catan/2/player/<player_code>', methods=['GET', 'POST'])
     def catan2_player(player_code):
         if len(player_code) != 5 or any(character not in string.ascii_uppercase + string.digits for character in player_code):
             abort(404)
@@ -547,7 +697,7 @@ def configure_routes_catan2(app, socketio):
         except (OSError, ValueError, json.JSONDecodeError):
             abort(404)
         player = next((item for item in registry['players'] if item['code'] == player_code), None)
-        if player is None:
+        if player is None or is_inactive_player_name(player.get('name')):
             abort(404)
 
         authorized_codes = set(session.get('catan2_player_access', []))
@@ -631,13 +781,15 @@ def configure_routes_catan2(app, socketio):
                     saved_state = json.loads(load_play_state_from_json() or "{}")
                 except (TypeError, ValueError):
                     saved_state = {}
+                if saved_state.get('_turnPhase') == 'setup':
+                    return jsonify(status='error', message='Complete setup using the required free placement.'), 409
                 play_state['progressCardDecks'] = normalize_progress_card_decks(
                     play_state.get('progressCardDecks', saved_state.get('progressCardDecks'))
                 )
                 play_state['activityLog'] = load_catan2_activity_log(saved_state)
                 play_state['vpAwardLog'] = merge_catan2_award_log(saved_state.get('vpAwardLog'), play_state.get('vpAwardLog'))
                 # Turn progression is server-owned; ignore stale client copies.
-                for turn_key in ('_turnOrder', '_currentTurnPlayerId', '_turnRolled', '_alchemistDice', '_gameStarted', '_turnPhase', '_setupQueue'):
+                for turn_key in ('_turnOrder', '_currentTurnPlayerId', '_turnRolled', '_alchemistDice', '_gameStarted', '_turnPhase', '_setupQueue', '_setupIndex'):
                     if turn_key in saved_state:
                         play_state[turn_key] = saved_state[turn_key]
                     else:
@@ -694,6 +846,8 @@ def configure_routes_catan2(app, socketio):
         except (TypeError, ValueError):
             return jsonify({"status": "error", "message": "Could not load Catan 2 game state."}), 500
         player_state = play_state.get(player_id)
+        if play_state.get('_turnPhase') == 'setup':
+            return jsonify(status='error', message='Finish setup before drawing progress cards.'), 409
         if not isinstance(player_state, dict):
             return jsonify({"status": "error", "message": "Player state not found."}), 404
 
@@ -725,9 +879,8 @@ def configure_routes_catan2(app, socketio):
             })
             play_state['vpAwardLog'] = award_log
         deck_label = deck_name.capitalize()
-        discarded_label = discarded_card.replace('_', ' ').title() if isinstance(discarded_card, str) else 'a Progress card'
-        message = f"dropped {discarded_label}; took {deck_label}" if replaced_card else f"drew {deck_label}"
-        record_catan2_activity(play_state, player_id, message, 'pick')
+        message = f"dropped a progress card; took {deck_label}" if replaced_card else f"drew {deck_label}"
+        record_catan2_activity(play_state, player_id, message, 'pick', action='progress_replace' if replaced_card else 'progress_draw')
         if not save_play_state_to_json(json.dumps(play_state)):
             return jsonify({"status": "error", "message": "Could not save the progress card draw."}), 500
 
@@ -742,6 +895,8 @@ def configure_routes_catan2(app, socketio):
     def is_authorized_seat(player_id):
         try:
             registry = load_catan_player_registry()
+            if json.loads(load_play_state_from_json() or '{}').get('_turnPhase') == 'setup':
+                return False
         except (OSError, ValueError, json.JSONDecodeError):
             return False
         authorized_codes = set(session.get('catan2_player_access', []))
@@ -758,7 +913,7 @@ def configure_routes_catan2(app, socketio):
         progress_cards = cities_and_knights.setdefault('progressCards', [])
         return progress_cards if isinstance(progress_cards, list) else None
 
-    def finish_server_progress_card(state, player_id, card, message, undo_entry=None, target=None):
+    def finish_server_progress_card(state, player_id, card, message, undo_entry=None, target=None, activity_details=None):
         state['progressCardDecks'] = normalize_progress_card_decks(state.get('progressCardDecks'))
         return_progress_cards_to_decks(state['progressCardDecks'], [card])
         if undo_entry is not None:
@@ -766,13 +921,50 @@ def configure_routes_catan2(app, socketio):
             state['_undoStack'] = (undo_stack + [{'serverUndo': card, 'player': player_id, **undo_entry}])[-3:]
         if not save_play_state_to_json(json.dumps(state)):
             return jsonify({"status": "error", "message": "Could not save the game state."}), 500
-        entries = record_catan2_activity(state, player_id, f"played {card}")
+        entries = record_catan2_activity(state, player_id, f"played {card}", action='played', card=card)
         if message:
-            entries = record_catan2_activity(state, player_id, message)
+            entries = record_catan2_activity(state, player_id, message, **(activity_details or {}))
         socketio.emit('catan2_activity_log_broadcast', {'entries': entries})
         socketio.emit('catan2_progress_card_played_broadcast', {'pid': player_id, 'card': card, 'target': target})
         socketio.emit('catan2_update')
         return jsonify({"status": "success"})
+
+    @app.route('/catan2/progress_card/trade_monopoly', methods=['POST'])
+    @catan2_setup_locked
+    def catan2_play_trade_monopoly():
+        payload = request.get_json(silent=True) or {}
+        player_id = payload.get('player_id')
+        commodity = payload.get('commodity')
+        if commodity not in ('paper', 'coin', 'cloth'):
+            return jsonify({'status': 'error', 'message': 'Choose paper, coin, or cloth.'}), 400
+        state, is_current_player = load_turn_state_for_request(player_id)
+        if not is_current_player or state.get('_gameStarted') is False or state.get('_turnPhase') == 'setup':
+            return jsonify({'status': 'error', 'message': 'Play Trade Monopoly during your play turn.'}), 403
+        progress_cards = get_player_progress_cards(state, player_id)
+        if not progress_cards or 'trade_monopoly' not in progress_cards:
+            return jsonify({'status': 'error', 'message': 'You do not have a Trade Monopoly card.'}), 409
+
+        snapshot = json.loads(json.dumps(state))
+        snapshot.pop('_undoStack', None)
+        player = state[player_id]
+        sources = []
+        for opponent_id in state.get('_turnOrder', []):
+            if opponent_id == player_id:
+                continue
+            opponent = state.get(opponent_id, {})
+            hand = opponent.get('hand') or []
+            if commodity in hand:
+                hand.remove(commodity)
+                player.setdefault('hand', []).append(commodity)
+                sources.append(short_player_name(opponent.get('playerName') or opponent_id))
+        progress_cards.remove('trade_monopoly')
+        undo_stack = state.get('_undoStack') if isinstance(state.get('_undoStack'), list) else []
+        state['_undoStack'] = (undo_stack + [{'state': snapshot}])[-3:]
+        message = f"got {len(sources)} {commodity}" + (f" from {', '.join(sources)}" if sources else '')
+        return finish_server_progress_card(
+            state, player_id, 'trade_monopoly', message, target=commodity,
+            activity_details={'action': 'received', 'cards': {commodity: len(sources)}, 'sources': sources},
+        )
 
     @app.route('/catan2/progress_card/alchemist', methods=['POST'])
     def catan2_play_alchemist():
@@ -898,10 +1090,11 @@ def configure_routes_catan2(app, socketio):
             play_state_json = load_play_state_from_json()
             if play_state_json:
                 play_state = json.loads(play_state_json)
+                names_changed = normalize_catan2_names(play_state)
                 play_state['activityLog'] = load_catan2_activity_log(play_state)
                 decks_before = play_state.get('progressCardDecks')
                 play_state['progressCardDecks'] = normalize_progress_card_decks(decks_before)
-                needs_save = play_state['progressCardDecks'] != decks_before
+                needs_save = names_changed or play_state['progressCardDecks'] != decks_before
                 if normalize_legacy_hand_resources(play_state):
                     needs_save = True
                 for player_id, player_state in play_state.items():
@@ -978,6 +1171,7 @@ def configure_routes_catan2(app, socketio):
         reset_state["_gameStarted"] = False
         reset_state["_turnPhase"] = None
         reset_state["_setupQueue"] = []
+        reset_state["_setupIndex"] = 0
         reset_state["_robberMoveAvailable"] = False
         reset_state["_robberMovePlayerId"] = None
 
@@ -998,7 +1192,7 @@ def configure_routes_catan2(app, socketio):
         socketio.emit('catan2_update')
         return jsonify({
             "status": "success",
-            "message": "Game reset. Player seats were cleared; each player receives a 13-card starting hand when they join.",
+            "message": "Game reset. Player seats were cleared; players start with no resource cards.",
         }), 200
 
     @socketio.on('catan2_score_update')
@@ -1019,7 +1213,7 @@ def configure_routes_catan2(app, socketio):
             resource_order = ('wood', 'brick', 'rock', 'sheep', 'hay', 'paper', 'cloth', 'coin')
             summary = ', '.join(f"{resources[resource]} {resource.capitalize()}" for resource in resource_order if resources.get(resource))
             message = f"picked {summary}" if log == 'resource-pick' and summary else f"picked {log}"
-            entries = record_catan2_activity(state, pid, message, 'pick')
+            entries = record_catan2_activity(state, pid, message, 'pick', action='picked', cards=resources)
             socketio.emit('catan2_activity_log_broadcast', {'entries': entries})
         except (TypeError, ValueError, OSError) as error:
             print(f"Could not save Catan 2 activity: {error}")
@@ -1038,7 +1232,11 @@ def configure_routes_catan2(app, socketio):
         if pid and message:
             try:
                 state = json.loads(load_play_state_from_json() or '{}')
-                entries = record_catan2_activity(state, pid, message)
+                if message.startswith('played '):
+                    return
+                target = state.get(data.get('target'), {}).get('playerName')
+                details = {**data, 'target_name': target} if target else data
+                entries = record_catan2_activity(state, pid, message, **visual_activity_details(message, details))
                 socketio.emit('catan2_activity_log_broadcast', {'entries': entries})
             except (TypeError, ValueError, OSError) as error:
                 print(f"Could not save Catan 2 activity: {error}")
@@ -1051,6 +1249,9 @@ def configure_routes_catan2(app, socketio):
         target = (data or {}).get('target')
         target = target.strip()[:40] if isinstance(target, str) and target.strip() else None
         if pid in {f'player{seat}' for seat in range(1, 5)} and card in PROGRESS_CARD_TYPES:
+            state = json.loads(load_play_state_from_json() or '{}')
+            entries = record_catan2_activity(state, pid, f'played {card}', action='played', card=card)
+            socketio.emit('catan2_activity_log_broadcast', {'entries': entries})
             socketio.emit('catan2_progress_card_played_broadcast', {'pid': pid, 'card': card, 'target': target})
     #@socketio.on('catan_gen_update')
     #def handle_catan_gen_update(info):
@@ -1077,6 +1278,7 @@ def configure_routes_catan2(app, socketio):
         return state, is_current_player
 
     @app.route('/catan2/start_game', methods=['POST'])
+    @catan2_setup_locked
     def catan2_start_game():
         try:
             registry = load_catan_player_registry()
@@ -1102,24 +1304,87 @@ def configure_routes_catan2(app, socketio):
         random.shuffle(turn_order)
         state['_turnOrder'] = turn_order
         state['_currentTurnPlayerId'] = turn_order[0]
-        # Setup snake: 1-2-3-4-3-2-1; the last player places both settlements in one turn.
         state['_setupQueue'] = (turn_order + turn_order[-2::-1])[1:]
         state['_turnPhase'] = 'setup'
+        state['_setupIndex'] = 0
         state['_turnRolled'] = True
         state['_gameStarted'] = True
         state['_undoStack'] = []
+        for player_id, player_state in state.items():
+            if player_id.startswith('player') and isinstance(player_state, dict):
+                player_state['hand'] = []
+                player_state['roads'] = []
+                player_state['structures'] = []
+                player_state['score'] = 0
+                player_state['longestroad'] = 0
+                player_state['largestarmy'] = 0
         try:
             save_catan_player_registry(registry)
         except OSError:
             return jsonify({"status": "error", "message": "Could not save player colors."}), 500
         if not save_play_state_to_json(json.dumps(state)):
             return jsonify({"status": "error", "message": "Could not start the game."}), 500
-        names = [state.get(player_id, {}).get('playerName') or player_id for player_id in turn_order]
+        names = [short_player_name(state.get(player_id, {}).get('playerName') or player_id) for player_id in turn_order]
         entries = record_catan2_activity(state, turn_order[0], f"starts the game. Order: {' > '.join(names)}")
         socketio.emit('catan2_activity_log_broadcast', {'entries': entries})
         socketio.emit('catan2_undo_history_reset')
         socketio.emit('catan2_update')
         return jsonify({"status": "success", "order": names})
+
+    @app.route('/catan2/setup_piece', methods=['POST'])
+    @catan2_setup_locked
+    def catan2_setup_piece():
+        payload = request.get_json(silent=True) or {}
+        player_id = payload.get('player_id')
+        state, is_current_player = load_turn_state_for_request(player_id)
+        step = catan2_setup_action(state)
+        if not is_current_player or state.get('_gameStarted') is not True:
+            return jsonify(status='error', message='It is not your setup turn.'), 403
+        if not step or step['player'] != player_id or payload.get('piece') != step['piece']:
+            return jsonify(status='error', message='Place the required setup piece first.'), 409
+        try:
+            board = json.loads(load_latest_catan_board_state_from_json() or '{}')
+            junctions, edges = catan2_board_geometry(board)
+        except (ValueError, KeyError, TypeError):
+            return jsonify(status='error', message='Could not load the board.'), 500
+        player = state[player_id]
+        structures = player.setdefault('structures', [])
+        roads = player.setdefault('roads', [])
+        players = [value for key, value in state.items() if key.startswith('player') and isinstance(value, dict)]
+        occupied = {structure.get('junction', {}).get('id') for owner in players for structure in owner.get('structures', [])}
+        if step['piece'] == 'road':
+            edge = edges.get(payload.get('edge_id'))
+            latest = structures[-1].get('junction', {}).get('id') if structures else None
+            if not edge or latest not in edge['junctions']:
+                return jsonify(status='error', message='Place the road beside your new house or city.'), 409
+            if any(road.get('edge', {}).get('id') == edge['id'] for owner in players for road in owner.get('roads', [])):
+                return jsonify(status='error', message='A road already occupies that edge.'), 409
+            roads.append({'edge': {key: value for key, value in edge.items() if key != 'junctions'}, 'owner': player_id})
+        else:
+            junction_id = payload.get('junction_id')
+            junction = junctions.get(junction_id)
+            if not junction or junction_id in occupied:
+                return jsonify(status='error', message='Choose an empty intersection.'), 409
+            if any(junction_id in edge['junctions'] and any(other in occupied for other in edge['junctions'] if other != junction_id) for edge in edges.values()):
+                return jsonify(status='error', message='Keep one empty intersection between settlements.'), 409
+            structures.append({'type': step['piece'], 'junction': junction, 'owner': player_id})
+        player['score'] = sum(2 if structure['type'] == 'city' else 1 for structure in structures)
+        state['_setupIndex'] = state.get('_setupIndex', 0) + 1
+        following = catan2_setup_action(state)
+        if following:
+            state['_currentTurnPlayerId'] = following['player']
+        else:
+            state['_turnPhase'] = 'play'
+            state['_currentTurnPlayerId'] = state['_turnOrder'][0]
+            state['_turnRolled'] = False
+            state['_setupQueue'] = []
+        state['_undoStack'] = []
+        if not save_play_state_to_json(json.dumps(state)):
+            return jsonify(status='error', message='Could not save the setup placement.'), 500
+        entries = record_catan2_activity(state, player_id, f"placed a free {step['piece']}", action='placed', piece=step['piece'])
+        socketio.emit('catan2_activity_log_broadcast', {'entries': entries})
+        socketio.emit('catan2_update')
+        return jsonify(status='success', phase=state['_turnPhase'], current_player=state['_currentTurnPlayerId'])
 
     @socketio.on('catan2_roll_dice')
     def catan2_handle_roll_dice(data=None):
@@ -1171,7 +1436,8 @@ def configure_routes_catan2(app, socketio):
         state['_robberMoveAvailable'] = robber_move_available
         state['_robberMovePlayerId'] = current_player_id if robber_move_available else None
         event_die = random.choice(CITIES_AND_KNIGHTS_EVENT_DIE)
-        state['lastDiceRoll'] = {'dice': dice, 'event_die': event_die}
+        state['lastDiceRoll'] = {'dice': dice, 'event_die': event_die, 'player': current_player_id,
+                     'player_name': short_player_name(state.get(current_player_id, {}).get('playerName'))}
         if event_die == 'black_ship':
             move_barbarian_ship(state, 'forward')
         save_play_state_to_json(json.dumps(state))
@@ -1183,6 +1449,7 @@ def configure_routes_catan2(app, socketio):
             'event_die': event_die,
             'current_player': current_player_id,
             'alchemist': alchemist_used,
+            'player_name': state['lastDiceRoll']['player_name'],
             'robber_move_available': robber_move_available,
             'robber_move_player': state['_robberMovePlayerId'],
         })
@@ -1191,6 +1458,12 @@ def configure_routes_catan2(app, socketio):
     def catan2_handle_end_turn(data=None):
         state, is_current_player = load_turn_state_for_request((data or {}).get('player_id'))
         current_player_id = state['_currentTurnPlayerId']
+        if state.get('_turnPhase') == 'setup':
+            socketio.emit('catan2_end_turn_rejected', {
+                'message': 'Complete your free house or city and its connected road.',
+                'current_player': current_player_id, 'turn_rolled': True,
+            }, to=request.sid)
+            return
         if not is_current_player or state.get('_turnRolled') is not True:
             socketio.emit('catan2_end_turn_rejected', {
                 'message': 'Roll the dice before ending your turn.' if is_current_player else 'It is not your turn.',

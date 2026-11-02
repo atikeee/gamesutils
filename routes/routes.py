@@ -73,7 +73,7 @@ def generate_letter_mapping():
 def configure_routes(app,socketio):
     data_dir = os.path.join(PROJECT_ROOT, 'data')
 
-    @app.route("/")
+    @app.route("/index")
     def index():
         return render_template("main/index.html", dashboard_sections=dashboard_sections(app))
 
