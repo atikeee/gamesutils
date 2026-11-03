@@ -6,7 +6,7 @@
     <title>My Music{% if tv_mode %} TV{% endif %}</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mm.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm_mp3.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm_mp3.css') }}?v=2">
 </head>
 <body class="mp3-page{% if tv_mode %} mp3-tv{% endif %}">
     <div class="mm-container" id="appContainer"
@@ -57,6 +57,9 @@
                     </div>
 
                     <div class="buttons-row">
+                        <button class="ctrl-btn page-nav-btn" id="queuePrevBtn" type="button" title="Previous page" aria-label="Previous page">
+                            <img src="https://cdn.jsdelivr.net/npm/lucide-static@0.468.0/icons/file-output.svg" alt="" aria-hidden="true" width="24" height="24">
+                        </button>
                         <button class="ctrl-btn" id="prevTrackBtn" type="button" title="Previous" aria-label="Previous track">&#9198;</button>
                         <button class="ctrl-btn chapter-btn" id="prevChapterBtn" type="button" title="Previous chapter" aria-label="Previous chapter" disabled>&#10094;|</button>
                         <button class="ctrl-btn" id="rev30sBtn" type="button" title="Back 30 s" aria-label="Back 30 seconds">&#8634;</button>
@@ -67,6 +70,9 @@
                         <button class="ctrl-btn" id="fwd30sBtn" type="button" title="Forward 30 s" aria-label="Forward 30 seconds">&#8635;</button>
                         <button class="ctrl-btn chapter-btn" id="nextChapterBtn" type="button" title="Next chapter" aria-label="Next chapter" disabled>|&#10095;</button>
                         <button class="ctrl-btn" id="nextTrackBtn" type="button" title="Next" aria-label="Next track">&#9197;</button>
+                        <button class="ctrl-btn page-nav-btn page-next-btn" id="queueNextBtn" type="button" title="Next page" aria-label="Next page">
+                            <img src="https://cdn.jsdelivr.net/npm/lucide-static@0.468.0/icons/file-output.svg" alt="" aria-hidden="true" width="24" height="24">
+                        </button>
                     </div>
 
                 </div>
@@ -122,9 +128,7 @@
                 <div class="playlist-items-list" id="queueList" role="listbox" aria-label="Songs" tabindex="-1"></div>
 
                 <div class="numbered-pagination-bar">
-                    <button type="button" class="arrow-btn" id="queuePrevBtn" title="Previous Page">&laquo;</button>
                     <div class="pagination-scroll-track" id="pageScrollTrack"></div>
-                    <button type="button" class="arrow-btn" id="queueNextBtn" title="Next Page">&raquo;</button>
                 </div>
             </section>
         </main>
@@ -133,6 +137,7 @@
     <audio id="audioEngine"></audio>
 
     <script src="{{ url_for('static', filename='js/mm_common.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/mm_mp3.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/mm_mp3.js') }}?v=2"></script>
 </body>
 </html>
+

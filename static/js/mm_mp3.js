@@ -157,11 +157,15 @@ function renderPagination(maxPages) {
     }
 }
 
-function goToQueuePage(page) {
+function goToQueuePage(page, autoPlay = false) {
     const maxPages = Math.ceil(filteredTracks.length / songsPerPage) || 1;
     if (page >= 1 && page <= maxPages && page !== queuePage) {
         queuePage = page;
-        renderQueue();
+        if (autoPlay) {
+            selectAndPlayTrack((page - 1) * songsPerPage, true);
+        } else {
+            renderQueue();
+        }
     }
 }
 
@@ -170,12 +174,9 @@ function focusQueueTrack(index) {
         document.querySelector('.page-num-pill.active')?.focus();
         return;
     }
-    const boundedIndex = Math.max(0, Math.min(filteredTracks.length - 1, index));
-    const targetPage = Math.floor(boundedIndex / songsPerPage) + 1;
-    if (targetPage !== queuePage) {
-        queuePage = targetPage;
-        renderQueue();
-    }
+    const firstOnPage = (queuePage - 1) * songsPerPage;
+    const lastOnPage = Math.min(filteredTracks.length - 1, firstOnPage + songsPerPage - 1);
+    const boundedIndex = Math.max(firstOnPage, Math.min(lastOnPage, index));
     document.getElementById(`queue-track-${filteredTracks[boundedIndex].id}`)?.focus();
 }
 
@@ -393,7 +394,10 @@ document.getElementById('queueList').addEventListener('keydown', event => {
     const focusedRow = event.target.closest('.playlist-item');
     if (event.key === 'Enter' || event.key === ' ') {
         const index = Number(focusedRow?.dataset.index ?? currentTrackIndex);
-        if (index >= 0) selectAndPlayTrack(index, true);
+        if (focusedRow && index >= 0) {
+            selectAndPlayTrack(index, true);
+            document.getElementById(`queue-track-${filteredTracks[index]?.id}`)?.focus({ preventScroll: true });
+        }
         return;
     }
     if (!focusedRow) {
@@ -402,9 +406,11 @@ document.getElementById('queueList').addEventListener('keydown', event => {
     }
     const currentIndex = Number(focusedRow.dataset.index);
     const nextIndex = currentIndex + (event.key === 'ArrowDown' ? 1 : -1);
-    if (nextIndex < 0) {
-        document.getElementById('playlistSelect')?.focus();
-    } else if (nextIndex >= filteredTracks.length) {
+    const firstOnPage = (queuePage - 1) * songsPerPage;
+    const endOnPage = Math.min(filteredTracks.length, firstOnPage + songsPerPage);
+    if (nextIndex < firstOnPage) {
+        document.getElementById('mainPlayBtn')?.focus();
+    } else if (nextIndex >= endOnPage) {
         document.querySelector('.page-num-pill.active')?.focus();
     } else {
         focusQueueTrack(nextIndex);
@@ -434,7 +440,7 @@ document.getElementById('queuePrevBtn').addEventListener('click', () => {
     document.getElementById('queuePrevBtn').focus();
 });
 document.getElementById('queueNextBtn').addEventListener('click', () => {
-    goToQueuePage(queuePage + 1);
+    goToQueuePage(queuePage + 1, true);
     document.getElementById('queueNextBtn').focus();
 });
 
@@ -485,3 +491,4 @@ setupTagInput(
 buildTagChips();
 applyTagFilters();
 if (filteredTracks.length > 0) selectAndPlayTrack(0, false);
+
