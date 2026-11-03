@@ -128,10 +128,10 @@ function renderQueue() {
 
     document.getElementById('queueList').innerHTML = pageTracks.map((t, idx) => {
         const globalIdx = start + idx;
-        const isPlaying = currentTrack && currentTrack.id === t.id;
+        const isPlaying = !!currentTrack && currentTrack.id === t.id;
         const tags = splitTags(t.tag_list).map(tag => `<span class="mini-tag">${escapeHtml(tag)}</span>`).join('');
         return `
-            <div class="playlist-item${isPlaying ? ' active' : ''}${t._missing ? ' missing' : ''}" data-index="${globalIdx}" tabindex="0" role="button">
+            <div class="playlist-item${isPlaying ? ' active' : ''}${t._missing ? ' missing' : ''}" id="queue-track-${t.id}" data-index="${globalIdx}" tabindex="0" role="option" aria-selected="${isPlaying}">
                 <div class="item-info">
                     <span class="item-title">${escapeHtml(t.title || 'Untitled')}</span>${tags}
                 </div>
@@ -163,6 +163,26 @@ function goToQueuePage(page) {
         queuePage = page;
         renderQueue();
     }
+}
+
+function focusQueueTrack(index) {
+    if (!filteredTracks.length) {
+        document.querySelector('.page-num-pill.active')?.focus();
+        return;
+    }
+    const boundedIndex = Math.max(0, Math.min(filteredTracks.length - 1, index));
+    const targetPage = Math.floor(boundedIndex / songsPerPage) + 1;
+    if (targetPage !== queuePage) {
+        queuePage = targetPage;
+        renderQueue();
+    }
+    document.getElementById(`queue-track-${filteredTracks[boundedIndex].id}`)?.focus();
+}
+
+function focusCurrentOrFirstSong() {
+    const firstOnPage = (queuePage - 1) * songsPerPage;
+    const playingOnPage = currentTrackIndex >= firstOnPage && currentTrackIndex < firstOnPage + songsPerPage;
+    focusQueueTrack(playingOnPage ? currentTrackIndex : firstOnPage);
 }
 
 // ── Tag filter chips (header) ────────────────────────────────────────────────
@@ -275,6 +295,7 @@ function renderActiveTags() {
     container.innerHTML = '';
     if (!currentTrack) return;
     splitTags(currentTrack.tag_list).forEach(tag => container.appendChild(makeTagBadge(tag, removeTag)));
+    container.querySelectorAll('button').forEach(button => { button.tabIndex = -1; });
 }
 
 function updateTags(tags) {
@@ -330,7 +351,13 @@ if (audio) {
 }
 
 // ── Wiring ───────────────────────────────────────────────────────────────────
-function onFilterChange() {
+function onFilterChange(event) {
+    if (event?.target?.id === 'playlistSelect') {
+        document.getElementById('categorySelect').value = '';
+        document.getElementById('artistSelect').value = '';
+    } else if (event?.target?.id === 'categorySelect') {
+        document.getElementById('artistSelect').value = '';
+    }
     const pl = document.getElementById('playlistSelect')?.value || '';
     const cat = document.getElementById('categorySelect')?.value || '';
     const artist = document.getElementById('artistSelect')?.value || '';
@@ -354,24 +381,62 @@ document.getElementById('tagChipsBar').addEventListener('click', (e) => {
 
 document.getElementById('queueList').addEventListener('click', (e) => {
     const row = e.target.closest('.playlist-item');
-    if (row) selectAndPlayTrack(parseInt(row.dataset.index, 10), true);
+    if (row) {
+        const index = Number(row.dataset.index);
+        selectAndPlayTrack(index, true);
+        document.getElementById(`queue-track-${filteredTracks[index]?.id}`)?.focus({ preventScroll: true });
+    }
 });
 document.getElementById('queueList').addEventListener('keydown', event => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    const row = event.target.closest('.playlist-item');
-    if (!row) return;
+    if (!['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) return;
     event.preventDefault();
-    const index = Number(row.dataset.index);
-    selectAndPlayTrack(index, true);
-    document.querySelector(`#queueList .playlist-item[data-index="${index}"]`)?.focus({ preventScroll: true });
+    const focusedRow = event.target.closest('.playlist-item');
+    if (event.key === 'Enter' || event.key === ' ') {
+        const index = Number(focusedRow?.dataset.index ?? currentTrackIndex);
+        if (index >= 0) selectAndPlayTrack(index, true);
+        return;
+    }
+    if (!focusedRow) {
+        focusCurrentOrFirstSong();
+        return;
+    }
+    const currentIndex = Number(focusedRow.dataset.index);
+    const nextIndex = currentIndex + (event.key === 'ArrowDown' ? 1 : -1);
+    if (nextIndex < 0) {
+        document.getElementById('playlistSelect')?.focus();
+    } else if (nextIndex >= filteredTracks.length) {
+        document.querySelector('.page-num-pill.active')?.focus();
+    } else {
+        focusQueueTrack(nextIndex);
+    }
 });
+
+if (TV_MODE) {
+    document.addEventListener('keydown', event => {
+        if (event.key !== 'ArrowDown' || event.altKey || event.ctrlKey || event.metaKey) return;
+        const target = event.target;
+        if (target?.matches?.('select, input, textarea, [contenteditable="true"]')) return;
+        if (!target?.closest?.('.mp3-pinned') && target !== document.body && target !== document.documentElement) return;
+        event.preventDefault();
+        focusCurrentOrFirstSong();
+    });
+}
 
 document.getElementById('pageScrollTrack').addEventListener('click', (e) => {
     const pill = e.target.closest('.page-num-pill');
-    if (pill) goToQueuePage(parseInt(pill.dataset.pageNum, 10));
+    if (pill) {
+        goToQueuePage(parseInt(pill.dataset.pageNum, 10));
+        document.querySelector(`.page-num-pill[data-page-num="${queuePage}"]`)?.focus();
+    }
 });
-document.getElementById('queuePrevBtn').addEventListener('click', () => goToQueuePage(queuePage - 1));
-document.getElementById('queueNextBtn').addEventListener('click', () => goToQueuePage(queuePage + 1));
+document.getElementById('queuePrevBtn').addEventListener('click', () => {
+    goToQueuePage(queuePage - 1);
+    document.getElementById('queuePrevBtn').focus();
+});
+document.getElementById('queueNextBtn').addEventListener('click', () => {
+    goToQueuePage(queuePage + 1);
+    document.getElementById('queueNextBtn').focus();
+});
 
 document.getElementById('mainPlayBtn').addEventListener('click', togglePlay);
 document.getElementById('prevTrackBtn').addEventListener('click', playPrevTrack);

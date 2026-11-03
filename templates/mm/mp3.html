@@ -52,7 +52,7 @@
                 <div class="player-controls-bar">
                     <div class="timeline-row">
                         <span class="time-label" id="currTime">0:00</span>
-                        <input type="range" id="scrubber" class="range-slider timeline-slider" value="0" min="0" max="100" step="0.1" aria-label="Seek">
+                        <input type="range" id="scrubber" class="range-slider timeline-slider" value="0" min="0" max="100" step="0.1" aria-label="Seek" tabindex="-1">
                         <span class="time-label" id="durTime">0:00</span>
                     </div>
 
@@ -73,7 +73,7 @@
             </section>
         </div>
 
-        <main class="mp3-scroll" id="libraryScroll" tabindex="0" aria-label="Track details and song list">
+        <main class="mp3-scroll" id="libraryScroll" aria-label="Track details and song list">
                     {% if not tv_mode %}
                     <section class="active-video-meta" aria-label="Edit current track">
                         <div class="meta-managers-group">
@@ -81,32 +81,32 @@
                             <div class="meta-fields-row">
                                   <div class="mp3-edit-field">
                                   <span class="inline-edit" id="playlistEdit" data-field="playlist" aria-label="Edit playlist"
-                                      data-value="" tabindex="0" role="button"
+                                      data-value="" tabindex="-1" role="button"
                                       title="Playlist — click to change"></span>
                                   </div>
                                   <div class="mp3-edit-field">
                                   <span class="inline-edit empty" id="categoryEdit" data-field="category" aria-label="Edit category"
-                                      data-value="" tabindex="0" role="button"
+                                      data-value="" tabindex="-1" role="button"
                                       title="Category — click to change">+ category</span>
                                   </div>
                                   <div class="mp3-edit-field">
                                       <span class="inline-edit empty" id="artistEdit" data-field="artist" aria-label="Edit artist"
-                                            data-value="" tabindex="0" role="button" title="Artist — click to change">+ artist</span>
+                                            data-value="" tabindex="-1" role="button" title="Artist — click to change">+ artist</span>
                                   </div>
                             </div>
 
                             <div class="video-tag-manager">
                                 <div class="video-tags-list" id="activeTagList"></div>
                                 <div class="add-tag-inline">
-                                    <input type="text" id="inlineTagInput" list="trackTagsDatalist" placeholder="Add tag..." autocomplete="off">
+                                    <input type="text" id="inlineTagInput" list="trackTagsDatalist" placeholder="Add tag..." autocomplete="off" tabindex="-1">
                                     <datalist id="trackTagsDatalist"></datalist>
-                                    <button type="button" id="addInlineTagBtn">+</button>
+                                    <button type="button" id="addInlineTagBtn" tabindex="-1">+</button>
                                 </div>
                             </div>
                             <form class="chapter-editor" id="chapterForm">
                                 <label class="meta-label" for="chapterInput">Chapters</label>
-                                <input id="chapterInput" name="chapter" type="text" placeholder="10, 1:05, 1:5:10" autocomplete="off" maxlength="4096" disabled>
-                                <button class="icon-btn" type="submit" id="saveChaptersBtn" title="Save chapters" aria-label="Save chapters" disabled>&#10003;</button>
+                                <input id="chapterInput" name="chapter" type="text" placeholder="10, 1:05, 1:5:10" autocomplete="off" maxlength="4096" disabled tabindex="-1">
+                                <button class="icon-btn" type="submit" id="saveChaptersBtn" title="Save chapters" aria-label="Save chapters" disabled tabindex="-1">&#10003;</button>
                                 <output id="chapterStatus" aria-live="polite"></output>
                             </form>
                         </div>
@@ -119,7 +119,7 @@
                     <span class="page-indicator">Page <span id="curQueuePage">1</span> of <span id="maxQueuePage">1</span></span>
                 </div>
 
-                <div class="playlist-items-list" id="queueList"></div>
+                <div class="playlist-items-list" id="queueList" role="listbox" aria-label="Songs" tabindex="-1"></div>
 
                 <div class="numbered-pagination-bar">
                     <button type="button" class="arrow-btn" id="queuePrevBtn" title="Previous Page">&laquo;</button>

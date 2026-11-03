@@ -72,6 +72,7 @@
 .mp3-page .playlist-item { display: block; width: 100%; min-width: 0; min-height: 0; margin: 0; padding: 6px 8px; border: 1px solid var(--mp3-border); border-radius: 4px; text-align: left; background: #171d1a; color: var(--mp3-text); cursor: pointer; }
 .mp3-page .playlist-item:hover { background: #202a23; }
 .mp3-page .playlist-item.active { border-color: var(--mp3-accent); background: #233227; }
+.mp3-page .playlist-item:focus-visible { border-color: var(--mp3-accent); outline: 2px solid #e8c879; outline-offset: -2px; }
 .mp3-page .item-info { display: block; min-width: 0; line-height: 1.6; overflow-wrap: anywhere; }
 .mp3-page .item-title { display: inline; margin: 0; font-size: .85rem; font-weight: 500; white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
 .mp3-page .item-artist { margin: 0; font-size: .75rem; color: var(--mp3-muted); overflow-wrap: anywhere; }

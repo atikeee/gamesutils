@@ -60,6 +60,7 @@ function openInlineEdit(el, onCommit) {
     el.textContent = '';
     const input = document.createElement('input');
     input.className = 'inline-edit-input';
+    if (document.body.classList.contains('mp3-page')) input.tabIndex = -1;
     input.value = current;
     input.placeholder = field === 'category' ? 'category (empty = none)' : field === 'artist' ? 'artist' : 'playlist';
     input.autocomplete = 'off';
