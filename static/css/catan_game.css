@@ -160,7 +160,7 @@ button, select { font-family: inherit; }
     .canvas-wrapper.map-zoom-viewport { position: absolute; top: 0; left: 0; }
     .map-zoom-viewport.map-zoomed { overflow: auto; -webkit-overflow-scrolling: touch; scrollbar-width: auto; }
     .map-zoom-viewport.map-zoomed::-webkit-scrollbar { display: block; }
-    .map-zoom-viewport.map-zoomed #catanBoard { width: 200% !important; height: 100% !important; }
+    .map-zoom-viewport.map-zoomed #catanBoard { width: 140% !important; height: auto !important; aspect-ratio: 1.2 / 1; }
     .map-tool { width: 40px; height: 40px; }
     .game-sidebar { display: block; margin-top: 8px; }
     .score-section { min-height: 0; }

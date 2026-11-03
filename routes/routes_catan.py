@@ -316,6 +316,21 @@ def load_play_state_from_json():
 
 
 def configure_routes_catan(app,socketio):
+    def catan_asset_url(filename):
+        with open(os.path.join(app.static_folder, filename), 'rb') as asset:
+            version = hashlib.sha256(asset.read()).hexdigest()[:12]
+        return url_for('static', filename=filename, v=version)
+
+    @app.context_processor
+    def catan_asset_context():
+        return {'catan_asset_url': catan_asset_url}
+
+    @app.after_request
+    def catan_page_cache(response):
+        if request.endpoint in ('catan_game', 'catan_player', 'catan_player_lobby'):
+            response.headers['Cache-Control'] = 'no-store'
+        return response
+
     def board_editing_allowed():
         try:
             return not load_catan_player_registry()['players']
