@@ -1,1 +1,1 @@
-{"players": [], "max_players": 4}
+{"players": [{"seat": 1, "name": "Fuck u", "code": "ELUPF", "passphrase_salt": "dfc31410deb123ad1eb7fb3dc35a2f11", "passphrase_hash": "557afec95f4b3ea26e6d0553ce472df06d49fbe9c611faa0740e0eb7c7cb6386", "color": "#218C63"}, {"seat": 2, "name": "Ila", "code": "KQI99", "passphrase_salt": "45dc7553ba3982e7259f5b8fc5e45510", "passphrase_hash": "38729a55b50fe983c24165607e4a292a29a0aeba34fcc0bb6898657729ba22a3", "color": "#8B5FBF"}], "max_players": 4}

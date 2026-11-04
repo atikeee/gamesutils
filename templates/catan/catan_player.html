@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css', v='1.1') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css', v='1.2') }}">
 </head>
 <body class="catan-player-page{% if player_color %} has-player-color{% endif %}" data-player-id="{{ player_id }}"{% if player_color %} style="--player-color: {{ player_color }}; --player-color-text: {{ '#1a1a1a' if player_color == '#F1C40F' else '#ffffff' }}"{% endif %}>
     
@@ -147,6 +147,6 @@
     </script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/catan_game_logic.js', v='1.1') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan_game_logic.js', v='1.2') }}"></script>
 </body>
 </html>

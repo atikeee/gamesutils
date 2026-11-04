@@ -17,7 +17,7 @@
             height: auto !important;
             aspect-ratio: 1.2 / 1;
         }
-        .catan2-player-page .canvas-wrapper.map-zoom-viewport.map-zoomed #catanBoard { width: 200% !important; aspect-ratio: 1.2 / 1; }
+        .catan2-player-page .canvas-wrapper.map-zoom-viewport.map-zoomed #catanBoard { width: 160% !important; aspect-ratio: 1.2 / 1; }
         .catan2-player-page .player-controls .card-buttons { width: 100%; }
         @media (min-width: 769px) {
             .catan2-player-page .player-controls {
@@ -117,7 +117,7 @@
             touch-action: manipulation;
         }
         .c2-map-zoom-button { font-size: 1.6rem; font-weight: 700; }
-        .c2-map-player-score { align-self: flex-start; padding: 2px 8px; border-radius: 4px; background: rgba(255,255,255,.94); color: #29453e; font-size: .85rem; font-weight: 700; }
+        .c2-map-player-score { align-self: flex-start; padding: 2px 8px; border-radius: 4px; background: rgba(255,255,255,.94); color: #29453e; font-size: 1.3rem; font-weight: 700; }
         .c2-setup-disabled { opacity: .45; pointer-events: none; }
         .c2-turn-button[data-state="setup"] { background: #176b5b; }
         .c2-map-zoom-button[aria-pressed="true"] { background: #176b5b; }
@@ -216,6 +216,7 @@
             .c2-map-zoom-button,
             .c2-build-toggle { width: 40px; height: 40px; font-size: 1rem; }
             .c2-map-zoom-button { font-size: 1.5rem; }
+            .c2-map-player-score { font-size: 1.15rem; }
         }
         .c2-metropolis-markers {
             position: absolute;
@@ -429,6 +430,7 @@
         .c2-ha-steal-title { display: none; }
         .c2-hand-actions.is-steal .c2-ha-selected { display: none; }
         .c2-hand-actions.is-steal .c2-ha-steal-title { display: inline; }
+        .c2-hand-actions.is-steal .c2-ha-give-label { display: none; }
         .c2-hand-actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
         .c2-hand-actions.is-steal .c2-ha-commands,
         .c2-hand-actions.no-targets .c2-ha-targets { display: none; }

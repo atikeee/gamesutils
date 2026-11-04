@@ -8,6 +8,26 @@ if (isPlayerPage && messageBox.parentElement !== document.body) {
     document.body.appendChild(messageBox);
 }
 if (isGamePage) {
+    const desktopLayout = window.matchMedia('(min-width: 901px)');
+    const diceRollSection = document.querySelector('.dice-roll-section');
+    const diceRollDesktopSlot = document.getElementById('diceRollDesktopSlot');
+    const diceRollMobileSlot = document.querySelector('.c2-game-heading');
+    const boardControlsToggle = document.getElementById('boardControlsToggle');
+    const boardControlsDesktopSlot = document.querySelector('.map-corner-bottom-left');
+    const boardControlsMobileSlot = document.getElementById('boardControlsMobileHome');
+    const updateGameLayout = () => {
+        if (desktopLayout.matches) {
+            diceRollDesktopSlot.append(diceRollSection);
+            boardControlsDesktopSlot.prepend(boardControlsToggle);
+        } else {
+            diceRollMobileSlot.append(diceRollSection);
+            boardControlsMobileSlot.append(boardControlsToggle);
+        }
+        window.requestAnimationFrame(() => resizeCanvas());
+    };
+    updateGameLayout();
+    desktopLayout.addEventListener('change', updateGameLayout);
+
     const viewButtons = document.querySelectorAll('.c2-game-mobile-tabs [data-game-view]');
     viewButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -638,8 +658,12 @@ function setMapZoom(level) {
         mapZoomToggle.setAttribute('aria-label', mapZoomToggle.title);
     }
     resizeCanvas();
-    zoomViewport.scrollLeft = 0;
-    zoomViewport.scrollTop = 0;
+    zoomViewport.scrollLeft = isPlayerPage
+        ? Math.max(0, (zoomViewport.scrollWidth - zoomViewport.clientWidth) / 2)
+        : 0;
+    zoomViewport.scrollTop = isPlayerPage
+        ? Math.max(0, (zoomViewport.scrollHeight - zoomViewport.clientHeight) / 2)
+        : 0;
 }
 if (mapZoomToggle) {
     mapZoomToggle.addEventListener('click', () => setMapZoom(mapZoomLevel === 1 ? 2 : 1));
@@ -653,7 +677,6 @@ if (boardControlsToggle) {
         boardControlsToggle.querySelector('i').className = `fas ${boardControlsEnabled ? 'fa-eye' : 'fa-eye-slash'}`;
         boardControlsToggle.title = boardControlsEnabled ? 'Disable map controls' : 'Enable map controls';
         boardControlsToggle.setAttribute('aria-label', boardControlsToggle.title);
-        if (!boardControlsEnabled && mapZoomLevel !== 1) setMapZoom(1);
         updateBoardEditingUI();
         drawBoard();
     });
@@ -1327,7 +1350,7 @@ function updateBoardEditingUI() {
         selectedSwapItem1 = null;
         selectedSwapItem2 = null;
     }
-    document.querySelectorAll('#boardTools .map-tool').forEach(button => {
+    document.querySelectorAll('#boardTools .map-tool:not(#mapZoomToggle)').forEach(button => {
         const editsBoard = ['swap', 'shuffle-cells', 'shuffle-numbers', 'undo'].includes(button.dataset.tool);
         button.disabled = !boardControlsEnabled || (editsBoard && !boardEditingAllowed);
         if (editsBoard && !boardEditingAllowed) button.title = 'Reset the game to edit the board';
@@ -3112,9 +3135,8 @@ function resizeCanvas() {
     fitGameMap();
     if (isGamePage && canvas.parentElement.clientWidth === 0) return;
 
-    const MOBILE_MAP_ZOOM = 1.6;   // must match the 160% in catan_styles.css
-    const mobileZoomed = isPlayerPage && mapZoomLevel === 2
-        && window.matchMedia('(max-width: 768px)').matches;
+    const PLAYER_MAP_ZOOM = 1.6;
+    const playerZoomed = isPlayerPage && mapZoomLevel === 2;
 
     const containerWidth = isPlayerPage
         ? canvas.parentElement.offsetWidth - canvas.parentElement.clientLeft * 2
@@ -3124,14 +3146,9 @@ function resizeCanvas() {
     if (isPlayerPage) {
         canvas.parentElement.style.height = `${containerWidth / aspectRatio}px`;
     }
-    let newWidth = containerWidth * mapZoomLevel;
+    const zoomFactor = playerZoomed ? PLAYER_MAP_ZOOM : 1;
+    let newWidth = containerWidth * zoomFactor;
     let newHeight = newWidth / aspectRatio;
-
-    if (mobileZoomed) {
-        // grow both dimensions by the same factor so the shape isn't stretched
-        newWidth = containerWidth * MOBILE_MAP_ZOOM;
-        newHeight = newWidth / aspectRatio;
-    }
     canvas.width = newWidth;
     canvas.height = newHeight;
     canvas.style.width = `${newWidth}px`;
@@ -3159,10 +3176,11 @@ function resizeCanvas() {
         maxRawY += portExtent;
         const boardWithPortsWidth = maxRawX - minRawX;
         const boardWithPortsHeight = maxRawY - minRawY;
-        const boardPadding = isPlayerPage && window.matchMedia('(max-width: 768px)').matches ? 12 : 48;
+        const baseBoardPadding = isPlayerPage && window.matchMedia('(max-width: 768px)').matches ? 12 : 48;
+        const boardPadding = baseBoardPadding * zoomFactor;
 
         boardScale = Math.min(
-            1,
+            playerZoomed ? Infinity : 1,
             (canvas.width - boardPadding) / boardWithPortsWidth,
             (canvas.height - boardPadding) / boardWithPortsHeight
         );
@@ -4089,6 +4107,7 @@ function renderGameScoreboard() {
         });
         if (!active) {
             [...row.cells].forEach(cell => { cell.textContent = ''; });
+            row.classList.remove('c2-score-leader', 'c2-score-inactive', 'c2-score-active');
             return;
         }
 
@@ -4206,6 +4225,7 @@ if (awardMetropolisButton) {
         selectedTrack = null;
     };
     awardMetropolisButton.addEventListener('click', () => trackModal.classList.remove('hidden'));
+    document.getElementById('cancelMetropolisTrack').addEventListener('click', closeMetropolisModals);
     document.getElementById('cancelMetropolisPlayer').addEventListener('click', closeMetropolisModals);
     [trackModal, playerModal].forEach(modal => {
         modal.addEventListener('click', event => {

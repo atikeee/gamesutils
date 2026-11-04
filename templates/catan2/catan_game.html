@@ -13,7 +13,7 @@
         body.catan2-game-page { height: 100dvh; min-height: 0; overflow: hidden; }
         .catan2-game-page .main-container {
             display: grid;
-            grid-template-columns: minmax(0, 44fr) minmax(0, 36fr) minmax(0, 20fr);
+            grid-template-columns: minmax(0, 62fr) minmax(0, 23fr) minmax(0, 15fr);
             height: 100%;
             min-height: 0;
             padding: 0;
@@ -210,6 +210,15 @@
                 aspect-ratio: 1.2 / 1;
             }
         }
+        @media (min-width: 901px) {
+            .catan2-game-page .game-map .map-zoom-viewport.map-zoomed { overflow: hidden !important; }
+            .catan2-game-page .game-map .map-zoom-viewport.map-zoomed #catanBoard {
+                width: 100% !important;
+                height: auto !important;
+                transform: scale(1.2);
+                transform-origin: center;
+            }
+        }
         .catan-game-page #assignpoint tr.c2-score-active { color: #c62828; font-weight: 700; }
         .c2-progress-card-popup {
             position: absolute;
@@ -244,6 +253,83 @@
         }
         .c2-vp-log .c2-vp-log-empty { color: #657972; }
         .c2-vp-log .c2-vp-log-empty::before { background: #c9d7d3; }
+        @media (min-width: 901px) {
+            .catan2-game-page .c2-game-heading { display: none; }
+            .catan2-game-page #assignpoint table { height: 132px; }
+            .catan2-game-page .middle-column { overflow-x: hidden; overflow-y: auto; }
+            .catan2-game-page .game-map {
+                width: min(100%, calc((100dvh - 24px) * 1.2));
+                max-width: none !important;
+                margin: auto;
+            }
+            .catan2-game-page .middle-column,
+            .catan2-game-page .right-column { gap: 4px; }
+            .catan2-game-page .c2-barbarian-track-section { flex: 0 0 auto; gap: 3px; }
+            .catan2-game-page .c2-barbarian-track-section h2 { font-size: 0.8rem; }
+            .catan2-game-page .c2-barbarian-track { width: min(100%, 250px, 26vh); }
+            .catan2-game-page .c2-dice-roll-slot { display: flex; justify-content: center; flex: 0 0 auto; width: 100%; }
+            .catan2-game-page .dice-roll-section { width: min(100%, 250px); }
+            .catan2-game-page #diceroll { min-height: 44px; }
+            .catan2-game-page #diceroll .dice-result { min-height: 40px; gap: 5px; }
+            .catan2-game-page #diceroll .dice-face,
+            .catan2-game-page #diceroll .catan2-event-die-face { width: 30px; height: 30px; }
+            .catan2-game-page #diceroll .dice-face { padding: 4px; }
+            .catan2-game-page #diceroll .die-pip { width: 5px; height: 5px; }
+            .catan2-game-page .middle-section { padding: 4px; }
+            .catan2-game-page .middle-section .assign-point-section { margin-top: 4px; }
+            .catan2-game-page #assignpoint th,
+            .catan2-game-page #assignpoint td {
+                padding: 4px 2px;
+                border-right: 1px solid #cbd5d1;
+                border-left: 1px solid #cbd5d1;
+                font-size: 0.66rem;
+                line-height: 1.1;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .catan2-game-page #assignpoint col:nth-child(1) { width: 27.8%; }
+            .catan2-game-page #assignpoint col:nth-child(2) { width: 11.1%; }
+            .catan2-game-page #assignpoint col:nth-child(3) { display: none; }
+            .catan2-game-page #assignpoint col:nth-child(4) { width: 11.1%; }
+            .catan2-game-page #assignpoint col:nth-child(5) { width: 11.1%; }
+            .catan2-game-page #assignpoint col:nth-child(6) { width: 11.1%; }
+            .catan2-game-page #assignpoint col:nth-child(7) { width: 27.8%; }
+            .catan2-game-page #assignpoint th:nth-child(3),
+            .catan2-game-page #assignpoint td:nth-child(3) { display: none; }
+            .catan2-game-page .c2-score-mobile-label { display: none; }
+            .catan2-game-page .c2-vp-footer { padding: 6px; }
+            .catan2-game-page .c2-vp-award { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; }
+            .catan2-game-page .c2-vp-award-button {
+                min-width: 0;
+                min-height: 28px;
+                padding: 3px 2px;
+                font-size: 0.62rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .catan2-game-page .c2-vp-footer h2 { margin: 4px 0 2px; font-size: 0.82rem; }
+            .catan2-game-page .c2-vp-log { max-height: 54px; padding-left: 12px; }
+            .catan2-game-page .c2-vp-log li { padding: 2px 4px; font-size: 0.62rem; line-height: 1.1; }
+            .catan2-game-page .c2-vp-log li::before { top: 5px; width: 7px; height: 7px; }
+            .catan2-game-page .c2-activity-section { padding: 4px 6px; }
+            .catan2-game-page .c2-activity-section h2 { margin-bottom: 3px; font-size: 0.82rem; }
+            .catan2-game-page .c2-activity-log li {
+                min-height: 36px;
+                gap: 3px;
+                padding: 2px 1px;
+                font-size: 0.65rem;
+                line-height: 1.15;
+            }
+            .catan2-game-page .c2-activity-player { font-size: 0.9rem; }
+            .catan2-game-page .c2-activity-card { flex-basis: 24px; width: 24px; height: 33px; }
+            .catan2-game-page .c2-activity-card > span { min-width: 13px; font-size: 0.58rem; }
+            .catan2-game-page .c2-activity-named-front strong { font-size: 0.42rem; }
+            .catan2-game-page .c2-activity-piece { flex-basis: 22px; width: 22px; height: 28px; font-size: 1.1rem; }
+            .catan2-game-page .map-corner-bottom-left { flex-direction: column; }
+            .catan2-game-page .board-controls-toggle { width: 40px; height: 40px; }
+        }
         @media (max-width: 900px) {
             body.catan2-game-page { height: auto; min-height: 100vh; padding: 8px !important; overflow-x: hidden; overflow-y: auto; }
             .c2-game-mobile-tabs { display: flex; height: 40px; gap: 4px; margin-bottom: 8px; }
@@ -264,6 +350,10 @@
             .catan2-game-page[data-game-view="log"] .right-column { display: flex; }
             .catan2-game-page .c2-barbarian-track { width: min(100%, 286px, 42vh, calc(90dvh - 310px)); }
             .catan2-game-page .c2-game-heading h1 { margin: 0; font-size: 1.1rem; }
+            .catan2-game-page .c2-score-desktop-label { display: none; }
+            .catan2-game-page .c2-score-mobile-label { display: inline; }
+            .catan2-game-page #assignpoint th:nth-child(3),
+            .catan2-game-page #assignpoint td:nth-child(3) { display: table-cell; }
             .catan2-game-page .game-map { flex: 0 0 auto; width: 100%; height: auto; padding-bottom: 0; }
             .catan2-game-page .game-map .canvas-wrapper.map-zoom-viewport {
                 position: relative;
@@ -298,7 +388,7 @@
             <div class="c2-game-heading">
                 <div class="game-title-row">
                     <h1 class="text-2xl font-bold text-gray-800">Cities &amp; Knights Game</h1>
-                    <button type="button" id="boardControlsToggle" class="board-controls-toggle" aria-pressed="false" aria-controls="boardTools" title="Enable map controls" aria-label="Enable map controls"><i class="fas fa-eye-slash" aria-hidden="true"></i></button>
+                    <span id="boardControlsMobileHome"></span>
                 </div>
                 <div class="dice-roll-section">
                     <div id="diceroll" aria-label="Last dice roll"></div>
@@ -313,9 +403,10 @@
                     <button type="button" class="map-tool" data-tool="shuffle-numbers" title="Shuffle numbers" aria-label="Shuffle numbers" disabled><i class="fas fa-dice" aria-hidden="true"></i></button>
                 </div>
                 <div class="map-corner map-corner-top-right">
-                    <button type="button" class="map-tool" id="mapZoomToggle" aria-pressed="false" title="Zoom in" aria-label="Zoom in" disabled><i class="fas fa-magnifying-glass-plus" aria-hidden="true"></i></button>
+                    <button type="button" class="map-tool" id="mapZoomToggle" aria-pressed="false" title="Zoom in" aria-label="Zoom in"><i class="fas fa-magnifying-glass-plus" aria-hidden="true"></i></button>
                 </div>
                 <div class="map-corner map-corner-bottom-left">
+                    <button type="button" id="boardControlsToggle" class="board-controls-toggle" aria-pressed="false" aria-controls="boardTools" title="Enable map controls" aria-label="Enable map controls"><i class="fas fa-eye-slash" aria-hidden="true"></i></button>
                     <button type="button" class="map-tool map-tool-danger" data-tool="reset-game" title="Reset game" aria-label="Reset game" disabled><i class="fas fa-power-off" aria-hidden="true"></i></button>
                 </div>
                 <div class="map-corner map-corner-bottom-right">
@@ -351,21 +442,25 @@
                     </div>
                 </div>
             </section>
+            <div class="c2-dice-roll-slot" id="diceRollDesktopSlot"></div>
             <div class="middle-section">
                 <div class="assign-point-section mt-6">
                     <div id="assignpoint">
                     <!-- add couple of button-->
                      <table class="w-full text-left table-auto border-collapse">
+                    <colgroup>
+                        <col><col><col><col><col><col><col>
+                    </colgroup>
                     <thead>
                         <tr class="bg-gray-200 text-gray-700 uppercase text-sm leading-normal">
                             <!-- Table Headers -->
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300 rounded-tl-lg">Name</th>
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300">Score</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300 rounded-tl-lg">NAME</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300"><span class="c2-score-desktop-label">Sc</span><span class="c2-score-mobile-label">Score</span></th>
                             <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Resource and commodity cards - Progress cards">Cards</th>
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Active knight strength">Knt</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Active knight strength">KN</th>
                             <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Victory Points">VP</th>
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Metropolises (2 points each)">Metro</th>
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300 c2-progress-level-heading" title="Trade - Politics - Science">Prog Lvl</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Metropolises (2 points each)"><span class="c2-score-desktop-label">MT</span><span class="c2-score-mobile-label">Metro</span></th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300 c2-progress-level-heading" title="Trade - Politics - Science"><span class="c2-score-desktop-label">LVL</span><span class="c2-score-mobile-label">Prog Lvl</span></th>
                         </tr>
                     </thead>
                     <tbody class="text-gray-600 text-sm font-light">
@@ -418,9 +513,9 @@
         <div class="right-column" id="gameLogPanel">
             <section class="c2-vp-footer" aria-labelledby="vpAwardLogTitle">
                 <div class="c2-vp-award">
-                    <button type="button" class="c2-vp-award-button" id="awardVpButton" aria-haspopup="dialog" aria-controls="awardVpModal">Victory Point</button>
-                    <button type="button" class="c2-vp-award-button" id="awardMetropolisButton">Metropolis</button>
-                    <button type="button" class="c2-vp-award-button" id="awardTitleButton">Longest Road</button>
+                    <button type="button" class="c2-vp-award-button" id="awardVpButton" aria-haspopup="dialog" aria-controls="awardVpModal" title="Victory Point">VP</button>
+                    <button type="button" class="c2-vp-award-button" id="awardMetropolisButton" title="Metropolis">MP</button>
+                    <button type="button" class="c2-vp-award-button" id="awardTitleButton" title="Longest Road">LR</button>
                 </div>
                 <h2 id="vpAwardLogTitle">Awards</h2>
                 <ol class="c2-vp-log" id="vpAwardLog" aria-live="polite"></ol>
@@ -452,6 +547,7 @@
                 <button type="button" class="c2-vp-choice c2-metropolis-trade" data-metropolis-track="trade">Trade</button>
                 <button type="button" class="c2-vp-choice c2-metropolis-politics" data-metropolis-track="politics">Politics</button>
                 <button type="button" class="c2-vp-choice c2-metropolis-science" data-metropolis-track="science">Science</button>
+                <button type="button" class="c2-vp-choice c2-vp-cancel" id="cancelMetropolisTrack">Cancel</button>
             </div>
         </div>
     </div>
@@ -481,6 +577,6 @@
     </div>
     <script>window.CATAN_PLAYER_COLORS = {{ player_colors|tojson }};</script>
     <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/catan2_game_logic.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan2_game_logic.js') }}?v=3"></script>
 </body>
 </html>
