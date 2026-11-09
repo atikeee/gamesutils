@@ -3,14 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Atiq's YouTube Player</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm.css') }}">
+    <title>Atiq's {{ media_label }} Player</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm.css') }}?v=6">
     <!-- Google Cast SDK -->
+    {% if media_source != 'local' %}
     <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+    {% endif %}
 </head>
 <body>
     <div class="mm-container" id="appContainer" data-page="{{ page }}" data-total-pages="{{ total_pages }}" data-playlist="{{ selected_playlist }}"
-         data-playlist-options='{{ all_playlists | tojson }}' data-category-options='{{ all_categories | tojson }}'>
+            data-playlist-options='{{ all_playlists | tojson }}' data-category-options='{{ all_categories | tojson }}'
+            data-source-type="{{ media_source }}" data-api-base="{{ api_base }}">
         <!-- Top Header: playlist · tags · icon actions -->
         <header class="mm-header">
             <select id="playlistFilterSelect" class="playlist-select" aria-label="Playlist">
@@ -19,18 +22,16 @@
                 {% endfor %}
             </select>
 
-            {% if playlist_categories %}
             <select id="categoryFilterSelect" class="playlist-select category-select" aria-label="Category">
                 <option value="" {% if not selected_category %}selected{% endif %}>All</option>
                 {% for c in playlist_categories %}
                     <option value="{{ c }}" {% if selected_category == c %}selected{% endif %}>{{ c }}</option>
                 {% endfor %}
             </select>
-            {% endif %}
 
             <div class="tag-filter-bar">
-                {% if all_tags %}
                 <span class="tag-filter-title">Tags</span>
+                {% if all_tags %}
                 {% for t in all_tags %}
                     {% set is_selected = t.name in selected_tags %}
                     {% if is_selected %}
@@ -38,22 +39,29 @@
                     {% else %}
                         {% set new_tags = (selected_tags + [t.name]) | list %}
                     {% endif %}
-                    <a href="{{ url_for('routes_mm.mm_youtube', playlist=selected_playlist, category=selected_category or None, tags=new_tags|join(',')) }}" 
+                    <a href="{{ url_for(route_endpoint, playlist=selected_playlist, category=selected_category or None, tags=new_tags|join(',')) }}" 
                        class="tag-chip {% if is_selected %}active{% endif %}" 
                        data-tag="{{ t.name }}">
                         {{ t.name }} <span class="tag-count">{{ t.count }}</span>
                     </a>
                 {% endfor %}
+                {% else %}
+                <span class="tag-filter-empty">No tags</span>
                 {% endif %}
             </div>
 
             <div class="header-right">
-                <label class="icon-btn audio-btn" title="Audio only (A)">
+                {% if media_source != 'local' %}<label class="icon-btn audio-btn" title="Audio only (A)">
                     <input type="checkbox" id="audioOnlyToggle">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
                         <path d="M12 3a9 9 0 0 0-9 9v7a2 2 0 0 0 2 2h2a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1H5v-1a7 7 0 0 1 14 0v1h-2a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2a2 2 0 0 0 2-2v-7a9 9 0 0 0-9-9z"/>
                     </svg>
-                </label>
+                </label>{% endif %}
+                {% if media_source == 'youtube' %}
+                <button class="icon-btn" id="openDownloadBtn" type="button" title="Download current video" aria-label="Download current video" {% if not videos %}disabled{% endif %}>
+                    <i data-lucide="download" aria-hidden="true">&#8681;</i>
+                </button>
+                {% endif %}
                 <button class="icon-btn" id="openAddModalBtn" type="button" title="Add video (+)" aria-label="Add video">+</button>
                 <!-- revealed by JS only when a Cast device is available -->
                 <div class="cast-wrapper" id="castWrapper" title="Cast to TV (C)" hidden>
@@ -69,10 +77,13 @@
             <div class="player-column">
                 {% if videos %}
                     {% set initial_vid = videos[0] %}
-                    <div class="active-video-container" id="activeVideoCard" 
+                    <div class="active-video-container" id="activeVideoCard" data-source-type="{{ media_source }}"
                          data-video-id="{{ initial_vid.video_id }}" 
                          data-id="{{ initial_vid.id }}"
                          data-is-new="{{ initial_vid.is_new }}">
+                        {% if media_source == 'local' %}
+                        <video id="main-local-player" class="yt-player-target" src="{{ stream_endpoint }}/{{ initial_vid.id }}" controls playsinline preload="metadata"></video>
+                        {% else %}
                         <!-- Native YouTube controls give the on-video timeline + fullscreen -->
                         <iframe id="main-yt-player" 
                                 class="yt-player-target"
@@ -81,6 +92,7 @@
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
                                 allowfullscreen>
                         </iframe>
+                            {% endif %}
 
                         <!-- Audio-Only Interface Overlay -->
                         <div class="audio-player-overlay" id="mainAudioOverlay">
@@ -147,6 +159,14 @@
                                         <button type="button" id="addInlineTagBtn">+</button>
                                     </div>
                                 </div>
+                                <div class="chapter-editor-wrap">
+                                    <button type="button" class="chapter-edit-toggle" id="youtubeChapterToggle" aria-controls="youtubeChapterForm" aria-expanded="false">Chapters</button>
+                                    <form class="chapter-editor" id="youtubeChapterForm" aria-label="Edit chapter timestamps" hidden>
+                                        <input id="youtubeChapterInput" name="chapter" type="text" aria-label="Chapter timestamps" value="{{ initial_vid.chapter or '' }}" placeholder="0 1:05 1:05:10" autocomplete="off" maxlength="4096">
+                                        <button class="icon-btn" type="submit" id="youtubeChapterSave" title="Save chapters" aria-label="Save chapters">&#10003;</button>
+                                        <output id="youtubeChapterStatus" aria-live="polite"></output>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -168,18 +188,20 @@
                     {% for v in videos %}
                     <div class="playlist-item {% if loop.first %}active{% endif %}" 
                          data-id="{{ v.id }}" 
-                         data-video-id="{{ v.video_id }}" 
+                         data-video-id="{{ v.video_id }}"
+                         data-url="{{ (stream_endpoint ~ '/' ~ v.id) if media_source == 'local' else v.url }}"
+                         data-duration="{{ v.duration or 0 }}" 
                          data-title="{{ v.title }}" 
                          data-artist="{{ v.artist }}" 
                          data-thumb="{{ v.thumbnail_url }}" 
-                         data-chapters="{{ v.chapters_json }}"
+                         data-chapters="{{ v.chapter or '' }}"
                          data-chapter-checked="{{ v.chapter_checked or 0 }}"
                          data-playlist="{{ v.playlist or selected_playlist }}"
                          data-category="{{ v.category or '' }}"
                          data-is-new="{{ v.is_new }}"
                          data-tags="{{ v.tag_list or '' }}">
                         <div class="item-thumb-wrapper">
-                            <img src="{{ v.thumbnail_url }}" alt="Thumb" class="item-thumb" loading="lazy">
+                            {% if v.thumbnail_url %}<img src="{{ v.thumbnail_url }}" alt="Thumb" class="item-thumb" loading="lazy">{% else %}<span class="video-file-placeholder" aria-hidden="true">VIDEO</span>{% endif %}
                             <span class="play-overlay-icon">&#9658;</span>
                         </div>
                         <div class="item-info">
@@ -203,14 +225,14 @@
                     {% set cat_param = selected_category or None %}
                     
                     {% if page > 1 %}
-                        <a href="{{ url_for('routes_mm.mm_youtube', page=page-1, playlist=selected_playlist, category=cat_param, tags=tags_param) }}" class="arrow-btn" title="Previous Page">&laquo;</a>
+                        <a href="{{ url_for(route_endpoint, page=page-1, playlist=selected_playlist, category=cat_param, tags=tags_param) }}" class="arrow-btn" title="Previous Page">&laquo;</a>
                     {% else %}
                         <span class="arrow-btn disabled">&laquo;</span>
                     {% endif %}
 
                     <div class="pagination-scroll-track" id="pageScrollTrack">
                         {% for p in range(1, total_pages + 1) %}
-                            <a href="{{ url_for('routes_mm.mm_youtube', page=p, playlist=selected_playlist, category=cat_param, tags=tags_param) }}" 
+                            <a href="{{ url_for(route_endpoint, page=p, playlist=selected_playlist, category=cat_param, tags=tags_param) }}"
                                class="page-num-pill {% if p == page %}active{% endif %}"
                                data-page-num="{{ p }}">
                                 {{ p }}
@@ -219,7 +241,7 @@
                     </div>
 
                     {% if page < total_pages %}
-                        <a href="{{ url_for('routes_mm.mm_youtube', page=page+1, playlist=selected_playlist, category=cat_param, tags=tags_param) }}" class="arrow-btn" title="Next Page">&raquo;</a>
+                        <a href="{{ url_for(route_endpoint, page=page+1, playlist=selected_playlist, category=cat_param, tags=tags_param) }}" class="arrow-btn" title="Next Page">&raquo;</a>
                     {% else %}
                         <span class="arrow-btn disabled">&raquo;</span>
                     {% endif %}
@@ -247,8 +269,10 @@
                 <div class="shortcut-item"><kbd>]</kbd> <span>Forward 1 Minute</span></div>
                 <div class="shortcut-item"><kbd>&lt;</kbd> / <kbd>,</kbd> <span>Previous Chapter</span></div>
                 <div class="shortcut-item"><kbd>&gt;</kbd> / <kbd>.</kbd> <span>Next Chapter</span></div>
+                {% if media_source != 'local' %}
                 <div class="shortcut-item"><kbd>A</kbd> <span>Toggle Audio-Only Mode</span></div>
                 <div class="shortcut-item"><kbd>C</kbd> <span>Cast to TV</span></div>
+                {% endif %}
                 <div class="shortcut-item"><kbd>+</kbd> <span>Add New Video</span></div>
                 <div class="shortcut-item"><kbd>?</kbd> / <kbd>H</kbd> <span>Show Shortcuts Guide</span></div>
                 <div class="shortcut-item"><kbd>Esc</kbd> <span>Close Dialog / Exit Fullscreen</span></div>
@@ -264,9 +288,9 @@
     <!-- Add Video Modal -->
     <div class="modal-backdrop" id="addVideoModal">
         <div class="modal-card">
-            <h3>Add YouTube Video</h3>
-            <p class="modal-desc">Paste YouTube link or ID to add to playlist:</p>
-            <input type="text" id="newVideoUrlInput" class="modal-input" placeholder="https://www.youtube.com/watch?v=...">
+            <h3>{{ 'Add X Video' if media_kind == 'x' else 'Add Movie' if media_kind == 'mov' else 'Add Local Video' if media_source == 'local' else 'Add YouTube Video' }}</h3>
+            <textarea id="newVideoUrlInput" class="modal-input" rows="5" aria-label="{{ 'Video file paths' if media_source == 'local' else 'YouTube links or IDs' }}" placeholder="{{ 'Video file paths, one per line' if media_source == 'local' else 'YouTube links or IDs, one per line' }}"></textarea>
+            {% if media_source == 'local' %}<input type="text" id="newVideoTitleInput" class="modal-input" placeholder="Title (optional)">{% endif %}
             <input type="text" id="newVideoPlaylistInput" class="modal-input" placeholder="Playlist" value="{{ selected_playlist }}" list="addPlaylistOptions" autocomplete="off">
             <input type="text" id="newVideoCategoryInput" class="modal-input" placeholder="Category (optional)" value="{{ selected_category }}" list="addCategoryOptions" autocomplete="off">
             <datalist id="addPlaylistOptions">
@@ -276,6 +300,7 @@
                 {% for c in all_categories %}<option value="{{ c }}"></option>{% endfor %}
             </datalist>
             <input type="text" id="newVideoTagsInput" class="modal-input" placeholder="Tags (comma-separated, e.g. 90s, Live)">
+            <output id="addVideoStatus" role="status" style="display: block; white-space: pre-wrap; overflow-wrap: anywhere;"></output>
             <div class="modal-actions">
                 <button type="button" class="btn-cancel" id="cancelAddBtn">Cancel</button>
                 <button type="button" class="btn-submit" id="submitAddBtn">Save Video</button>
@@ -283,7 +308,22 @@
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/mm_common.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/mm_youtube.js') }}"></script>
+    {% if media_source == 'youtube' %}
+    <dialog id="downloadDialog" class="modal-card download-dialog" aria-labelledby="downloadTitle">
+        <h3 id="downloadTitle">Download</h3>
+        <p id="downloadSelection" class="modal-desc"></p>
+        <form id="downloadForm">
+            <output id="downloadStatus" role="status"></output>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="downloadCancel">Cancel</button>
+                <button type="submit" class="btn-submit" id="downloadAudio" data-kind="audio"><i data-lucide="music" aria-hidden="true"></i>Audio</button>
+                <button type="submit" class="btn-submit" id="downloadVideo" data-kind="video"><i data-lucide="film" aria-hidden="true"></i>Video</button>
+            </div>
+        </form>
+    </dialog>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    {% endif %}
+    <script src="{{ url_for('static', filename='js/mm_common.js') }}?v=2"></script>
+    <script src="{{ url_for('static', filename='js/mm_youtube.js') }}?v=5"></script>
 </body>
 </html>

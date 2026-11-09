@@ -1,128 +1,26 @@
-<style>
-    textarea { 
-        width: 100%; 
-        min-height: 50px; /* Base height */
-        resize: vertical;  /* Allows user to expand if needed */
-        font-family: inherit;
-        padding: 5px;
-        box-sizing: border-box;
-    }
-    .common-note { width: 100%; min-height: 80px; }
-    body { font-family: sans-serif; background: #f9f9f9; padding: 20px; }
-    .section-container { margin-bottom: 40px; border-bottom: 2px solid #ccc; padding-bottom: 20px; }
-    .common-data { background: #eee; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
-    table, th, td { border: 1px solid #999; }
-    th, td { padding: 8px; text-align: left; }
-    th { background-color: #eaeaea; font-weight: bold; }
-    .status-processed { background-color: #d4edda !important; }
-    .changed { background-color: #fff3cd !important; border: 2px solid #ffc107; }
-    .saved-confirm { background-color: #d1e7dd !important; border: 2px solid #198754; }
-    #floating-save, #dup-toggle-btn {
-        position: fixed;
-        top: 20px;
-        width: 110px;
-        height: 48px;
-        border: none;
-        border-radius: 5px;
-        color: white;
-        font-weight: 600;
-        cursor: pointer;
-        z-index: 1000;
-    }
-    #floating-save { right: 20px; background: #238636; }
-    #dup-toggle-btn { right: 140px; background: #1f6feb; }
-    #data-file-form {
-        position: fixed;
-        top: 20px;
-        right: 260px;
-        z-index: 1000;
-        display: flex;
-        gap: 10px;
-        align-items: center;
-    }
-    #timestamp-filter {
-        height: 48px;
-        width: 180px;
-        border: 1px solid #999;
-        border-radius: 5px;
-        padding: 0 10px;
-        background: white;
-        font-size: 14px;
-        box-sizing: border-box;
-    }
-    #timestamp-filter::placeholder {
-        color: #999;
-    }
-    #data-file-select {
-        height: 48px;
-        min-width: 260px;
-        border: 1px solid #999;
-        border-radius: 5px;
-        padding: 0 10px;
-        background: white;
-        font-weight: 600;
-        cursor: pointer;
-    }
-    
-    /* Column sizing for all columns */
-    table td:nth-child(1), table th:nth-child(1) { width: 40px; text-align: center; }
-    table td:nth-child(2), table th:nth-child(2) { width: 140px; white-space: nowrap; overflow: hidden; }
-    table td:nth-child(3), table th:nth-child(3) { width: 130px; overflow: hidden; word-wrap: break-word; }
-    table td:nth-child(4), table th:nth-child(4) { width: 130px; overflow: hidden; word-wrap: break-word; }
-    table td:nth-child(5), table th:nth-child(5) { width: 150px; overflow: hidden; word-wrap: break-word; }
-    table td:nth-child(6), table th:nth-child(6) { width: 70px; white-space: nowrap; overflow: hidden; }
-    table td:nth-child(7), table th:nth-child(7) { width: auto; overflow: hidden; word-wrap: break-word; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email Triage</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/work.css') }}?v=2">
+</head>
+<body class="work-page work-email">
 
-    /* Ensure the dropdown itself behaves */
-    .status-select {
-        width: 100%;
-        padding: 4px;
-        box-sizing: border-box;
-        cursor: pointer;
-    }
-    .preview-tooltip {
-        display: none;
-        position: absolute;
-        width: 400px;
-        height: 300px;
-        background: white;
-        border: 1px solid #ccc;
-        z-index: 1000;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        overflow: hidden;
-    }
-    .preview-tooltip iframe { width: 100%; height: 100%; border: none; }
-    /* Resizable columns */
-    th { position: relative; user-select: none; }
-    th.resizable::after {
-        content: '';
-        position: absolute;
-        right: 0;
-        top: 0;
-        bottom: 0;
-        width: 4px;
-        cursor: col-resize;
-        background: linear-gradient(to right, transparent, #ccc, transparent);
-        opacity: 0;
-        transition: opacity 0.2s;
-    }
-    th.resizable:hover::after { opacity: 1; }
-    th.resizing::after { opacity: 1; background: #0066ff; }
-    
-    /* Sortable column styling */
-    th.sortable { cursor: pointer; }
-    th.sortable:hover { background-color: #d0d0d0; }
-    th.sortable::before {
-        content: ' ⇅';
-        font-size: 1.1em;
-        color: #999;
-        margin-left: 6px;
-    }
-    th.sort-asc::before { content: ' ⬆'; color: #0066ff; font-weight: bold; }
-    th.sort-desc::before { content: ' ⬇'; color: #0066ff; font-weight: bold; }
-</style>
 
+<nav id="work-dashboard-nav" aria-label="Work dashboard">
+    {% include 'work/_back_button.html' %}
+</nav>
+<button id="run-triage-btn" type="button" onclick="runTriageImport()">Run Email Import</button>
+<section id="triage-run-panel" aria-label="Email import output" hidden>
+    <div id="triage-run-panel-header">
+        <span>Import output</span>
+        <button id="triage-run-close" type="button" onclick="hideTriageOutput()">Close</button>
+    </div>
+    <textarea id="triage-run-output" rows="20" readonly aria-live="polite"></textarea>
+</section>
 <button id="floating-save" onclick="saveAll(false)">Save</button>
 <button id="dup-toggle-btn" onclick="toggleDupRows()">Show</button>
 <form id="data-file-form" method="get" action="/triage_email_dashboard">
@@ -190,8 +88,101 @@
 </div>
 {% endfor %}
 
+<script id="triage-data-file" type="application/json">{{ selected_data_file | tojson }}</script>
 <script>
-const selectedDataFile = {{ selected_data_file | tojson }};
+const selectedDataFile = JSON.parse(document.getElementById('triage-data-file').textContent);
+
+function highlightImportedRows() {
+    try {
+        const imported = JSON.parse(sessionStorage.getItem('triageEmailImportedRows') || 'null');
+        if (!imported || imported.data_file !== selectedDataFile) return;
+        const keys = new Set(imported.rows.map(row => JSON.stringify([row.section, row.item_id])));
+        document.querySelectorAll('tr[data-item-id]').forEach(row => {
+            row.classList.toggle('imported-current', keys.has(JSON.stringify([row.dataset.section, row.dataset.itemId])));
+        });
+    } catch (error) {
+        sessionStorage.removeItem('triageEmailImportedRows');
+    }
+}
+highlightImportedRows();
+
+let triageOutputHideTimer = null;
+
+// Show the previous run's output once after the auto-reload.
+(function restoreTriageOutput() {
+    const saved = sessionStorage.getItem('triageEmailOutput');
+    if (saved === null) return;
+    sessionStorage.removeItem('triageEmailOutput');
+    const output = document.getElementById('triage-run-output');
+    output.value = saved;
+    document.getElementById('triage-run-panel').hidden = false;
+    output.scrollTop = output.scrollHeight;
+})();
+
+function hideTriageOutput() {
+    document.getElementById('triage-run-panel').hidden = true;
+    clearTimeout(triageOutputHideTimer);
+}
+
+function scheduleTriageOutputHide() {
+    clearTimeout(triageOutputHideTimer);
+    triageOutputHideTimer = setTimeout(hideTriageOutput, 30000);
+}
+
+function waitForTriageOutputPoll() {
+    return new Promise(resolve => setTimeout(resolve, 750));
+}
+
+async function pollTriageOutput() {
+    const output = document.getElementById('triage-run-output');
+    while (true) {
+        const response = await fetch('/triage_email_api/process4_output');
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Could not read import output');
+
+        output.value = result.lines.join('\n');
+        output.scrollTop = output.scrollHeight;
+        if (!result.running) return result;
+        await waitForTriageOutputPoll();
+    }
+}
+
+async function runTriageImport() {
+    sessionStorage.removeItem('triageEmailImportedRows');
+    document.querySelectorAll('tr.imported-current').forEach(row => row.classList.remove('imported-current'));
+    const button = document.getElementById('run-triage-btn');
+    const panel = document.getElementById('triage-run-panel');
+    const output = document.getElementById('triage-run-output');
+    clearTimeout(triageOutputHideTimer);
+    panel.hidden = false;
+    output.value = 'Starting import...';
+    button.disabled = true;
+    button.textContent = 'Starting...';
+    let succeeded = false;
+
+    try {
+        const response = await fetch('/triage_email_api/run_process4', { method: 'POST' });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Could not start import');
+        button.textContent = 'Importing...';
+        const finished = await pollTriageOutput();
+        const importedRows = finished.imported_rows || [];
+        sessionStorage.setItem('triageEmailImportedRows', JSON.stringify({ data_file: finished.data_file, rows: importedRows }));
+        succeeded = finished.return_code === 0 || importedRows.length > 0;
+    } catch (error) {
+        output.value += `\n${error.message}`;
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Run Email Import';
+        scheduleTriageOutputHide();
+    }
+
+    if (succeeded) {
+        sessionStorage.setItem('triageEmailOutput', output.value);
+        // Save pending edits first so the reload does not discard them.
+        setTimeout(() => document.querySelector('.changed') ? saveAll(true) : location.reload(), 1500);
+    }
+}
 
 // Keep direct selection working, but refresh should return to default route.
 if (window.location.search.includes('data_file=')) {
@@ -216,7 +207,7 @@ function updateDupToggleButton() {
     const btn = document.getElementById('dup-toggle-btn');
     if (!btn) return;
     btn.textContent = showDupRows ? 'Hide' : 'Show';
-    btn.style.background = showDupRows ? '#d1242f' : '#1f6feb';
+    btn.classList.toggle('showing-duplicates', showDupRows);
 }
 
 function toggleDupRows(forceShow = null) {
@@ -455,3 +446,5 @@ document.querySelectorAll('th.resizable').forEach(th => {
     document.addEventListener('mouseup', () => { isResizing = false; });
 });
 </script>
+</body>
+</html>

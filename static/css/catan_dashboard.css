@@ -17,6 +17,15 @@ h2 { margin: 0; font-size: 1.65rem; line-height: 1.25; overflow-wrap: anywhere; 
 .edition-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; min-width: 0; }
 .destination { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
 .destination:hover { border-color: var(--accent); }
+.game-destination { display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 16px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font-size: .95rem; font-weight: 600; }
+.game-destination:hover { border-color: var(--accent); background: #eef5f1; }
+.game-destination > i { color: var(--accent); }
+.game-destination > i:last-child { margin-left: auto; }
+.game-tv-btn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-top: 16px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--accent); font-size: 1.15rem; cursor: pointer; }
+.game-tv-btn:hover:not(:disabled) { background: #eef5f1; border-color: var(--accent); }
+.game-tv-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.game-tv-btn:disabled { opacity: .5; cursor: default; }
+#gameTvStatus:empty { display: none; }
 .destination-photo { position: relative; aspect-ratio: 1.55; overflow: hidden; background: #fff; }
 .destination-photo > img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .destination-player .destination-photo > img { object-position: 35% center; }

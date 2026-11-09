@@ -373,11 +373,6 @@ def configure_routes_catan(app,socketio):
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    @app.route('/catan', strict_slashes=False)
-    @dashboard_tile(section='board', title='Catan', description='Choose Catan or Cities & Knights game and player pages.', icon='island', order=19)
-    def catan_dashboard():
-        return render_template('catan/dashboard.html')
-
     @app.route("/catan/1/game")
     @dashboard_tile(section="board", title="Catan Game", description="Open the shared Catan game view.", icon="island", order=20)
     def catan_game():

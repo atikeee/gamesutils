@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>My Music{% if tv_mode %} TV{% endif %}</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm_mp3.css') }}?v=2">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm.css') }}?v=3">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm_mp3.css') }}?v=4">
 </head>
 <body class="mp3-page{% if tv_mode %} mp3-tv{% endif %}">
     <div class="mm-container" id="appContainer"
@@ -109,12 +109,14 @@
                                     <button type="button" id="addInlineTagBtn" tabindex="-1">+</button>
                                 </div>
                             </div>
-                            <form class="chapter-editor" id="chapterForm">
-                                <label class="meta-label" for="chapterInput">Chapters</label>
-                                <input id="chapterInput" name="chapter" type="text" placeholder="10, 1:05, 1:5:10" autocomplete="off" maxlength="4096" disabled tabindex="-1">
-                                <button class="icon-btn" type="submit" id="saveChaptersBtn" title="Save chapters" aria-label="Save chapters" disabled tabindex="-1">&#10003;</button>
-                                <output id="chapterStatus" aria-live="polite"></output>
-                            </form>
+                            <div class="chapter-editor-wrap">
+                                <button type="button" class="chapter-edit-toggle" id="chapterEditorToggle" aria-controls="chapterForm" aria-expanded="false">Chapters</button>
+                                <form class="chapter-editor" id="chapterForm" aria-label="Edit chapter timestamps" hidden>
+                                    <input id="chapterInput" name="chapter" type="text" aria-label="Chapter timestamps" placeholder="10 1:05 1:5:10" autocomplete="off" maxlength="4096" disabled tabindex="-1">
+                                    <button class="icon-btn" type="submit" id="saveChaptersBtn" title="Save chapters" aria-label="Save chapters" disabled tabindex="-1">&#10003;</button>
+                                    <output id="chapterStatus" aria-live="polite"></output>
+                                </form>
+                            </div>
                         </div>
                     </section>
                         {% endif %}
@@ -136,8 +138,8 @@
 
     <audio id="audioEngine"></audio>
 
-    <script src="{{ url_for('static', filename='js/mm_common.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/mm_mp3.js') }}?v=2"></script>
+    <script src="{{ url_for('static', filename='js/mm_common.js') }}?v=2"></script>
+    <script src="{{ url_for('static', filename='js/mm_mp3.js') }}?v=3"></script>
 </body>
 </html>
 

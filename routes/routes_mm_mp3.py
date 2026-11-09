@@ -3,9 +3,11 @@ import mimetypes
 import sqlite3
 from pathlib import Path
 from flask import Blueprint, render_template, request, jsonify, send_file, url_for
+from routes.media_chapters import normalize_chapter_timestamps
+from routes.mm_config import mm_path
 
 bp_mm_mp3 = Blueprint("mm_mp3", __name__)
-DB_PATH = Path(__file__).resolve().parent.parent / "data" / "mm" / "mp3.db"
+DB_PATH = mm_path('mp3_db')
 SUPPORTED_AUDIO_EXTS = {".mp3", ".m4a", ".flac", ".wav", ".ogg", ".aac", ".wma"}
 
 
@@ -41,6 +43,10 @@ def init_db():
         cursor.execute("ALTER TABLE tracks ADD COLUMN category TEXT DEFAULT NULL;")
     if "chapter" not in cols:
         cursor.execute("ALTER TABLE tracks ADD COLUMN chapter TEXT DEFAULT '';")
+    for row in cursor.execute("SELECT id, chapter FROM tracks WHERE chapter IS NOT NULL AND TRIM(chapter) != ''").fetchall():
+        normalized = normalize_chapter_timestamps(row["chapter"])
+        if normalized != row["chapter"]:
+            cursor.execute("UPDATE tracks SET chapter = ? WHERE id = ?", (normalized, row["id"]))
     cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_tracks_path ON tracks(path);")
     conn.commit()
     conn.close()
@@ -195,7 +201,7 @@ def update_track_metadata(track_id):
     new_playlist = data.get("playlist", "").strip()
     new_category = data.get("category", "").strip() or None
     new_tags = data.get("tag_list", "").strip()
-    new_chapter = str(data['chapter'] or '').strip() if 'chapter' in data else None
+    new_chapter = normalize_chapter_timestamps(data['chapter']) if 'chapter' in data else None
     new_artist = str(data['artist'] or '').strip() if 'artist' in data else None
 
     if not new_playlist:

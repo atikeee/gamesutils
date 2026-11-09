@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Dashboard</title>
+    
+    
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/work.css') }}?v=2">
+</head>
+<body class="work-page work-dashboard">
+    <main>
+        <header><i data-lucide="briefcase-business" aria-hidden="true"></i><h1>Work Dashboard</h1></header>
+        {% macro tile(endpoint, label, icon, style='') %}
+        <a class="tile {{ style }}" href="{{ url_for(endpoint) }}">
+            <span class="icon"><i data-lucide="{{ icon }}" aria-hidden="true"></i></span>
+            <span class="label">{{ label }}</span>
+            <i data-lucide="arrow-up-right" class="arrow" aria-hidden="true"></i>
+        </a>
+        {% endmacro %}
+        <section aria-labelledby="triage-title">
+            <h2 id="triage-title">Triage</h2>
+            <nav class="tiles" aria-label="Triage tools">
+                {{ tile('triage_email_dashboard', 'Email Triage', 'mail') }}
+                {{ tile('triage_its_dashboard', 'HSD-ES Tickets', 'tickets', 'tickets') }}
+            </nav>
+        </section>
+        <section aria-labelledby="reference-title">
+            <h2 id="reference-title">Reference</h2>
+            <nav class="tiles" aria-label="Reference tools">
+                {{ tile('links', 'Useful Links', 'link', 'links') }}
+                {{ tile('acronyms', 'Acronyms', 'book-open', 'acronyms') }}
+            </nav>
+        </section>
+    </main>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script>window.lucide?.createIcons();</script>
+</body>
+</html>

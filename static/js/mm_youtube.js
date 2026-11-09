@@ -23,6 +23,10 @@ window['__onGCastApiAvailable'] = function(isAvailable) {
 };
 
 // Global state
+const appContainer = document.getElementById('appContainer');
+const MEDIA_SOURCE = appContainer?.dataset.sourceType || 'youtube';
+const API_BASE = appContainer?.dataset.apiBase || '/mm/api/video';
+const mediaApi = path => `${API_BASE}${path}`;
 let ytPlayer = null;
 let currentTrackIndex = 0;
 let playlistItems = [];
@@ -31,6 +35,7 @@ let pendingDeleteVideoId = null;
 
 // Ensure YouTube API Script is loaded
 (function loadYouTubeApi() {
+    if (MEDIA_SOURCE !== 'youtube') return;
     window.onYouTubeIframeAPIReady = initMainPlayer;
     if (!window.YT) {
         const tag = document.createElement('script');
@@ -49,6 +54,7 @@ let pendingDeleteVideoId = null;
 // YouTube Player Factory
 function initMainPlayer() {
     playlistItems = Array.from(document.querySelectorAll('.playlist-item'));
+    if (MEDIA_SOURCE === 'local') return;
     if (!playlistItems.length) return;
 
     if (ytPlayer) return;
@@ -78,31 +84,33 @@ function initMainPlayer() {
 }
 
 function parseChaptersFromItem(itemEl) {
-    activeChapters = [];
-    try {
-        const raw = itemEl?.getAttribute('data-chapters');
-        if (raw) activeChapters = JSON.parse(raw);
-    } catch (e) {
-        activeChapters = [];
-    }
+    activeChapters = parseChapterTimestamps(itemEl?.getAttribute('data-chapters'));
+    const chapterInput = document.getElementById('youtubeChapterInput');
+    if (chapterInput) chapterInput.value = itemEl?.getAttribute('data-chapters') || '';
+    const chapterStatus = document.getElementById('youtubeChapterStatus');
+    if (chapterStatus) chapterStatus.textContent = '';
     ensureChapters(itemEl);
 }
 
 // One-time server lookup; the server marks chapter_checked so it never repeats
 function ensureChapters(itemEl) {
-    if (!itemEl || itemEl.dataset.chapterChecked !== '0') return;
+    if (!itemEl || itemEl.dataset.chapterChecked !== '0' || itemEl.getAttribute('data-chapters')?.trim()) return;
     const dbId = itemEl.getAttribute('data-id');
     if (!dbId) return;
     itemEl.dataset.chapterChecked = 'pending';
 
-    fetch(`/mm/api/video/${dbId}/chapters`, { method: 'POST' })
+    fetch(mediaApi(`/${dbId}/chapters`), { method: 'POST' })
         .then(r => r.json())
         .then(res => {
             if (!res.success) throw new Error(res.error || 'lookup failed');
-            itemEl.setAttribute('data-chapters', JSON.stringify(res.chapters));
+            itemEl.setAttribute('data-chapters', res.chapter || '');
             itemEl.dataset.chapterChecked = '1';
-            if (playlistItems[currentTrackIndex] === itemEl) activeChapters = res.chapters;
-            console.log(`[Chapters] ${res.chapters.length} chapter(s) for video ${dbId}`);
+            if (playlistItems[currentTrackIndex] === itemEl) {
+                activeChapters = parseChapterTimestamps(res.chapter);
+                const chapterInput = document.getElementById('youtubeChapterInput');
+                if (chapterInput) chapterInput.value = res.chapter || '';
+            }
+            console.log(`[Chapters] ${activeChapters.length} chapter(s) for video ${dbId}`);
         })
         .catch(err => {
             itemEl.dataset.chapterChecked = '0';
@@ -124,10 +132,18 @@ function onPlayerReady(event) {
     }
 }
 
-function onPlayerStateChange(event) {
-    const isAudioOnly = document.getElementById('audioOnlyToggle')?.checked;
+function setPlaybackButtonState(playing) {
     const playBtn = document.getElementById('mainPlayBtn');
     const eq = document.getElementById('mainEqualizer');
+    if (playBtn) {
+        playBtn.querySelector('.icon-play').style.display = playing ? 'none' : 'inline';
+        playBtn.querySelector('.icon-pause').style.display = playing ? 'inline' : 'none';
+    }
+    if (eq) eq.classList.toggle('playing', playing);
+}
+
+function onPlayerStateChange(event) {
+    const isAudioOnly = document.getElementById('audioOnlyToggle')?.checked;
     const activeCard = document.getElementById('activeVideoCard');
 
     if (isAudioOnly && event.data === YT.PlayerState.PLAYING) {
@@ -138,19 +154,11 @@ function onPlayerStateChange(event) {
 
     if (event.data === YT.PlayerState.PLAYING) {
         localStorage.setItem('mm_continuous_play', 'true');
-        if (playBtn) {
-            playBtn.querySelector('.icon-play').style.display = 'none';
-            playBtn.querySelector('.icon-pause').style.display = 'inline';
-        }
-        if (eq) eq.classList.add('playing');
+        setPlaybackButtonState(true);
 
         checkAndUpdateMetadata(activeCard);
     } else {
-        if (playBtn) {
-            playBtn.querySelector('.icon-play').style.display = 'inline';
-            playBtn.querySelector('.icon-pause').style.display = 'none';
-        }
-        if (eq) eq.classList.remove('playing');
+        setPlaybackButtonState(false);
     }
 
     // Auto-advance to next track on video end (No suggestion screen shown)
@@ -174,7 +182,7 @@ function checkAndUpdateMetadata(activeCard) {
                 const title = data.title;
                 const artist = data.author || 'YouTube';
 
-                fetch(`/mm/api/video/${dbId}/update_metadata`, {
+                fetch(mediaApi(`/${dbId}/update_metadata`), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -226,6 +234,7 @@ function loadTrackByIndex(index, autoPlay = true) {
     const targetItem = playlistItems[index];
 
     const vidId = targetItem.getAttribute('data-video-id');
+    const mediaUrl = targetItem.getAttribute('data-url');
     const dbId = targetItem.getAttribute('data-id');
     const title = targetItem.getAttribute('data-title');
     const artist = targetItem.getAttribute('data-artist');
@@ -240,6 +249,7 @@ function loadTrackByIndex(index, autoPlay = true) {
         activeCard.setAttribute('data-video-id', vidId);
         activeCard.setAttribute('data-id', dbId);
         activeCard.setAttribute('data-is-new', isNew);
+        activeCard.setAttribute('data-url', mediaUrl || '');
     }
 
     const oTitle = document.getElementById('overlayTitle');
@@ -265,6 +275,16 @@ function loadTrackByIndex(index, autoPlay = true) {
 
     if (autoPlay) {
         localStorage.setItem('mm_continuous_play', 'true');
+    }
+
+    if (MEDIA_SOURCE === 'local') {
+        const localPlayer = document.getElementById('main-local-player');
+        if (!localPlayer || !mediaUrl) return;
+        localPlayer.src = mediaUrl;
+        localPlayer.load();
+        if (autoPlay) localPlayer.play().catch(error => console.warn('[Player] Playback could not start:', error));
+        else localPlayer.pause();
+        return;
     }
 
     // Try YouTube Player API first
@@ -337,6 +357,12 @@ function playPrevTrack(autoPlay = true) {
 }
 
 function seekRelative(seconds) {
+    if (MEDIA_SOURCE === 'local') {
+        const localPlayer = document.getElementById('main-local-player');
+        if (!localPlayer || !Number.isFinite(localPlayer.duration)) return;
+        localPlayer.currentTime = Math.max(0, Math.min(localPlayer.duration, localPlayer.currentTime + seconds));
+        return;
+    }
     if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
         const current = ytPlayer.getCurrentTime();
         const duration = ytPlayer.getDuration ? ytPlayer.getDuration() : 0;
@@ -355,20 +381,25 @@ function seekRelative(seconds) {
 }
 
 function jumpChapter(direction) {
-    if (!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function') return;
-    const current = ytPlayer.getCurrentTime();
+    const localPlayer = MEDIA_SOURCE === 'local' ? document.getElementById('main-local-player') : null;
+    if (!localPlayer && (!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function')) return;
+    const current = localPlayer ? localPlayer.currentTime : ytPlayer.getCurrentTime();
+    const seek = seconds => {
+        if (localPlayer) localPlayer.currentTime = seconds;
+        else ytPlayer.seekTo(seconds, true);
+    };
 
     if (activeChapters && activeChapters.length > 0) {
         if (direction === 'next') {
-            const nextCh = activeChapters.find(ch => ch.seconds > current + 1);
-            if (nextCh) ytPlayer.seekTo(nextCh.seconds, true);
+            const nextCh = activeChapters.find(seconds => seconds > current + 1);
+            if (nextCh !== undefined) seek(nextCh);
         } else {
-            const prevChs = activeChapters.filter(ch => ch.seconds < current - 2);
+            const prevChs = activeChapters.filter(seconds => seconds < current - 2);
             if (prevChs.length > 0) {
                 const prevCh = prevChs[prevChs.length - 1];
-                ytPlayer.seekTo(prevCh.seconds, true);
+                seek(prevCh);
             } else {
-                ytPlayer.seekTo(0, true);
+                seek(0);
             }
         }
     } else {
@@ -409,7 +440,7 @@ function renderActiveTags(videoId, tagString) {
 // In-Place Tag Addition (Zero Reload)
 function addTagToVideo(videoId, tag) {
     if (!tag) return;
-    fetch(`/mm/api/video/${videoId}/tag`, {
+    fetch(mediaApi(`/${videoId}/tag`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tag: tag })
@@ -450,7 +481,7 @@ function addTagToVideo(videoId, tag) {
 
 // In-Place Tag Removal (Zero Reload)
 function removeTagFromVideo(videoId, tag) {
-    fetch(`/mm/api/video/${videoId}/tag`, {
+    fetch(mediaApi(`/${videoId}/tag`), {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tag: tag })
@@ -485,7 +516,7 @@ function commitInlineEdit(el, value, previous) {
     if (!dbId) return renderInlineValue(el, previous);
 
     renderInlineValue(el, value);
-    fetch(`/mm/api/video/${dbId}/${field}`, {
+    fetch(mediaApi(`/${dbId}/${field}`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [field]: value })
@@ -506,6 +537,7 @@ function commitInlineEdit(el, value, previous) {
 
 // Trigger browser cast
 function triggerCastFlow() {
+    if (MEDIA_SOURCE === 'local') return;
     console.log("[Cast] Triggering Cast flow...");
     if (window.cast && cast.framework && cast.framework.CastContext) {
         try {
@@ -535,6 +567,18 @@ function showBrowserCastHelp() {
 }
 
 function togglePlay() {
+    if (MEDIA_SOURCE === 'local') {
+        const localPlayer = document.getElementById('main-local-player');
+        if (!localPlayer) return;
+        if (localPlayer.paused) {
+            localStorage.setItem('mm_continuous_play', 'true');
+            localPlayer.play().catch(error => console.warn('[Player] Playback could not start:', error));
+        } else {
+            localStorage.removeItem('mm_continuous_play');
+            localPlayer.pause();
+        }
+        return;
+    }
     if (ytPlayer && typeof ytPlayer.getPlayerState === 'function') {
         const state = ytPlayer.getPlayerState();
         const isAudioOnly = document.getElementById('audioOnlyToggle')?.checked;
@@ -560,6 +604,67 @@ function togglePlay() {
 // Comprehensive Control Bar Binding
 function setupControls() {
     playlistItems = Array.from(document.querySelectorAll('.playlist-item'));
+    setupChapterEditorToggle(document.getElementById('youtubeChapterToggle'), document.getElementById('youtubeChapterForm'));
+
+    const localPlayer = document.getElementById('main-local-player');
+    if (localPlayer) {
+        const saveLocalDuration = () => {
+            const duration = Math.round(localPlayer.duration || 0);
+            const item = playlistItems[currentTrackIndex];
+            if (!duration || !item || Number(item.dataset.duration) === duration) return;
+            item.dataset.duration = String(duration);
+            const dbId = item.getAttribute('data-id');
+            fetch(mediaApi(`/${dbId}/update_metadata`), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ duration })
+            }).catch(error => console.warn('[Metadata] Local duration save failed:', error));
+        };
+        localPlayer.addEventListener('play', () => {
+            localStorage.setItem('mm_continuous_play', 'true');
+            setPlaybackButtonState(true);
+        });
+        localPlayer.addEventListener('pause', () => setPlaybackButtonState(false));
+        localPlayer.addEventListener('ended', () => playNextTrack(true));
+        localPlayer.addEventListener('loadedmetadata', saveLocalDuration);
+        if (localPlayer.readyState >= 1) saveLocalDuration();
+        if (localStorage.getItem('mm_continuous_play') === 'true') {
+            localPlayer.play().catch(error => console.warn('[Player] Autoplay was blocked:', error));
+        }
+    }
+
+    document.getElementById('youtubeChapterForm')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const item = playlistItems[currentTrackIndex];
+        const chapterInput = document.getElementById('youtubeChapterInput');
+        const status = document.getElementById('youtubeChapterStatus');
+        const saveButton = document.getElementById('youtubeChapterSave');
+        const dbId = item?.getAttribute('data-id');
+        if (!dbId || !chapterInput) return;
+
+        const chapter = formatChapterTimestamps(chapterInput.value);
+        saveButton.disabled = true;
+        status.textContent = 'Saving';
+        try {
+            const response = await fetch(mediaApi(`/${dbId}/chapters`), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chapter })
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || 'Could not save chapters');
+            item.setAttribute('data-chapters', chapter);
+            item.dataset.chapterChecked = '1';
+            chapterInput.value = chapter;
+            activeChapters = parseChapterTimestamps(chapter);
+            status.textContent = 'Saved';
+        } catch (error) {
+            status.textContent = 'Not saved';
+            console.warn('[Chapters] save error:', error);
+        } finally {
+            saveButton.disabled = false;
+        }
+    });
 
     // 1. Play / Pause
     document.getElementById('mainPlayBtn')?.addEventListener('click', togglePlay);
@@ -789,6 +894,78 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    window.lucide?.createIcons({ attrs: { width: 18, height: 18 } });
+    const openDownloadButton = document.getElementById('openDownloadBtn');
+    if (openDownloadButton) {
+        const dialog = document.getElementById('downloadDialog');
+        const form = document.getElementById('downloadForm');
+        const status = document.getElementById('downloadStatus');
+        const cancel = document.getElementById('downloadCancel');
+        const audioButton = document.getElementById('downloadAudio');
+        const videoButton = document.getElementById('downloadVideo');
+        let busy = false;
+        let selectedId = null;
+        function finishDownload() {
+            busy = false;
+            audioButton.disabled = false;
+            videoButton.disabled = false;
+            cancel.textContent = 'Cancel';
+            form.removeAttribute('aria-busy');
+        }
+        openDownloadButton.addEventListener('click', () => {
+            if (!busy) {
+                const item = playlistItems[currentTrackIndex];
+                if (!item) return;
+                selectedId = item.dataset.id;
+                document.getElementById('downloadSelection').textContent = item.dataset.title || 'Untitled';
+                status.textContent = '';
+            }
+            dialog.showModal();
+        });
+        cancel.addEventListener('click', () => dialog.close());
+        async function pollDownload(jobId) {
+            try {
+                const response = await fetch(`/mm/api/video/download/${jobId}`);
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Could not read download status.');
+                status.textContent = `${result.message}${result.status === 'downloading' ? ` ${result.progress}%` : ''}`;
+                if (result.status === 'complete' || result.status === 'failed') {
+                    if (result.filename) status.textContent += `\n${result.filename}`;
+                    finishDownload();
+                } else {
+                    window.setTimeout(() => pollDownload(jobId), 2000);
+                }
+            } catch (error) {
+                status.textContent = error.message || 'Download status unavailable.';
+                finishDownload();
+            }
+        }
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+            const kind = event.submitter?.dataset.kind;
+            if (busy || !selectedId || !kind) return;
+            busy = true;
+            audioButton.disabled = true;
+            videoButton.disabled = true;
+            cancel.textContent = 'Close';
+            form.setAttribute('aria-busy', 'true');
+            status.textContent = 'Starting download...';
+            try {
+                const response = await fetch(`/mm/api/video/${selectedId}/download`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ kind })
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Could not start download.');
+                pollDownload(result.job_id);
+            } catch (error) {
+                status.textContent = error.message || 'Could not start download.';
+                finishDownload();
+            }
+        });
+    }
+
     // 7. Add Video Modal Handlers
     const addModal = document.getElementById('addVideoModal');
     const openAddBtn = document.getElementById('openAddModalBtn');
@@ -799,38 +976,53 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cancelAddBtn && addModal) cancelAddBtn.addEventListener('click', () => addModal.style.display = 'none');
 
     if (submitAddBtn) {
-        submitAddBtn.addEventListener('click', () => {
-            const url = document.getElementById('newVideoUrlInput').value.trim();
+        submitAddBtn.addEventListener('click', async () => {
+            const urlInput = document.getElementById('newVideoUrlInput');
+            const urls = [...new Set(urlInput.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean))];
+            const title = document.getElementById('newVideoTitleInput')?.value.trim() || '';
             const playlist = document.getElementById('newVideoPlaylistInput').value.trim();
             const category = document.getElementById('newVideoCategoryInput')?.value.trim() || '';
             const tagsRaw = document.getElementById('newVideoTagsInput').value.trim();
             const tags = tagsRaw ? tagsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
 
-            if (!url) return alert("Please enter a YouTube link or ID.");
+            const status = document.getElementById('addVideoStatus');
+            if (!urls.length || urls.length > 50 || !playlist) {
+                status.textContent = !playlist ? 'Playlist is required.' : 'Enter between 1 and 50 entries.';
+                return;
+            }
 
             submitAddBtn.textContent = "Saving...";
             submitAddBtn.disabled = true;
-
-            fetch('/mm/api/video/add', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: url, playlist: playlist, category: category, tags: tags })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
+            cancelAddBtn.disabled = true;
+            const failures = [];
+            let saved = 0;
+            try {
+                for (const [index, url] of urls.entries()) {
+                    status.textContent = `Saving ${index + 1} of ${urls.length}...`;
+                    try {
+                        const response = await fetch(mediaApi('/add'), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url, title: urls.length === 1 ? title : '', playlist, category, tags })
+                        });
+                        const data = await response.json();
+                        if (!response.ok || !data.success) throw new Error(data.error || 'Failed to add video.');
+                        saved++;
+                    } catch (error) {
+                        failures.push({ url, error: error.message || 'Server error adding video.' });
+                    }
+                }
+                if (!failures.length) {
                     window.location.reload();
                 } else {
-                    alert(data.error || "Failed to add video.");
-                    submitAddBtn.textContent = "Save Video";
-                    submitAddBtn.disabled = false;
+                    urlInput.value = failures.map(failure => failure.url).join('\n');
+                    status.textContent = `Saved ${saved} of ${urls.length}.\n` + failures.map(failure => `${failure.url}: ${failure.error}`).join('\n');
                 }
-            })
-            .catch(() => {
-                alert("Server error adding video.");
+            } finally {
                 submitAddBtn.textContent = "Save Video";
                 submitAddBtn.disabled = false;
-            });
+                cancelAddBtn.disabled = false;
+            }
         });
     }
 });

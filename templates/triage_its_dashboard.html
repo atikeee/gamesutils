@@ -4,32 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HSD-ES Tickets</title>
-    <style>
-        body { font-family: sans-serif; background: #f9f9f9; color: #263d38; padding: 20px; margin: 0; }
-        header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-        h1 { font-size: 1.4rem; margin: 0; }
-        .summary { color: #526961; margin: 12px 0 16px; }
-        .error { padding: 10px; border: 1px solid #d78d86; background: #fff0ee; color: #792b27; }
-        .table-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 24px 0 8px; }
-        .table-heading h2 { margin: 0; font-size: 1.1rem; }
-        .delete-selected { min-height: 36px; padding: 6px 12px; border: 1px solid #ad332b; border-radius: 5px; background: #fff; color: #9f2922; font-weight: 600; cursor: pointer; }
-        .delete-selected:disabled { opacity: 0.45; cursor: not-allowed; }
-        a:focus-visible { outline: 3px solid #c49c26; outline-offset: 2px; }
-        .table-scroll { overflow-x: auto; }
-        table { width: 100%; min-width: 850px; border-collapse: collapse; background: white; }
-        th, td { border: 1px solid #999; padding: 8px; text-align: left; vertical-align: top; }
-        th { background: #eaeaea; font-weight: bold; }
-        tr.priority { background: #d4edda; font-weight: 600; }
-        td { overflow-wrap: anywhere; }
-        td:first-child, td:nth-child(2) { white-space: nowrap; }
-        a { color: #175d86; }
-        .empty { padding: 18px 8px; text-align: center; color: #526961; }
-    </style>
+    
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/work.css') }}?v=2">
 </head>
-<body>
+<body class="work-page work-its">
     <header>
+        {% include 'work/_back_button.html' %}
         <h1>HSD-ES Tickets</h1>
+        <button id="run-scan-btn" type="button">Run Scan</button>
     </header>
+    <section id="scan-run-panel" aria-label="Scan output" hidden>
+        <button id="scan-run-close" type="button">Close</button>
+        <textarea id="scan-run-output" rows="12" readonly aria-live="polite"></textarea>
+    </section>
     <p class="summary">{{ data.tickets|length }} saved tickets from the last 48 hours. Last scan: {{ data.scanned_at or 'Not scanned yet' }}{% if data.scanned_at_utc %} (<span id="scan-age" data-scanned-at="{{ data.scanned_at_utc }}">calculating age</span>){% endif %}</p>
     {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <div class="table-heading">
@@ -102,6 +90,53 @@
         </table>
     </div>
     <script>
+        document.getElementById('scan-run-close').addEventListener('click', () => {
+            document.getElementById('scan-run-panel').hidden = true;
+        });
+
+        // Show the previous scan's output once after the auto-reload.
+        const savedScanOutput = sessionStorage.getItem('triageItsScanOutput');
+        if (savedScanOutput !== null) {
+            sessionStorage.removeItem('triageItsScanOutput');
+            const savedOutput = document.getElementById('scan-run-output');
+            savedOutput.value = savedScanOutput;
+            document.getElementById('scan-run-panel').hidden = false;
+            savedOutput.scrollTop = savedOutput.scrollHeight;
+        }
+
+        document.getElementById('run-scan-btn').addEventListener('click', async () => {
+            const button = document.getElementById('run-scan-btn');
+            const panel = document.getElementById('scan-run-panel');
+            const output = document.getElementById('scan-run-output');
+            panel.hidden = false;
+            output.value = 'Starting scan...';
+            button.disabled = true;
+            button.textContent = 'Scanning...';
+            let succeeded = false;
+            try {
+                const start = await fetch('/triage_its/run_scan', { method: 'POST' });
+                const startResult = await start.json();
+                if (!start.ok) throw new Error(startResult.message || 'Could not start scan');
+                while (true) {
+                    const response = await fetch('/triage_its/scan_output');
+                    const result = await response.json();
+                    output.value = result.lines.join('\n');
+                    output.scrollTop = output.scrollHeight;
+                    if (!result.running) { succeeded = result.return_code === 0; break; }
+                    await new Promise(resolve => setTimeout(resolve, 750));
+                }
+            } catch (error) {
+                output.value += `\n${error.message}`;
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Run Scan';
+            }
+            if (succeeded) {
+                sessionStorage.setItem('triageItsScanOutput', output.value);
+                setTimeout(() => window.location.reload(), 1500);
+            }
+        });
+
         document.querySelectorAll('.scan-age, #scan-age').forEach(scanAge => {
             const scannedAt = Date.parse(scanAge.dataset.scannedAt);
             function updateScanAge() {

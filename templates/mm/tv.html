@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Display</title>
+    <style>
+        :root { color-scheme: dark; background: #000; color: #fff; font-family: "Segoe UI", sans-serif; }
+        * { box-sizing: border-box; }
+        html, body, #tvApp { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #000; }
+        #tvApp { position: relative; display: grid; place-items: center; }
+        #playerStage { width: 100%; height: 100%; display: grid; place-items: center; }
+        #tvYoutubePlayer, #tvLocalPlayer { width: 100%; height: 100%; border: 0; object-fit: contain; background: #000; }
+        #tvYoutubePlayer { pointer-events: none; }
+        #playerStage { cursor: none; }
+        #tvYoutubePlayer[hidden], #tvLocalPlayer[hidden] { display: none; }
+        #tvAudioOverlay { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; padding: 5vw; background: #101413; color: #edf2ee; text-align: center; }
+        #tvAudioOverlay[hidden] { display: none; }
+        #tvAudioOverlay h1 { margin: 0; font-size: clamp(1.5rem, 5vw, 4rem); }
+        .audio-only #tvYoutubePlayer, .audio-only #tvLocalPlayer { opacity: 0; }
+        #tvStatus { position: absolute; inset: auto 16px 14px; margin: 0; color: #ddd; font-size: .9rem; text-align: center; text-shadow: 0 1px 5px #000; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <main id="tvApp" data-mode="tv">
+        <div id="playerStage">
+            <div id="tvYoutubePlayer" hidden></div>
+            <video id="tvLocalPlayer" playsinline preload="metadata" hidden></video>
+        </div>
+        <div id="tvAudioOverlay" hidden><h1 id="tvAudioTitle"></h1></div>
+        <p id="tvStatus" role="status">Waiting for media selection</p>
+    </main>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/mm_tvremote.js') }}?v=15"></script>
+</body>
+</html>

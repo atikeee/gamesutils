@@ -1,9 +1,17 @@
 # utils
 
+## Deployment
+
+The release-branch deployment webhook and GitHub Actions setup are documented in
+[data/deploy/README.md](data/deploy/README.md).
+
 ## Passphrase Router
 
 The home page `/` routes passphrases to local URLs. The original dashboard is now
 at `/index`, and the master-protected passphrase manager is at `/passphrases`.
+`/index` is public and does not require a passphrase, even if a saved passphrase
+destination points to it. Individual Games and Work links are grouped under their
+dashboard tiles instead of repeated on the index. Other page protections remain.
 
 After installing the existing requirements, initialize the two passphrases locally:
 
@@ -106,6 +114,15 @@ Tag chips toggle independently. Songs must contain **all selected tags**; select
 **All** to clear the selection. Filters are retained when changing playlist,
 category, or artist, including in the TV view. Repeated `tag` query parameters
 can be used in player URLs and `/mm/api/mp3/library`.
+
+## Video Libraries
+
+`/mm/youtube` and `/mm/vdo` share the same player and `videos`/`tags`/`video_tags`
+schema, stored separately in `data/mm/youtube.db` and `data/mm/vdo.db`. The VDO
+`url` column stores a local file path and `video_id` is generated from that path.
+Local files must be under `MM_VDO_ROOT`; it defaults to `/Media` when that mount
+exists, otherwise `data/vdo`. Set `MM_VDO_ROOT` to the video directory before
+starting the app if your files are elsewhere.
 
 ## Catan
 

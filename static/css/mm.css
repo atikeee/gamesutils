@@ -110,6 +110,8 @@ google-cast-launcher {
     margin-right: 2px;
 }
 
+.tag-filter-empty { color: #777; font-size: 0.8rem; }
+
 .tag-chip {
     text-decoration: none;
     background-color: #272727;
@@ -332,14 +334,17 @@ body.audio-mode .audio-player-overlay {
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px solid #272727;
+    overflow-x: auto;
 }
 
 .meta-managers-group {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-    width: 100%;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    width: max-content;
+    min-width: 100%;
 }
 
 .meta-label {
@@ -355,6 +360,7 @@ body.audio-mode .audio-player-overlay {
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
+    flex: 0 0 auto;
 }
 
 .inline-edit {
@@ -434,12 +440,34 @@ body.audio-mode .audio-player-overlay {
 /* Tag Manager Box */
 .video-tag-manager {
     display: flex;
+    flex: 0 1 auto;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    min-width: 0;
 }
 
-.video-tags-list { display: flex; gap: 6px; flex-wrap: wrap; }
+.video-tags-list { display: flex; gap: 6px; flex-wrap: nowrap; max-width: 220px; overflow-x: auto; }
+
+.chapter-editor-wrap { position: relative; flex: 0 0 auto; }
+
+.chapter-edit-toggle {
+    min-height: 26px;
+    padding: 3px 9px;
+    border: 1px solid #3f3f3f;
+    border-radius: 13px;
+    background: #1e1e1e;
+    color: #bdbdbd;
+    font: inherit;
+    font-size: 0.72rem;
+    cursor: pointer;
+}
+.chapter-edit-toggle:hover,
+.chapter-edit-toggle:focus-visible { border-color: #00c853; color: #00e676; }
+.chapter-editor { position: fixed; z-index: 2000; display: flex; flex: 0 1 auto; align-items: center; gap: 5px; min-width: 0; max-width: calc(100vw - 16px); padding: 8px; border: 1px solid #3f3f3f; border-radius: 6px; background: #1e1e1e; box-shadow: 0 8px 24px rgba(0,0,0,.6); }
+.chapter-editor[hidden] { display: none !important; }
+.chapter-editor input { width: 150px; min-width: 90px; min-height: 28px; padding: 4px 7px; border: 1px solid #3f3f3f; border-radius: 5px; background: #1e1e1e; color: #f1f1f1; font: inherit; font-size: 0.75rem; }
+.chapter-editor output { color: #00e676; font-size: 0.68rem; white-space: nowrap; }
 
 .tag-badge {
     background-color: #2a2a2a;
@@ -540,6 +568,7 @@ body.audio-mode .audio-player-overlay {
 }
 
 .item-thumb { width: 100%; height: 100%; object-fit: cover; }
+.video-file-placeholder { display: grid; place-items: center; width: 100%; height: 100%; color: #9faa9f; background: #202a23; font-size: .7rem; font-weight: 700; }
 .play-overlay-icon {
     position: absolute;
     top: 50%; left: 50%;
@@ -703,6 +732,13 @@ body.audio-mode .audio-player-overlay {
 }
 
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+textarea.modal-input { min-height: 120px; resize: vertical; font-family: inherit; }
+.download-dialog { color: #fff; }
+.download-dialog::backdrop { background: rgba(0, 0, 0, .78); }
+.download-dialog label { display: block; margin-bottom: 6px; font-size: .85rem; }
+.download-dialog output { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; }
+.download-dialog .modal-actions { flex-wrap: wrap; }
+.download-dialog .modal-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .btn-cancel {
     display: inline-flex;
     align-items: center;
@@ -1078,7 +1114,7 @@ kbd {
     .ctrl-btn { flex: 1 1 0; min-width: 0; width: auto; height: 40px; font-size: 0.95rem; border-radius: 8px; }
     .play-main-btn { flex: 0 0 46px; width: 46px; height: 46px; margin: 0 2px; }
 
-    .meta-managers-group { align-items: stretch; gap: 8px; }
+    .meta-managers-group { align-items: center; gap: 8px; }
     .inline-edit { min-height: 32px; }
     .inline-edit-input { height: 32px; width: 55vw; font-size: 16px; } /* 16px stops iOS zoom */
     .inline-suggest-item { padding: 11px 12px; }

@@ -40,7 +40,7 @@ button, select { font-family: inherit; }
 .game-board-shell { flex: 1 1 auto; min-height: 0; position: relative; }
 .game-map { position: relative; width: 100%; height: 100%; }
 .canvas-wrapper.map-zoom-viewport { position: relative; width: 100%; height: 100%; overflow: hidden; border: 2px solid #a78bfa; border-radius: 12px; background: #e0e7ff; }
-#catanBoard { position: absolute; top: 0; left: 0; display: block; width: 100%; height: 100%; max-width: none; background: #fff; }
+#catanBoard { position: absolute; top: 0; left: 0; display: block; width: 100%; height: 100%; max-width: none; background: #4b5563; }
 
 /* zoom: 1.2x on TV / laptop; scrolls inside the map, scrollbars hidden */
 .map-zoom-viewport.map-zoomed { overflow: auto; scrollbar-width: none; }
@@ -168,3 +168,37 @@ button, select { font-family: inherit; }
     .score-table td:nth-child(2) { font-size: 1.15rem; }
     .game-activity-section { max-height: 260px; }
 }
+
+/* Dark theme for the game controls and score sidebar; keep the board artwork bright. */
+body.catan-game-page { color: #e5eeeb; background: #111a19; }
+.board-controls-toggle,
+.compact-select,
+.map-tool,
+#lastRollPlayer,
+#diceroll,
+.award-select { border-color: #3b514c; background: #202d2a; color: #e5eeeb; }
+.board-controls-toggle[aria-pressed="true"],
+.map-tool:hover:not(:disabled) { border-color: #4a9b83; background: #29483f; color: #effff9; }
+.board-controls-toggle[aria-pressed="true"],
+.map-tool.selected,
+.map-tool[aria-pressed="true"] { border-color: #34866f; background: #246653; color: #fff; }
+.road-select-label { color: #c1d1cb; }
+.dev-deck-left { color: #9fb3ab; }
+.score-section,
+.game-activity-section { border-color: #354541; background: #1a2522; color: #e5eeeb; box-shadow: 0 2px 8px rgba(0,0,0,0.28); }
+.score-table { border-color: #455b55; }
+.score-table th,
+.score-table td { border-color: #354541; color: #dce8e3; }
+.score-table th { background: #263632; color: #b7c8c1; }
+.score-table th:nth-child(2) { background: #246653; color: #fff; }
+.score-table td:nth-child(2) { background: #213e35; color: #bcebd7; }
+.activity-entry { border-top-color: #354541; }
+.activity-seven-block { background: #392827; }
+.road-award-picker > button { border-color: #3b816d; background: #213e35; color: #c4eadb; }
+.road-award-picker > button:hover { background: #2a5144; }
+#roadChoices { border-color: #3b514c; background: #202d2a; color: #e5eeeb; }
+#roadChoices button { color: inherit; }
+#roadChoices button:hover { background: #2a4039; }
+.game-dialog { border: 1px solid #3b514c; background: #1a2522; color: #e5eeeb; }
+.game-dialog p { color: #b7c8c1; }
+.game-dialog-cancel { border-color: #455b55; background: #263632; color: #e5eeeb; }

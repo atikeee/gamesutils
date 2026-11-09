@@ -1,0 +1,29 @@
+{
+  "site_url": "https://atiq.us",
+  "x_pin": "6732",
+  "movie_pin": "0000",
+  "vdo_pin": "1111",
+  "paths": {
+    "data_dir": "data/mm",
+    "youtube_db": "data/mm/youtube.db",
+    "vdo_db": "data/mm/vdo.db",
+    "mov_db": "data/mm/mov.db",
+    "x_db": "data/mm/x.db",
+    "mp3_db": "data/mm/mp3.db",
+    "remote_state_db": "data/mm/remote_state.db",
+    "youtube_seed": "data/mm/youtube_videos.json",
+    "youtube_credentials": "data/mm/youtube_token.json",
+    "media_mount": "/Media",
+    "vdo_root": "data/vdo",
+    "download_audio_root": "/Media/Audio",
+    "download_video_root": "/Media/Video"
+  },
+  "tv": {
+    "ip": "192.168.0.245",
+    "adb_port": 5555,
+    "adb_executable": "adb",
+    "app_component": "com.rahmanma.gamesutils.catan/.MainActivity",
+    "control_key": "9291",
+    "timeout_seconds": 15
+  }
+}

@@ -2347,6 +2347,40 @@ body.catan-setup-page {
     .catan-player-page .player-content-spacer { order: 6; }
 }
 
+/* Dark theme for the player page; resource cards and the board remain unchanged. */
+body.catan-player-page,
+body.catan-player-page.has-player-color { background: #111a19; color: #e5eeeb; }
+.catan-player-page .player-page-container { background: transparent; color: #e5eeeb; box-shadow: none; }
+.catan-player-page .player-heading { color: #e5eeeb; }
+.catan-player-page.has-player-color .player-heading { color: var(--player-color) !important; }
+.catan-player-page .player-color-picker,
+.catan-player-page .deck-display { border-color: #354541; background: #1a2522; color: #e5eeeb; box-shadow: none; }
+.catan-player-page .player-color-picker h2,
+.catan-player-page .player-cards-heading { color: #e5eeeb; }
+.catan-player-page .player-color-option { border-color: #455b55; background: #202d2a; color: #dce8e3; }
+.catan-player-page .player-color-option input { accent-color: #48a88b; }
+.catan-player-page .player-color-swatch { border-color: #8ca39a; }
+.catan-player-page .card-list { border-color: #455b55; background: #141e1c; }
+.catan-player-page .player-action-toolbar .btn-tool,
+.catan-player-page .map-overlay button,
+.catan-player-page .map-undo,
+.catan-player-page .dev-cards-toggle { border-color: #455b55; background: #202d2a; color: #e5eeeb; }
+.catan-player-page .player-action-toolbar .btn-tool:hover { border-color: #4a9b83; background: #29483f; }
+.catan-player-page .player-action-toolbar .btn-tool.selected { border-color: #34866f; background: #246653; color: #fff; }
+.catan-player-page .map-overlay { background: rgba(17, 26, 25, 0.88); }
+.catan-player-page .last-roll-total { border-color: #455b55; background: #202d2a; color: #e5eeeb; }
+.catan-player-page .resource-selection-tray { border-color: #455b55; background: rgba(26, 37, 34, 0.98); color: #e5eeeb; }
+.catan-player-page .resource-selection-summary,
+.catan-player-page #resourceSelectionDetails,
+.catan-player-page #handSelectionDetails { color: #dce8e3; }
+.catan-player-page .resource-selection-actions button { border-color: #455b55; background: #263632; color: #e5eeeb; }
+.catan-player-page .modal-content { border: 1px solid #455b55; background: #1a2522; color: #e5eeeb; }
+.catan-player-page .modal-message,
+.catan-player-page .resource-pick-title { color: #e5eeeb; }
+.catan-player-page #catanBoard { background: #4b5563 !important; }
+.catan-player-page .resource-pick-card { border-color: #455b55; background: #202d2a; color: #e5eeeb; }
+.catan-player-page .resource-pick-card.selected { border-color: #48a88b; background: #213e35; }
+.catan-player-page .player-color-error { color: #ff9a91; }
 
 
 /* ==========================================================================

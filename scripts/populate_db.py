@@ -5,7 +5,11 @@ import re
 import sqlite3
 import time
 import argparse
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from routes.mm_config import mm_db_path
 
 try:
     import requests
@@ -27,10 +31,7 @@ def extract_video_id(raw_val: str):
     return cleaned if len(cleaned) == 11 else None
 
 def get_target_db_path():
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    db_path = os.path.normpath(os.path.join(base_dir, '..', 'data', 'mm', 'youtube.db'))
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    return db_path
+    return mm_db_path('youtube_db')
 
 def init_database_schema(db_path):
     """Ensures tables exist with UNIQUE constraint on video_id and enables WAL mode."""

@@ -15,6 +15,67 @@ function readJsonData(el, key, fallback) {
     }
 }
 
+function parseChapterTimestamps(value) {
+    const timestamps = String(value || '').trim().split(/[\s,]+/).map(token => {
+        const parts = token.trim().split(':');
+        if (!token.trim() || parts.length > 3 || !parts.every(part => /^\d+(?:\.\d+)?$/.test(part))
+            || !parts.slice(0, -1).every(part => /^\d+$/.test(part))) return null;
+        const seconds = parts.reduce((total, part) => total * 60 + Number(part), 0);
+        return Number.isFinite(seconds) ? seconds : null;
+    }).filter(seconds => seconds !== null && seconds >= 0);
+    return [...new Set(timestamps)].sort((first, second) => first - second);
+}
+
+function formatChapterTimestamps(value) {
+    return parseChapterTimestamps(value).join(' ');
+}
+
+function setupChapterEditorToggle(toggle, form) {
+    if (!toggle || !form) return;
+    const wrapper = toggle.closest('.chapter-editor-wrap');
+    const position = () => {
+        const bounds = toggle.getBoundingClientRect();
+        const popup = form.getBoundingClientRect();
+        const left = Math.max(8, Math.min(bounds.left, window.innerWidth - popup.width - 8));
+        const top = bounds.bottom + popup.height + 8 <= window.innerHeight
+            ? bounds.bottom + 6
+            : Math.max(8, bounds.top - popup.height - 6);
+        form.style.left = `${left}px`;
+        form.style.top = `${top}px`;
+    };
+    const stopPositioning = () => {
+        window.removeEventListener('resize', position);
+        window.removeEventListener('scroll', position, true);
+    };
+    const close = () => {
+        form.hidden = true;
+        toggle.setAttribute('aria-expanded', 'false');
+        stopPositioning();
+    };
+    toggle.addEventListener('click', () => {
+        const open = form.hidden;
+        form.hidden = !open;
+        toggle.setAttribute('aria-expanded', String(open));
+        if (open) {
+            window.requestAnimationFrame(position);
+            window.addEventListener('resize', position);
+            window.addEventListener('scroll', position, true);
+            form.querySelector('input')?.focus();
+        } else {
+            stopPositioning();
+        }
+    });
+    document.addEventListener('click', event => {
+        if (!form.hidden && wrapper && !wrapper.contains(event.target)) close();
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !form.hidden) {
+            close();
+            toggle.focus();
+        }
+    });
+}
+
 // suggestions for the inline playlist / category editors (rendered by the server on #appContainer)
 window.MM_OPTIONS = (() => {
     const c = document.getElementById('appContainer');

@@ -135,7 +135,7 @@ def configure_routes_passphrase(app):
     @app.before_request
     def require_destination_access():
         requested_path = request.path.rstrip('/') or '/'
-        if requested_path == '/' or path_matches(requested_path, '/passphrases') or path_matches(requested_path, '/static'):
+        if requested_path in {'/', '/index'} or path_matches(requested_path, '/passphrases') or path_matches(requested_path, '/static'):
             return None
         with database(path) as connection:
             entries = connection.execute('SELECT * FROM destinations WHERE is_master = 0').fetchall()

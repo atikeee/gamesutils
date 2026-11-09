@@ -73,6 +73,10 @@ def generate_letter_mapping():
 def configure_routes(app,socketio):
     data_dir = os.path.join(PROJECT_ROOT, 'data')
 
+    @app.route('/games', strict_slashes=False)
+    def game_dashboard():
+        return render_template('game_dashboard.html')
+
     @app.route("/index")
     def index():
         return render_template("main/index.html", dashboard_sections=dashboard_sections(app))
@@ -105,7 +109,7 @@ def configure_routes(app,socketio):
                                has_prev=index > 0,
                                has_next=index < len(image_list) - 1)
     @app.route('/guesstune')
-    @dashboard_tile(section="media", title="Guess the Tune", description="Listen to a short clip and guess the track.", icon="music", order=10)
+    @dashboard_tile(section="quiz", title="Guess the Tune", description="Listen to a short clip and guess the track.", icon="music", order=10)
     def guesstune():
         clips = load_clips()
         clip_index = int(request.args.get("clip", 0))
@@ -235,7 +239,7 @@ def configure_routes(app,socketio):
         
         return render_template("main/crack.html", data=data,revealed=revealed, current=current, index=index, more_left=more_left)
     @app.route('/shuffle_cards')
-    @dashboard_tile(section="cards", title="Shuffle Deck", description="View a freshly shuffled 52-card deck.", icon="deck", order=30)
+    @dashboard_tile(section="quiz", title="Shuffle Deck", description="View a freshly shuffled 52-card deck.", icon="deck", order=30)
     def shuffle_cards():
         card_folder = os.path.join(data_dir, 'cards')
         card_files = sorted([

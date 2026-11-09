@@ -11,7 +11,7 @@ from routes.routes_catan import configure_routes_catan
 from routes.routes_catan2 import configure_routes_catan2
 from routes.routes_bridge import configure_routes_bridge
 from routes.routes_bridge_v2 import configure_routes_bridge_v2
-from routes.routes_links import configure_routes_links
+from routes.routes_work import configure_routes_work
 from routes.routes_launcher import configure_routes_launcher
 from routes.routes_triage_email import configure_routes_triage_email
 from routes.routes_triage_its import configure_routes_triage_its
@@ -19,9 +19,9 @@ from routes.routes_math import configure_routes_math
 from routes.routes_stocks import configure_routes_stocks
 from routes.routes_phototag import configure_routes_phototag
 from routes.routes_mm import configure_routes_mm
-from routes.routes_mm_x import routes_mm_x, configure_routes_mm_x
 from routes.routes_mm_mp3 import configure_routes_mm_mp3
-from routes.routes_mm_nas import configure_routes_mm_nas
+from routes.routes_deploy import configure_routes_deploy
+import os
 import random
 
 
@@ -38,7 +38,7 @@ configure_routes_buzzer(app, socketio)
 configure_routes_delta(app)
 configure_routes_ppp_tool(app)
 configure_routes_panchforon(app, socketio)
-configure_routes_links(app, socketio)
+configure_routes_work(app, socketio)
 configure_routes_catan(app,socketio)
 configure_routes_catan2(app, socketio)
 configure_routes_bridge(app, socketio) 
@@ -53,8 +53,8 @@ configure_routes_phototag(app, socketio)
 configure_routes_mm(app, socketio)
 #configure_routes_mm_mp3(app, socketio)
 configure_routes_mm_mp3(app)
-configure_routes_mm_nas(app)
-configure_routes_mm_x(app)
+configure_routes_deploy(app)
 if __name__ == '__main__':
     #app.run(debug=True, host='0.0.0.0')
-    socketio.run(app, debug=True, host='0.0.0.0', allow_unsafe_werkzeug=True)
+    socketio.run(app, debug=os.environ.get('APP_DEBUG', '1') == '1', host='0.0.0.0',
+                 port=int(os.environ.get('APP_PORT', '5000')), allow_unsafe_werkzeug=True)

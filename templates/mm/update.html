@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Database Update</title>
+    <style>
+        :root { color-scheme: light; font-family: "Segoe UI", sans-serif; background: #f3f5f4; color: #202725; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 32px 16px; }
+        main { width: min(100%, 560px); margin: 0 auto; }
+        h1 { margin: 0 0 24px; font-size: 1.4rem; }
+        form { display: flex; align-items: end; gap: 12px; margin: 0 0 18px; }
+        label { display: grid; flex: 1; gap: 6px; font-size: .9rem; font-weight: 600; }
+        select, input[type="file"] { width: 100%; min-width: 0; min-height: 40px; padding: 7px 9px; border: 1px solid #aeb9b4; border-radius: 4px; background: #fff; color: inherit; font: inherit; }
+        button { min-height: 40px; padding: 7px 14px; border: 1px solid #176b5b; border-radius: 4px; background: #176b5b; color: #fff; font: 600 .9rem "Segoe UI", sans-serif; cursor: pointer; white-space: nowrap; }
+        button:hover { background: #125447; }
+        .status { margin: 18px 0; padding: 10px 12px; border-left: 3px solid #26804d; background: #e8f4ec; }
+        .error { border-color: #b3261e; background: #fbeceb; }
+        @media (max-width: 480px) { body { padding: 22px 12px; } form { align-items: stretch; flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Media Database Update</h1>
+
+        <form method="get" action="{{ url_for('routes_mm.mm_update') }}">
+            <label for="databaseSelect">Database
+                <select id="databaseSelect" name="database" onchange="this.form.submit()">
+                    {% for key, name in databases.items() %}
+                    <option value="{{ key }}" {% if selected_database == key %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <noscript><button type="submit">Select</button></noscript>
+        </form>
+
+        <form method="get" action="{{ url_for('routes_mm.mm_update') }}">
+            <input type="hidden" name="database" value="{{ selected_database }}">
+            <button type="submit" name="action" value="download">Download CSV</button>
+        </form>
+
+        <form method="post" action="{{ url_for('routes_mm.mm_update') }}" enctype="multipart/form-data">
+            <input type="hidden" name="database" value="{{ selected_database }}">
+            <label for="csvFile">CSV file
+                <input id="csvFile" type="file" name="file" accept=".csv,text/csv" required>
+            </label>
+            <button type="submit">Upload CSV</button>
+        </form>
+
+        {% if message %}<p class="status" role="status">{{ message }}</p>{% endif %}
+        {% if error %}<p class="status error" role="alert">{{ error }}</p>{% endif %}
+    </main>
+</body>
+</html>

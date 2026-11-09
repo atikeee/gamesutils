@@ -1,18 +1,35 @@
 services:
   gamesutils:
-    image: python:3.11-slim
+    image: python:3.11-slim-trixie
     container_name: gamesutils
     working_dir: /app
+    environment:
+      APP_DEBUG: "0"
+      APP_PORT: "5000"
+      DEPLOY_REPO_DIR: /app
+      DEPLOY_RESTART: "1"
+      DEPLOY_WEBHOOK_SECRET: ${DEPLOY_WEBHOOK_SECRET:-}
     command:
       - bash
-      - -c
-      - pip install -r requirements.txt && python app.py
+      - -ec
+      - |
+        if ! command -v git >/dev/null 2>&1 || ! command -v ssh >/dev/null 2>&1 || ! command -v adb >/dev/null 2>&1 || ! command -v ffmpeg >/dev/null 2>&1 || ! command -v node >/dev/null 2>&1; then
+          apt-get update
+          apt-get install -y --no-install-recommends git openssh-client ca-certificates adb ffmpeg nodejs
+          rm -rf /var/lib/apt/lists/*
+        fi
+        pip install -r requirements.txt
+        exec python app.py
     ports:
       - "5000:5000"
     volumes:
       - /volume1/docker/gamesutils:/app:rw
+      - /volume1/docker/gamesutils/data/mm/adb:/root/.android:rw
+      - /volume1/docker/gamesutils/data/deploy/ssh:/root/.ssh:ro
       - /volume1/photos1:/photos1:rw
       - /volume2/Media:/Media:rw
+      - /volume2/pm:/pm:rw
+      - /volume3/vol3/xcinema:/xcinema:rw
       - /volume2/Photos-temp:/Photo-temp:rw
     restart: unless-stopped
     networks:

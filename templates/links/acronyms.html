@@ -5,75 +5,28 @@
   <title>Acronym Dictionary</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <!-- Sakura CSS for styling -->
-  <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css">
-  <style>
-    body {
-      max-width: 100vw !important;
-    }
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100vw;
-      min-height: 100vh;
-      background: #fff;
-      box-sizing: border-box;
-      overflow-x: hidden;
-    }
-    .container {
-      width: 100vw;
-      margin: 0;
-      padding: 0 0.5em;
-      box-sizing: border-box;
-    }
-    h1, .search-box {
-      margin-left: 0.2em;
-      margin-right: 0.2em;
-    }
-    .search-box {
-      width: calc(100vw - 0.4em);
-      max-width: 100vw;
-      font-size: 1.1em;
-      box-sizing: border-box;
-    }
-    .table-wrapper {
-      width: 100vw;
-      max-width: 100vw;
-      overflow-x: auto;
-      margin: 0;
-      padding: 0;
-    }
-    table {
-      width: 100vw;
-      max-width: 100vw;
-      border-collapse: collapse;
-      table-layout: fixed;
-    }
-    th, td {
-      text-align: left;
-      padding: 0.5em 0.3em;
-      word-break: break-word;
-    }
-    th {
-      background: #f8f8f8;
-    }
-  </style>
+  
+  
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/work.css') }}?v=2">
 </head>
-<body>
+<body class="work-page work-acronyms">
   <div class="container">
+    {% include 'work/_back_button.html' %}
     <h1>Acronym Dictionary</h1>
     <input class="search-box" type="text" id="search" placeholder="Type to filter acronyms..." autofocus>
 
     <!-- Add Acronym Form -->
-    <div style="margin: 0.5em 0.2em 1em;">
-      <fieldset style="border: 1px solid #ccc; padding: 0.5em;">
+    <div class="acronym-form">
+      <fieldset>
         <legend>Add Acronym</legend>
-        <div style="display:flex; flex-wrap:wrap; gap:0.5em;">
-          <input type="text" id="newAcronym" placeholder="Acronym" style="flex:1; min-width:10ch;">
-          <input type="text" id="newMeaning" placeholder="Meaning" style="flex:2; min-width:15ch;">
-          <input type="text" id="newDescription" placeholder="Description (optional)" style="flex:3; min-width:15ch;">
+        <div class="acronym-fields">
+          <input type="text" id="newAcronym" placeholder="Acronym">
+          <input type="text" id="newMeaning" placeholder="Meaning">
+          <input type="text" id="newDescription" placeholder="Description (optional)">
           <button type="button" id="addBtn">Add</button>
         </div>
-        <div id="addStatus" style="margin-top:0.3em; font-size:0.9em;"></div>
+        <div id="addStatus"></div>
       </fieldset>
     </div>
 
@@ -151,12 +104,12 @@
 
       if (!acronym || !meaning) {
         statusEl.textContent = "Acronym and Meaning are required.";
-        statusEl.style.color = "red";
+        statusEl.style.color = "var(--red)";
         return;
       }
 
       statusEl.textContent = "Saving...";
-      statusEl.style.color = "black";
+      statusEl.style.color = "var(--muted)";
 
       try {
         const resp = await fetch('/acronyms/add', {
@@ -197,10 +150,10 @@
         descInput.value = "";
 
         statusEl.textContent = "Added.";
-        statusEl.style.color = "green";
+        statusEl.style.color = "var(--green)";
       } catch (e) {
         statusEl.textContent = "Error: " + e.message;
-        statusEl.style.color = "red";
+        statusEl.style.color = "var(--red)";
       }
     }
 

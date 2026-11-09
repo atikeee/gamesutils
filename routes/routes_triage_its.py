@@ -3,13 +3,21 @@ import hashlib
 import ntpath
 import os
 import re
+import subprocess
 import sys
+import threading
 from datetime import datetime, timedelta, timezone
 
 from bs4 import BeautifulSoup
-from flask import render_template, request
+from flask import jsonify, render_template, request
 
 from dashboard import PROJECT_ROOT, dashboard_tile
+
+
+SCAN_SCRIPT = os.path.join(PROJECT_ROOT, 'scripts', 'triage_its_scan.py')
+SCAN_LOCK = threading.Lock()
+SCAN_OUTPUT_LOCK = threading.Lock()
+SCAN_OUTPUT = {'running': False, 'lines': [], 'return_code': None}
 
 
 DATA_FILE = os.path.join(PROJECT_ROOT, 'data', 'triage_its.json')
@@ -388,6 +396,59 @@ def write_validation_cache(data):
 
 
 def configure_routes_triage_its(app):
+    def append_scan_output(line):
+        with SCAN_OUTPUT_LOCK:
+            SCAN_OUTPUT['lines'] = (SCAN_OUTPUT['lines'] + [line])[-2000:]
+
+    def run_scan_script():
+        try:
+            append_scan_output('[triage-its] Starting triage_its_scan.py')
+            process = subprocess.Popen(
+                [sys.executable, '-u', SCAN_SCRIPT],
+                cwd=PROJECT_ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding='utf-8',
+                errors='replace',
+                bufsize=1,
+            )
+            if process.stdout:
+                for line in process.stdout:
+                    append_scan_output(line.rstrip('\r\n'))
+            return_code = process.wait()
+            with SCAN_OUTPUT_LOCK:
+                SCAN_OUTPUT['return_code'] = return_code
+            append_scan_output(f'[triage-its] Script finished with exit code {return_code}')
+        except Exception as error:
+            append_scan_output(f'[triage-its] Failed to run script: {error}')
+        finally:
+            with SCAN_OUTPUT_LOCK:
+                SCAN_OUTPUT['running'] = False
+            SCAN_LOCK.release()
+
+    @app.route('/triage_its/run_scan', methods=['POST'])
+    def triage_its_run_scan():
+        if request.remote_addr not in ('127.0.0.1', '::1'):
+            return jsonify({'status': 'error', 'message': 'Local access only'}), 403
+        if not SCAN_LOCK.acquire(blocking=False):
+            return jsonify({'status': 'error', 'message': 'Scan is already running'}), 409
+        try:
+            with SCAN_OUTPUT_LOCK:
+                SCAN_OUTPUT.update(running=True, lines=[], return_code=None)
+            threading.Thread(target=run_scan_script, daemon=True).start()
+        except Exception as error:
+            SCAN_LOCK.release()
+            with SCAN_OUTPUT_LOCK:
+                SCAN_OUTPUT['running'] = False
+            return jsonify({'status': 'error', 'message': str(error)}), 500
+        return jsonify({'status': 'started'}), 202
+
+    @app.route('/triage_its/scan_output', methods=['GET'])
+    def triage_its_scan_output():
+        with SCAN_OUTPUT_LOCK:
+            return jsonify(dict(SCAN_OUTPUT))
+
     @app.route('/triage_its')
     @dashboard_tile(section='tools', title='HSD-ES Tickets', description='Review recent Outlook tickets.', icon='mail', order=65)
     def triage_its_dashboard():

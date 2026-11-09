@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ media_label }} - PIN</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #f3f5f4; color: #202725; font-family: "Segoe UI", sans-serif; }
+        main { width: min(340px, calc(100% - 32px)); margin: 15vh auto 0; }
+        h1 { font-size: 1.4rem; margin: 0 0 20px; }
+        form, label { display: grid; gap: 10px; }
+        input, button { min-height: 44px; padding: 10px; border: 1px solid #aeb9b4; border-radius: 4px; font: inherit; }
+        input { width: 100%; }
+        button { background: #176b5b; color: #fff; cursor: pointer; }
+        [role="alert"] { color: #a32828; overflow-wrap: anywhere; }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>{{ media_label }}</h1>
+        <form method="post">
+            <label for="xPin">PIN
+                <input id="xPin" name="pin" type="password" inputmode="numeric" pattern="[0-9]+" autocomplete="off" required autofocus>
+            </label>
+            {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+            <button type="submit">Unlock</button>
+        </form>
+    </main>
+</body>
+</html>

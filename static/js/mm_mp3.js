@@ -12,6 +12,7 @@ const songsPerPage = 10;
 const selectedTagFilters = new Set(readJsonData(appContainer, 'selectedTags', []));
 
 const audio = document.getElementById('audioEngine');
+setupChapterEditorToggle(document.getElementById('chapterEditorToggle'), document.getElementById('chapterForm'));
 
 function splitTags(tagList) {
     return (tagList || '').split(',').map(t => t.trim()).filter(Boolean);
@@ -24,14 +25,7 @@ function formatTime(secs) {
 }
 
 function parseChapters(value) {
-    const timestamps = String(value || '').split(',').map(token => {
-        const parts = token.trim().split(':');
-        if (!token.trim() || parts.length > 3 || !parts.every(part => /^\d+(?:\.\d+)?$/.test(part))
-            || !parts.slice(0, -1).every(part => /^\d+$/.test(part))) return null;
-        const seconds = parts.reduce((total, part) => total * 60 + Number(part), 0);
-        return Number.isFinite(seconds) ? seconds : null;
-    }).filter(seconds => seconds !== null);
-    return [...new Set(timestamps)].sort((first, second) => first - second);
+    return parseChapterTimestamps(value);
 }
 
 function getChapterTarget(direction) {
@@ -91,6 +85,13 @@ function updateCurrentTrackInfo() {
     document.getElementById('nowArtist').textContent = (currentTrack.artist || 'Unknown Artist') +
         (currentTrack.album ? ` — ${currentTrack.album}` : '');
     document.querySelector('.mp3-now-playing').title = [currentTrack.title, currentTrack.artist, currentTrack.album].filter(Boolean).join(' - ');
+    if ('mediaSession' in navigator && 'MediaMetadata' in window) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: currentTrack.title || 'Untitled',
+            artist: currentTrack.artist || 'Unknown Artist',
+            album: currentTrack.album || ''
+        });
+    }
 }
 
 function playNextTrack() {
@@ -111,6 +112,46 @@ function togglePlay() {
     if (!audio) return;
     if (audio.paused) audio.play();
     else audio.pause();
+}
+
+function playNextChapterOrTrack() {
+    if (getChapterTarget(1) !== null) seekChapter(1);
+    else playNextTrack();
+}
+
+function updateMediaPosition() {
+    if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+    if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
+        navigator.mediaSession.setPositionState();
+        return;
+    }
+    navigator.mediaSession.setPositionState({
+        duration: audio.duration,
+        playbackRate: audio.playbackRate,
+        position: Math.min(Math.max(0, audio.currentTime), audio.duration)
+    });
+}
+
+if (audio && 'mediaSession' in navigator) {
+    const handlers = {
+        play: () => audio.play().catch(error => console.warn('[Playback]', error)),
+        pause: () => audio.pause(),
+        nexttrack: playNextChapterOrTrack,
+        previoustrack: playPrevTrack,
+        seekbackward: details => skipSeconds(-(details.seekOffset || 30)),
+        seekforward: details => skipSeconds(details.seekOffset || 30),
+        seekto: details => {
+            if (!Number.isFinite(audio.duration)) return;
+            audio.currentTime = Math.min(Math.max(0, details.seekTime), audio.duration);
+        }
+    };
+    Object.entries(handlers).forEach(([action, handler]) => {
+        try {
+            navigator.mediaSession.setActionHandler(action, handler);
+        } catch (error) {
+            console.warn(`[Media Session] ${action} unavailable`, error);
+        }
+    });
 }
 
 // ── Queue (10 songs per page) ────────────────────────────────────────────────
@@ -327,6 +368,9 @@ function setPlayingUi(isPlaying) {
     const playBtn = document.getElementById('mainPlayBtn');
     playBtn.querySelector('.icon-play').style.display = isPlaying ? 'none' : 'inline';
     playBtn.querySelector('.icon-pause').style.display = isPlaying ? 'inline' : 'none';
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    }
 }
 
 if (audio) {
@@ -340,10 +384,15 @@ if (audio) {
     audio.addEventListener('play', () => setPlayingUi(true));
     audio.addEventListener('pause', () => setPlayingUi(false));
     audio.addEventListener('ended', playNextTrack);
+    audio.addEventListener('emptied', updateMediaPosition);
+    audio.addEventListener('loadedmetadata', updateMediaPosition);
+    audio.addEventListener('seeked', updateMediaPosition);
+    audio.addEventListener('ratechange', updateMediaPosition);
     audio.addEventListener('loadedmetadata', updateChapterButtons);
     audio.addEventListener('seeked', updateChapterButtons);
     audio.addEventListener('timeupdate', () => {
         updateChapterButtons();
+        updateMediaPosition();
         if (!audio.duration) return;
         document.getElementById('scrubber').value = (audio.currentTime / audio.duration) * 100;
         document.getElementById('currTime').textContent = formatTime(audio.currentTime);
@@ -456,7 +505,8 @@ document.getElementById('chapterForm')?.addEventListener('submit', async event =
     if (!currentTrack) return;
     const track = currentTrack;
     const previous = track.chapter || '';
-    track.chapter = document.getElementById('chapterInput').value.trim();
+    track.chapter = formatChapterTimestamps(document.getElementById('chapterInput').value);
+    document.getElementById('chapterInput').value = track.chapter;
     const status = document.getElementById('chapterStatus');
     const button = document.getElementById('saveChaptersBtn');
     button.disabled = true;

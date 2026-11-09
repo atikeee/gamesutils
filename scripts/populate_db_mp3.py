@@ -14,8 +14,11 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from routes.mm_config import mm_path
+
 SUPPORTED_EXTENSIONS = {".mp3", ".m4a", ".flac", ".wav", ".ogg"}
-DEFAULT_DB = Path(__file__).resolve().parent.parent / "data" / "mm" / "mp3.db"
+DEFAULT_DB = mm_path('mp3_db')
 
 
 def init_db(conn: sqlite3.Connection):

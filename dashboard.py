@@ -4,6 +4,14 @@ import os
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
+GROUPED_DASHBOARD_ENDPOINTS = {
+    'catan_game', 'catan_player_lobby', 'catan2_game', 'catan2_player_lobby',
+    'codenames', 'codenames_spy', 'codenames_spy2',
+    'panchforon_play', 'panchforon_status', 'panchforon_review', 'panchforon_namelist',
+    'bridge', 'bridge_gamescore', 'bridge_v2_index',
+    'triage_email_dashboard', 'triage_its_dashboard', 'links', 'acronyms',
+}
+
 
 DASHBOARD_SECTIONS = {
     "cards": {"title": "Card Games", "order": 10},
@@ -85,7 +93,7 @@ def dashboard_sections(app):
 
     for endpoint, view in app.view_functions.items():
         metadata = getattr(view, "__dashboard_tile__", None)
-        if metadata is None:
+        if metadata is None or endpoint in GROUPED_DASHBOARD_ENDPOINTS:
             continue
 
         module = view.__module__
