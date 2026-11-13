@@ -6,7 +6,7 @@
     <title>My Music{% if tv_mode %} TV{% endif %}</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mm.css') }}?v=3">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm_mp3.css') }}?v=4">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm_mp3.css') }}?v={{ 4 if tv_mode else 6 }}">
 </head>
 <body class="mp3-page{% if tv_mode %} mp3-tv{% endif %}">
     <div class="mm-container" id="appContainer"
@@ -41,8 +41,23 @@
                     {% endfor %}
                 </select>
             </label>
+            {% if tv_mode %}
             <div class="tag-filter-bar" id="tagChipsBar" role="group" aria-label="Filter by tag"></div>
+            {% else %}
+            <div class="mp3-actions">
+                <button class="icon-btn" id="startTvBtn" type="button" title="Wake TV and launch FunHub" aria-label="Wake TV and launch FunHub"><i data-lucide="power" aria-hidden="true"></i></button>
+                <button class="icon-btn" id="playOnTvBtn" type="button" title="Play on TV" aria-label="Play on TV" aria-pressed="false" disabled><i data-lucide="monitor-speaker" aria-hidden="true"></i></button>
+                <button class="icon-btn" id="editTrackBtn" type="button" title="Edit current song" aria-label="Edit current song" aria-haspopup="dialog" disabled><i data-lucide="pencil" aria-hidden="true"></i></button>
+            </div>
+            {% endif %}
         </header>
+            {% if not tv_mode %}
+            <div class="mp3-tools">
+                <input id="trackSearch" type="search" placeholder="Search songs" aria-label="Search songs in current playlist and category" autocomplete="off" value="{{ request.args.get('search', '') }}">
+                <div class="tag-filter-bar" id="tagChipsBar" role="group" aria-label="Filter by tag"></div>
+            </div>
+            <p id="mp3Status" role="status" aria-live="polite"></p>
+            {% endif %}
 
             <section class="mp3-player" aria-label="Audio player">
                 <div class="mp3-now-playing">
@@ -137,9 +152,32 @@
     </div>
 
     <audio id="audioEngine"></audio>
+    {% if not tv_mode %}
+    <dialog id="editTrackDialog" class="mp3-edit-dialog" aria-labelledby="editTrackTitle">
+        <h2 id="editTrackTitle">Edit Song</h2>
+        <form id="editTrackForm">
+            <label>Title<input name="title" type="text" autocomplete="off"></label>
+            <label>Artist<input name="artist" type="text" autocomplete="off"></label>
+            <label>Album<input name="album" type="text" autocomplete="off"></label>
+            <label>Playlist<input name="playlist" type="text" required autocomplete="off"></label>
+            <label>Category<input name="category" type="text" autocomplete="off"></label>
+            <label>Tags<input name="tag_list" type="text" autocomplete="off"></label>
+            <label>Duration (seconds)<input name="duration" type="number" min="0" step="1" required></label>
+            <label>Chapters<textarea name="chapter" rows="2" maxlength="4096"></textarea></label>
+            <label>File path<input name="path" type="text" readonly></label>
+            <output id="editTrackStatus" role="status"></output>
+            <div class="dialog-actions">
+                <button type="button" id="editTrackCancel">Cancel</button>
+                <button type="submit" id="editTrackSave">Save</button>
+            </div>
+        </form>
+    </dialog>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    {% endif %}
 
     <script src="{{ url_for('static', filename='js/mm_common.js') }}?v=2"></script>
-    <script src="{{ url_for('static', filename='js/mm_mp3.js') }}?v=3"></script>
+    <script src="{{ url_for('static', filename='js/mm_mp3.js') }}?v={{ 3 if tv_mode else 4 }}"></script>
 </body>
 </html>
 

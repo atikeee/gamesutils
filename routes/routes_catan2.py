@@ -153,6 +153,9 @@ def visual_activity_details(message, details=None):
     sources = details.get('sources')
     if isinstance(sources, list):
         result['sources'] = [short_player_name(name) for name in sources if isinstance(name, str) and name.strip()]
+    deck = details.get('deck')
+    if deck in ('politics', 'trade', 'science'):
+        result['deck'] = deck
     return result
 
 
@@ -234,37 +237,41 @@ CITIES_AND_KNIGHTS_EVENT_DIE = (
     "black_ship",
     "black_ship",
 )
+six = 6
+three = 3
+two = 2
+one = 1
 PROGRESS_CARD_DECKS = {
     "trade": {
-        "merchant": {"quantity": 6, "note": "Choose a hex to place the Merchant. Only one Merchant can be on the board, and its current owner gains 1 victory point."},
-        "harbor": {"quantity": 2, "note": "Commercial Harbor: Up to two opponents with more victory points each exchange one resource they choose for one commodity you choose."},
-        "merchant_fleet": {"quantity": 2, "note": "Choose one resource or commodity; for the rest of your turn, trade it with the bank at 2:1."},
-        "master_merchant": {"quantity": 2, "note": "Choose an opponent with more victory points, inspect their hand, and take two cards."},
-        "trade_monopoly": {"quantity": 2, "note": "Choose paper, coin, or cloth. Each opponent gives you one of that commodity if they have it."},
-        "resource_monopoly": {"quantity": 2, "note": "Choose wood, brick, sheep, grain, or rock. Each opponent gives you up to two of that resource."},
+        "merchant": {"quantity": six, "note": "Choose a hex to place the Merchant. Only one Merchant can be on the board, and its current owner gains 1 victory point."},
+        "harbor": {"quantity": two, "note": "Commercial Harbor: Up to two opponents with more victory points each exchange one resource they choose for one commodity you choose."},
+        "merchant_fleet": {"quantity": two, "note": "Choose one resource or commodity; for the rest of your turn, trade it with the bank at 2:1."},
+        "master_merchant": {"quantity": two, "note": "Choose an opponent with more victory points, inspect their hand, and take two cards."},
+        "trade_monopoly": {"quantity": two, "note": "Choose paper, coin, or cloth. Each opponent gives you one of that commodity if they have it."},
+        "resource_monopoly": {"quantity": two, "note": "Choose wood, brick, sheep, grain, or rock. Each opponent gives you up to two of that resource."},
     },
     "politics": {
-        "bishop": {"quantity": 2, "note": "Move the robber to a hex, then take one random resource or commodity from each opponent with a settlement or city beside it."},
-        "diplomat": {"quantity": 2, "note": "Remove an open road. Return an opponent's road to their supply; you may relocate your own road for free."},
-        "warlord": {"quantity": 2, "note": "Activate all of your knights without paying grain."},
-        "wedding": {"quantity": 2, "note": "Each opponent with more victory points gives you two resource or commodity cards of their choice."},
-        "intrigue": {"quantity": 2, "note": "Displace an opponent's knight beside one of your roads or intersections. If it has no legal destination, return it to supply."},
-        "saboteur": {"quantity": 2, "note": "Opponents with at least as many victory points as you discard half their resource and commodity hand, rounded down."},
-        "spy": {"quantity": 3, "note": "Choose an opponent and take one of their Progress Cards, but not a Victory Point card."},
-        "deserter": {"quantity": 2, "note": "An opponent removes one of their knights; then place one of your available knights of the same strength for free. Take a hay if opponent has an active knight."},
-        "constitution": {"quantity": 1, "note": "Worth 1 victory point as soon as you draw it."},
+        "bishop": {"quantity": two, "note": "Move the robber to a hex, then take one random resource or commodity from each opponent with a settlement or city beside it."},
+        "diplomat": {"quantity": two, "note": "Remove an open road. Return an opponent's road to their supply; you may relocate your own road for free."},
+        "warlord": {"quantity": two, "note": "Activate all of your knights without paying grain."},
+        "wedding": {"quantity": two, "note": "Each opponent with more victory points gives you two resource or commodity cards of their choice."},
+        "intrigue": {"quantity": two, "note": "Displace an opponent's knight beside one of your roads or intersections. If it has no legal destination, return it to supply."},
+        "saboteur": {"quantity": two, "note": "Opponents with at least as many victory points as you discard half their resource and commodity hand, rounded down."},
+        "spy": {"quantity": three, "note": "Choose an opponent and take one of their Progress Cards, but not a Victory Point card."},
+        "deserter": {"quantity": two, "note": "An opponent removes one of their knights; then place one of your available knights of the same strength for free. Take a hay if opponent has an active knight."},
+        "constitution": {"quantity": one, "note": "Worth 1 victory point as soon as you draw it."},
     },
     "science": {
-        "alchemist": {"quantity": 2, "note": "Play before rolling the number dice. Choose both results, then roll the event die normally."},
-        "crane": {"quantity": 2, "note": "Upgrade with 1 less commodity card. Get a free commodity and use it."},
-        "mining": {"quantity": 2, "note": "Gain two rock from the bank for each adjacent mountain hex that produces for one of your settlements or cities."},
-        "irrigation": {"quantity": 2, "note": "Gain two grain from the bank for each adjacent field hex that produces for one of your settlements or cities."},
-        "printer": {"quantity": 1, "note": "Worth 1 victory point as soon as you draw it."},
-        "inventor": {"quantity": 2, "note": "Swap two number tokens, except tokens showing 2, 6, 8, or 12."},
-        "engineer": {"quantity": 1, "note": "Build one city wall for free. get 2 free brick and use for wall"},
-        "medicine": {"quantity": 2, "note": "Upgrade a settlement to a city for two rock and one grain. get 1 rock and 1 grain for city"},
-        "smith": {"quantity": 2, "note": "Promote up to two of your knights by one level each, within your improvement limit."},
-        "road_building": {"quantity": 2, "note": "Place up to two roads for free, following normal building rules. get 2 wood and 2 brick and build 2 roads"},
+        "alchemist": {"quantity": two, "note": "Play before rolling the number dice. Choose both results, then roll the event die normally."},
+        "crane": {"quantity": two, "note": "Upgrade with 1 less commodity card. Get a free commodity and use it."},
+        "mining": {"quantity": two, "note": "Gain two rock from the bank for each adjacent mountain hex that produces for one of your settlements or cities."},
+        "irrigation": {"quantity": two, "note": "Gain two grain from the bank for each adjacent field hex that produces for one of your settlements or cities."},
+        "printer": {"quantity": one, "note": "Worth 1 victory point as soon as you draw it."},
+        "inventor": {"quantity": two, "note": "Swap two number tokens, except tokens showing 2, 6, 8, or 12."},
+        "engineer": {"quantity": one, "note": "Build one city wall for free. get 2 free brick and use for wall"},
+        "medicine": {"quantity": two, "note": "Upgrade a settlement to a city for two rock and one grain. get 1 rock and 1 grain for city"},
+        "smith": {"quantity": two, "note": "Promote up to two of your knights by one level each, within your improvement limit."},
+        "road_building": {"quantity": two, "note": "Place up to two roads for free this turn, following normal building rules."},
     },
 }
 PROGRESS_CARD_TYPES = {
@@ -551,6 +558,7 @@ def configure_routes_catan2(app, socketio):
             board_state = request.json
             if board_state:
                 if save_catan_board_state_to_json(json.dumps(board_state)): # Save as JSON string
+                    socketio.emit('catan2_update')
                     return jsonify({"status": "success", "message": "Board state saved successfully!"}), 200
                 return jsonify({"status": "error", "message": "Failed to save board state to file."}), 500
             return jsonify({"status": "error", "message": "No board state provided."}), 400
@@ -771,7 +779,25 @@ def configure_routes_catan2(app, socketio):
             error=error,
         )
 
+    @app.route('/catan2/correct_robber', methods=['POST'])
+    @catan2_setup_locked
+    def catan2_correct_robber():
+        position = request.get_json(silent=True)
+        if not isinstance(position, dict) or any(type(position.get(axis)) is not int for axis in ('q', 'r')):
+            return jsonify(status='error', message='Invalid robber position.'), 400
+        board = json.loads(load_latest_catan_board_state_from_json() or '{}')
+        if not any(tile.get('q') == position['q'] and tile.get('r') == position['r']
+                   for tile in board.get('boardTiles', [])):
+            return jsonify(status='error', message='Choose a tile on the board.'), 400
+        state = json.loads(load_play_state_from_json() or '{}')
+        state['robber'] = {'q': position['q'], 'r': position['r']}
+        if not save_play_state_to_json(json.dumps(state)):
+            return jsonify(status='error', message='Failed to save robber position.'), 500
+        socketio.emit('catan2_update')
+        return jsonify(status='success')
+
     @app.route('/catan2/save_play_state', methods=['POST'])
+    @catan2_setup_locked
     def catan2_save_play_state():
         """API endpoint to save a specific player's state."""
         try:
@@ -783,13 +809,20 @@ def configure_routes_catan2(app, socketio):
                     saved_state = {}
                 if saved_state.get('_turnPhase') == 'setup':
                     return jsonify(status='error', message='Complete setup using the required free placement.'), 409
+                pending_discards = dict(saved_state.get('_pendingDiscards') or {})
+                if pending_discards and (
+                    play_state.get('robber') != saved_state.get('robber')
+                    or play_state.get('_robberMoveAvailable') is False
+                ):
+                    return jsonify(status='error', message='Wait for all required players to drop cards before moving the robber.'), 409
+                play_state['_pendingDiscards'] = pending_discards
                 play_state['progressCardDecks'] = normalize_progress_card_decks(
                     play_state.get('progressCardDecks', saved_state.get('progressCardDecks'))
                 )
                 play_state['activityLog'] = load_catan2_activity_log(saved_state)
                 play_state['vpAwardLog'] = merge_catan2_award_log(saved_state.get('vpAwardLog'), play_state.get('vpAwardLog'))
                 # Turn progression is server-owned; ignore stale client copies.
-                for turn_key in ('_turnOrder', '_currentTurnPlayerId', '_turnRolled', '_alchemistDice', '_gameStarted', '_turnPhase', '_setupQueue', '_setupIndex'):
+                for turn_key in ('_turnOrder', '_currentTurnPlayerId', '_turnRolled', '_alchemistDice', '_gameStarted', '_turnPhase', '_setupQueue', '_setupIndex', '_setupUndoOpen', '_inventorSelection'):
                     if turn_key in saved_state:
                         play_state[turn_key] = saved_state[turn_key]
                     else:
@@ -824,6 +857,34 @@ def configure_routes_catan2(app, socketio):
             return jsonify({"status": "error", "message": "No player state provided."}), 400
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
+
+    @app.route('/catan2/discard_cards', methods=['POST'])
+    @catan2_setup_locked
+    def catan2_discard_cards():
+        data = request.get_json(silent=True) or {}
+        player_id = data.get('player_id')
+        registry = load_catan_player_registry()
+        player = next((item for item in registry['players'] if f"player{item['seat']}" == player_id), None)
+        if not player or player['code'] not in set(session.get('catan2_player_access', [])):
+            return jsonify(status='error', message='Player access required.'), 403
+        state = json.loads(load_play_state_from_json() or '{}')
+        if player_id not in (state.get('_pendingDiscards') or {}):
+            return jsonify(status='error', message='You have no pending seven discard.'), 409
+        cards = data.get('cards')
+        if not isinstance(cards, list) or not cards or any(
+            card not in ('wood', 'brick', 'sheep', 'hay', 'rock', 'paper', 'cloth', 'coin') for card in cards
+        ):
+            return jsonify(status='error', message='Select at least one resource or commodity card to drop.'), 400
+        hand = state[player_id].get('hand', [])
+        if Counter(cards) - Counter(hand):
+            return jsonify(status='error', message='Selected cards are no longer in your hand.'), 409
+        for card in cards:
+            hand.remove(card)
+        state['_pendingDiscards'].pop(player_id)
+        if not save_play_state_to_json(json.dumps(state)):
+            return jsonify(status='error', message='Could not save your discard.'), 500
+        socketio.emit('catan2_update')
+        return jsonify(status='success')
 
     @app.route('/catan2/progress_card/draw', methods=['POST'])
     def catan2_draw_progress_card():
@@ -880,7 +941,8 @@ def configure_routes_catan2(app, socketio):
             play_state['vpAwardLog'] = award_log
         deck_label = deck_name.capitalize()
         message = f"dropped a progress card; took {deck_label}" if replaced_card else f"drew {deck_label}"
-        record_catan2_activity(play_state, player_id, message, 'pick', action='progress_replace' if replaced_card else 'progress_draw')
+        record_catan2_activity(play_state, player_id, message, 'pick',
+                      action='progress_replace' if replaced_card else 'progress_draw', deck=deck_name)
         if not save_play_state_to_json(json.dumps(play_state)):
             return jsonify({"status": "error", "message": "Could not save the progress card draw."}), 500
 
@@ -914,6 +976,7 @@ def configure_routes_catan2(app, socketio):
         return progress_cards if isinstance(progress_cards, list) else None
 
     def finish_server_progress_card(state, player_id, card, message, undo_entry=None, target=None, activity_details=None):
+        state['_setupUndoOpen'] = False
         state['progressCardDecks'] = normalize_progress_card_decks(state.get('progressCardDecks'))
         return_progress_cards_to_decks(state['progressCardDecks'], [card])
         if undo_entry is not None:
@@ -929,41 +992,50 @@ def configure_routes_catan2(app, socketio):
         socketio.emit('catan2_update')
         return jsonify({"status": "success"})
 
+    @app.route('/catan2/progress_card/resource_monopoly', methods=['POST'])
     @app.route('/catan2/progress_card/trade_monopoly', methods=['POST'])
     @catan2_setup_locked
     def catan2_play_trade_monopoly():
         payload = request.get_json(silent=True) or {}
         player_id = payload.get('player_id')
-        commodity = payload.get('commodity')
-        if commodity not in ('paper', 'coin', 'cloth'):
-            return jsonify({'status': 'error', 'message': 'Choose paper, coin, or cloth.'}), 400
+        is_resource_monopoly = request.path.endswith('/resource_monopoly')
+        card_name = 'resource_monopoly' if is_resource_monopoly else 'trade_monopoly'
+        display_name = 'Resource Monopoly' if is_resource_monopoly else 'Trade Monopoly'
+        commodity = payload.get('resource' if is_resource_monopoly else 'commodity')
+        allowed_cards = ('wood', 'brick', 'rock', 'sheep', 'hay') if is_resource_monopoly else ('paper', 'coin', 'cloth')
+        if commodity not in allowed_cards:
+            return jsonify({'status': 'error', 'message': 'Choose ' + ', '.join(allowed_cards) + '.'}), 400
         state, is_current_player = load_turn_state_for_request(player_id)
         if not is_current_player or state.get('_gameStarted') is False or state.get('_turnPhase') == 'setup':
-            return jsonify({'status': 'error', 'message': 'Play Trade Monopoly during your play turn.'}), 403
+            return jsonify({'status': 'error', 'message': f'Play {display_name} during your play turn.'}), 403
         progress_cards = get_player_progress_cards(state, player_id)
-        if not progress_cards or 'trade_monopoly' not in progress_cards:
-            return jsonify({'status': 'error', 'message': 'You do not have a Trade Monopoly card.'}), 409
+        if not progress_cards or card_name not in progress_cards:
+            return jsonify({'status': 'error', 'message': f'You do not have a {display_name} card.'}), 409
 
         snapshot = json.loads(json.dumps(state))
         snapshot.pop('_undoStack', None)
         player = state[player_id]
         sources = []
+        received_count = 0
         for opponent_id in state.get('_turnOrder', []):
             if opponent_id == player_id:
                 continue
             opponent = state.get(opponent_id, {})
             hand = opponent.get('hand') or []
-            if commodity in hand:
-                hand.remove(commodity)
-                player.setdefault('hand', []).append(commodity)
+            take_count = min(2 if is_resource_monopoly else 1, hand.count(commodity))
+            if take_count:
+                for transfer_index in range(take_count):
+                    hand.remove(commodity)
+                    player.setdefault('hand', []).append(commodity)
+                received_count += take_count
                 sources.append(short_player_name(opponent.get('playerName') or opponent_id))
-        progress_cards.remove('trade_monopoly')
+        progress_cards.remove(card_name)
         undo_stack = state.get('_undoStack') if isinstance(state.get('_undoStack'), list) else []
         state['_undoStack'] = (undo_stack + [{'state': snapshot}])[-3:]
-        message = f"got {len(sources)} {commodity}" + (f" from {', '.join(sources)}" if sources else '')
+        message = f"got {received_count} {commodity}" + (f" from {', '.join(sources)}" if sources else '')
         return finish_server_progress_card(
-            state, player_id, 'trade_monopoly', message, target=commodity,
-            activity_details={'action': 'received', 'cards': {commodity: len(sources)}, 'sources': sources},
+            state, player_id, card_name, message, target=commodity,
+            activity_details={'action': 'received', 'cards': {commodity: received_count}, 'sources': sources},
         )
 
     @app.route('/catan2/progress_card/alchemist', methods=['POST'])
@@ -991,21 +1063,38 @@ def configure_routes_catan2(app, socketio):
         return finish_server_progress_card(state, player_id, 'alchemist', None, {}, f"{dice[0]} + {dice[1]}")
 
     @app.route('/catan2/progress_card/inventor', methods=['POST'])
+    @catan2_setup_locked
     def catan2_play_inventor():
         payload = request.get_json(silent=True) or {}
         player_id = payload.get('player_id')
-        if not is_authorized_seat(player_id):
-            return jsonify({"status": "error", "message": "Join this Catan 2 player seat first."}), 403
+        state, is_current_player = load_turn_state_for_request(player_id)
+        if not is_current_player or state.get('_turnPhase') == 'setup' or state.get('_gameStarted') is False:
+            return jsonify(status='error', message='Play Inventor on your own turn after setup.'), 403
+        action = payload.get('action', 'swap')
+        selection = state.get('_inventorSelection')
+        if action == 'play':
+            if selection:
+                return jsonify(status='error', message='Finish or undo the current Inventor card first.'), 409
+            progress_cards = get_player_progress_cards(state, player_id)
+            if not progress_cards or 'inventor' not in progress_cards:
+                return jsonify(status='error', message='You do not have an Inventor card.'), 409
+            progress_cards.remove('inventor')
+            state['_inventorSelection'] = {'player': player_id, 'first': None}
+            return finish_server_progress_card(state, player_id, 'inventor', None, {'step': 'play'})
+        if action not in ('select', 'swap'):
+            return jsonify(status='error', message='Invalid Inventor action.'), 400
+        if not isinstance(selection, dict) or selection.get('player') != player_id:
+            return jsonify(status='error', message='Play an Inventor card first.'), 409
         try:
             coordinates = [(int(tile['q']), int(tile['r'])) for tile in payload.get('tiles')]
         except (KeyError, TypeError, ValueError):
             coordinates = []
-        if len(coordinates) != 2 or coordinates[0] == coordinates[1]:
+        expected_count = 1 if action == 'select' else 2
+        if len(coordinates) != expected_count or len(set(coordinates)) != expected_count:
             return jsonify({"status": "error", "message": "Choose two different number tokens."}), 400
 
         try:
             board_state = json.loads(load_latest_catan_board_state_from_json() or '{}')
-            state = json.loads(load_play_state_from_json() or '{}')
         except (TypeError, ValueError):
             return jsonify({"status": "error", "message": "Could not load the game."}), 500
         board_tiles = board_state.get('boardTiles') if isinstance(board_state, dict) else None
@@ -1017,40 +1106,58 @@ def configure_routes_catan2(app, socketio):
             return jsonify({"status": "error", "message": "Both hexes must have number tokens."}), 400
         if any(tile['number'] in (2, 6, 8, 12) for tile in tiles):
             return jsonify({"status": "error", "message": "2, 6, 8 and 12 cannot be swapped."}), 400
-        progress_cards = get_player_progress_cards(state, player_id)
-        if not progress_cards or 'inventor' not in progress_cards:
-            return jsonify({"status": "error", "message": "You do not have an Inventor card."}), 409
-
-        first_number, second_number = tiles[0]['number'], tiles[1]['number']
-        tiles[0]['number'], tiles[1]['number'] = second_number, first_number
-        if not save_catan_board_state_to_json(json.dumps(board_state)):
-            return jsonify({"status": "error", "message": "Could not save the board."}), 500
-        progress_cards.remove('inventor')
-        return finish_server_progress_card(
-            state, player_id, 'inventor', f"swapped number tokens {first_number} and {second_number} with Inventor",
-            {'tiles': [list(coordinate) for coordinate in coordinates]},
-            f"{first_number} / {second_number}",
-        )
+        undo_entry = {'serverUndo': 'inventor', 'player': player_id, 'step': action}
+        previous_board_json = None
+        if action == 'select':
+            if selection.get('first') is not None:
+                return jsonify(status='error', message='Choose the second number, or undo the first selection.'), 409
+            selection['first'] = {'q': coordinates[0][0], 'r': coordinates[0][1]}
+        else:
+            first = selection.get('first')
+            if not isinstance(first, dict) or coordinates[0] != (first.get('q'), first.get('r')):
+                return jsonify(status='error', message='Select the first number before swapping.'), 409
+            previous_board_json = json.dumps(board_state)
+            first_number, second_number = tiles[0]['number'], tiles[1]['number']
+            undo_entry.update(tiles=[list(coordinate) for coordinate in coordinates], numbers=[first_number, second_number])
+            tiles[0]['number'], tiles[1]['number'] = second_number, first_number
+            if not save_catan_board_state_to_json(json.dumps(board_state)):
+                return jsonify(status='error', message='Could not save the board.'), 500
+            state.pop('_inventorSelection', None)
+        state['_undoStack'] = (state.get('_undoStack', []) + [undo_entry])[-3:]
+        if not save_play_state_to_json(json.dumps(state)):
+            if previous_board_json is not None:
+                save_catan_board_state_to_json(previous_board_json)
+            return jsonify(status='error', message='Could not save the game state.'), 500
+        if action == 'swap':
+            entries = record_catan2_activity(state, player_id, f"swapped number tokens {first_number} and {second_number} with Inventor")
+            socketio.emit('catan2_activity_log_broadcast', {'entries': entries})
+        socketio.emit('catan2_update')
+        return jsonify(status='success')
 
     @app.route('/catan2/progress_card/undo', methods=['POST'])
+    @catan2_setup_locked
     def catan2_undo_server_progress_card():
         player_id = (request.get_json(silent=True) or {}).get('player_id')
-        if not is_authorized_seat(player_id):
-            return jsonify({"status": "error", "message": "Join this Catan 2 player seat first."}), 403
-        try:
-            state = json.loads(load_play_state_from_json() or '{}')
-        except (TypeError, ValueError):
-            return jsonify({"status": "error", "message": "Could not load the game."}), 500
+        state, is_current_player = load_turn_state_for_request(player_id)
+        if not is_current_player:
+            return jsonify(status='error', message='Undo progress cards on your own turn.'), 403
         undo_stack = state.get('_undoStack') if isinstance(state.get('_undoStack'), list) else []
         entry = undo_stack[-1] if undo_stack else None
         if not isinstance(entry, dict) or entry.get('player') != player_id or entry.get('serverUndo') not in ('inventor', 'alchemist'):
             return jsonify({"status": "error", "message": "Nothing to undo."}), 409
         progress_cards = get_player_progress_cards(state, player_id)
-        if progress_cards is None or len(progress_cards) >= 5:
+        card = entry['serverUndo']
+        step = entry.get('step')
+        returns_card = card != 'inventor' or step in (None, 'play')
+        if progress_cards is None or (returns_card and len(progress_cards) >= 5):
             return jsonify({"status": "error", "message": "Your progress card hand is full."}), 409
 
-        card = entry['serverUndo']
-        if card == 'inventor':
+        previous_board_json = None
+        if card == 'inventor' and step == 'play':
+            state.pop('_inventorSelection', None)
+        elif card == 'inventor' and step == 'select':
+            state['_inventorSelection'] = {'player': player_id, 'first': None}
+        elif card == 'inventor':
             try:
                 board_state = json.loads(load_latest_catan_board_state_from_json() or '{}')
                 coordinates = [tuple(coordinate) for coordinate in entry.get('tiles', [])]
@@ -1062,9 +1169,13 @@ def configure_routes_catan2(app, socketio):
             ]
             if len(tiles) != 2 or any(tile is None for tile in tiles):
                 return jsonify({"status": "error", "message": "Could not find the swapped numbers."}), 409
-            tiles[0]['number'], tiles[1]['number'] = tiles[1]['number'], tiles[0]['number']
+            previous_board_json = json.dumps(board_state)
+            numbers = entry.get('numbers') or [tiles[1]['number'], tiles[0]['number']]
+            tiles[0]['number'], tiles[1]['number'] = numbers
             if not save_catan_board_state_to_json(json.dumps(board_state)):
                 return jsonify({"status": "error", "message": "Could not save the board."}), 500
+            if step == 'swap':
+                state['_inventorSelection'] = {'player': player_id, 'first': {'q': coordinates[0][0], 'r': coordinates[0][1]}}
         else:
             alchemist = state.get('_alchemistDice')
             if state.get('_turnRolled') is True or not isinstance(alchemist, dict) or alchemist.get('player') != player_id:
@@ -1073,10 +1184,13 @@ def configure_routes_catan2(app, socketio):
 
         undo_stack.pop()
         state['_undoStack'] = undo_stack
-        progress_cards.append(card)
-        state['progressCardDecks'] = normalize_progress_card_decks(state.get('progressCardDecks'))
-        take_progress_cards_from_decks(state['progressCardDecks'], [card])
+        if returns_card:
+            progress_cards.append(card)
+            state['progressCardDecks'] = normalize_progress_card_decks(state.get('progressCardDecks'))
+            take_progress_cards_from_decks(state['progressCardDecks'], [card])
         if not save_play_state_to_json(json.dumps(state)):
+            if previous_board_json is not None:
+                save_catan_board_state_to_json(previous_board_json)
             return jsonify({"status": "error", "message": "Could not save the game state."}), 500
         entries = record_catan2_activity(state, player_id, f"undid {card.title()}")
         socketio.emit('catan2_activity_log_broadcast', {'entries': entries})
@@ -1307,6 +1421,7 @@ def configure_routes_catan2(app, socketio):
         state['_setupQueue'] = (turn_order + turn_order[-2::-1])[1:]
         state['_turnPhase'] = 'setup'
         state['_setupIndex'] = 0
+        state['_setupUndoOpen'] = True
         state['_turnRolled'] = True
         state['_gameStarted'] = True
         state['_undoStack'] = []
@@ -1330,6 +1445,46 @@ def configure_routes_catan2(app, socketio):
         socketio.emit('catan2_undo_history_reset')
         socketio.emit('catan2_update')
         return jsonify({"status": "success", "order": names})
+
+    @app.route('/catan2/setup_undo', methods=['POST'])
+    @catan2_setup_locked
+    def catan2_setup_undo():
+        payload = request.get_json(silent=True) or {}
+        player_id = payload.get('player_id')
+        registry = load_catan_player_registry()
+        authorized_codes = set(session.get('catan2_player_access', []))
+        if not any(f"player{player['seat']}" == player_id and player['code'] in authorized_codes
+                   for player in registry['players']):
+            return jsonify(status='error', message='Join this Catan 2 player seat first.'), 403
+        state, _ = load_turn_state_for_request(player_id)
+        index = state.get('_setupIndex', 0)
+        if state.get('_turnPhase') != 'setup' and not state.get('_setupUndoOpen'):
+            return jsonify(status='error', message='Setup undo is no longer available.'), 409
+        if type(index) is not int or index <= 0 or payload.get('setup_index') != index:
+            return jsonify(status='error', message='No setup action to undo, or the setup has changed.'), 409
+        step = catan2_setup_action({**state, '_turnPhase': 'setup', '_setupIndex': index - 1})
+        if not step or step['player'] != player_id:
+            return jsonify(status='error', message='The latest setup action must be undone by its owner first.'), 409
+        player = state[player_id]
+        pieces = player.get('roads' if step['piece'] == 'road' else 'structures', [])
+        if not pieces or (step['piece'] != 'road' and pieces[-1].get('type') != step['piece']):
+            return jsonify(status='error', message='The setup placement could not be found.'), 409
+        pieces.pop()
+        player['score'] = sum(2 if piece.get('type') == 'city' else 1
+                              for piece in player.get('structures', []))
+        state['_setupIndex'] = index - 1
+        state['_turnPhase'] = 'setup'
+        state['_currentTurnPlayerId'] = player_id
+        state['_turnRolled'] = True
+        state['_setupUndoOpen'] = True
+        state['_undoStack'] = []
+        if not save_play_state_to_json(json.dumps(state)):
+            return jsonify(status='error', message='Could not save the setup undo.'), 500
+        entries = record_catan2_activity(state, player_id, f"undid a free {step['piece']}",
+                                         action='removed', piece=step['piece'])
+        socketio.emit('catan2_activity_log_broadcast', {'entries': entries})
+        socketio.emit('catan2_update')
+        return jsonify(status='success')
 
     @app.route('/catan2/setup_piece', methods=['POST'])
     @catan2_setup_locked
@@ -1370,6 +1525,7 @@ def configure_routes_catan2(app, socketio):
             structures.append({'type': step['piece'], 'junction': junction, 'owner': player_id})
         player['score'] = sum(2 if structure['type'] == 'city' else 1 for structure in structures)
         state['_setupIndex'] = state.get('_setupIndex', 0) + 1
+        state['_setupUndoOpen'] = True
         following = catan2_setup_action(state)
         if following:
             state['_currentTurnPlayerId'] = following['player']
@@ -1387,6 +1543,7 @@ def configure_routes_catan2(app, socketio):
         return jsonify(status='success', phase=state['_turnPhase'], current_player=state['_currentTurnPlayerId'])
 
     @socketio.on('catan2_roll_dice')
+    @catan2_setup_locked
     def catan2_handle_roll_dice(data=None):
         state, is_current_player = load_turn_state_for_request((data or {}).get('player_id'))
         current_player_id = state['_currentTurnPlayerId']
@@ -1423,8 +1580,10 @@ def configure_routes_catan2(app, socketio):
             }, to=request.sid)
             return
 
-        state['_undoStack'] = []
+        state['_undoStack'] = [entry for entry in state.get('_undoStack', [])
+                       if entry.get('serverUndo') == 'inventor' and entry.get('player') == current_player_id]
         state['_turnRolled'] = True
+        state['_setupUndoOpen'] = False
         alchemist = state.pop('_alchemistDice', None)
         alchemist_dice = alchemist.get('dice') if isinstance(alchemist, dict) and alchemist.get('player') == current_player_id else None
         alchemist_used = (
@@ -1433,6 +1592,10 @@ def configure_routes_catan2(app, socketio):
         )
         dice = list(alchemist_dice) if alchemist_used else [random.randint(1, 6), random.randint(1, 6)]
         robber_move_available = sum(dice) == 7
+        state['_pendingDiscards'] = {
+            player_id: True for player_id in state['_turnOrder']
+            if len(state.get(player_id, {}).get('hand', [])) >= 8
+        } if robber_move_available else {}
         state['_robberMoveAvailable'] = robber_move_available
         state['_robberMovePlayerId'] = current_player_id if robber_move_available else None
         event_die = random.choice(CITIES_AND_KNIGHTS_EVENT_DIE)
@@ -1442,7 +1605,7 @@ def configure_routes_catan2(app, socketio):
             move_barbarian_ship(state, 'forward')
         save_play_state_to_json(json.dumps(state))
         socketio.emit('catan2_undo_history_reset')
-        if event_die == 'black_ship':
+        if event_die == 'black_ship' or robber_move_available or state.get('_undoStack'):
             socketio.emit('catan2_update')
         socketio.emit('catan2_roll_dice_broadcast', {
             'dice': dice,
@@ -1452,12 +1615,19 @@ def configure_routes_catan2(app, socketio):
             'player_name': state['lastDiceRoll']['player_name'],
             'robber_move_available': robber_move_available,
             'robber_move_player': state['_robberMovePlayerId'],
+            'pending_discards': state['_pendingDiscards'],
         })
 
     @socketio.on('catan2_end_turn')
     def catan2_handle_end_turn(data=None):
         state, is_current_player = load_turn_state_for_request((data or {}).get('player_id'))
         current_player_id = state['_currentTurnPlayerId']
+        if state.get('_pendingDiscards'):
+            socketio.emit('catan2_end_turn_rejected', {
+                'message': 'Wait for all required players to drop cards before ending your turn.',
+                'current_player': current_player_id, 'turn_rolled': state.get('_turnRolled') is True,
+            }, to=request.sid)
+            return
         if state.get('_turnPhase') == 'setup':
             socketio.emit('catan2_end_turn_rejected', {
                 'message': 'Complete your free house or city and its connected road.',
@@ -1487,9 +1657,17 @@ def configure_routes_catan2(app, socketio):
                 next_player_id = turn_order[(turn_order.index(current_player_id) + 1) % len(turn_order)]
             state['_turnRolled'] = False
         state['_currentTurnPlayerId'] = next_player_id
+        for structure in state.get(next_player_id, {}).get('structures', []):
+            if structure.get('type') == 'knight':
+                structure.pop('activatedThisTurn', None)
         state['_robberMoveAvailable'] = False
         state['_robberMovePlayerId'] = None
+        state['_freeRoads'] = 0
+        state['_freeRoadsPlayerId'] = None
+        state['_undoStack'] = []
+        state['_pendingDiscards'] = {}
         state.pop('_alchemistDice', None)
+        state.pop('_inventorSelection', None)
         save_play_state_to_json(json.dumps(state))
         socketio.emit('catan2_turn_ended_broadcast', {
             'previous_player': current_player_id,
@@ -1497,3 +1675,4 @@ def configure_routes_catan2(app, socketio):
             'turn_rolled': state['_turnRolled'],
             'phase': state.get('_turnPhase'),
         })
+        socketio.emit('catan2_update')

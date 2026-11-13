@@ -77,9 +77,10 @@
         </section>
         <section aria-labelledby="maintenance-title">
             <h2 id="maintenance-title">Maintenance</h2>
-            <nav class="tiles maintenance" aria-label="Media maintenance">
+            <nav class="tiles tools" aria-label="Media maintenance">
                 {{ tile('mm_mp3.populate_ui', 'MP3 Import', 'folder-plus') }}
                 {{ tile('routes_mm.mm_update', 'Database Update', 'database-backup') }}
+                {{ tile('routes_mm_download.mm_download', 'Media Download', 'download', 'youtube') }}
             </nav>
         </section>
     </main>

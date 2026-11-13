@@ -46,7 +46,6 @@
         const searchInput = document.getElementById('mediaSearch');
         const tagFilters = document.getElementById('tagFilters');
         const mediaList = document.getElementById('mediaList');
-        const connectionStatus = document.getElementById('connectionStatus');
         const currentMedia = document.getElementById('currentMedia');
         const remoteMessage = document.getElementById('remoteMessage');
         const togglePlayback = document.getElementById('togglePlayback');
@@ -57,6 +56,10 @@
         const previousPage = document.getElementById('previousPage');
         const nextPage = document.getElementById('nextPage');
         const pageIndicator = document.getElementById('pageIndicator');
+        const pageNumbers = document.getElementById('pageNumbers');
+        const editMediaButton = document.getElementById('editMediaBtn');
+        const addChapterButton = document.getElementById('addChapter');
+        let addingChapter = false;
         let items = [];
         let state = null;
         let selectedTags = new Set();
@@ -70,13 +73,33 @@
         let focusMediaId = null;
         let highlightMediaId = null;
         let resolveDatabasePin = null;
+        let pendingView = null;
+        let viewRestored = false;
+        let viewReady = false;
+        const lastMediaIds = {};
+        const viewTimers = {};
         const databaseLabels = { youtube: 'YouTube', mov: 'Movie', vdo: 'VDO', x: 'X' };
         let unlockedDatabases = new Set(JSON.parse(root.dataset.unlocked || '["youtube"]'));
 
-        const send = (action, data = {}) => socket.emit('media_control', {
-            action, ...data, x_token: mediaAccessToken,
-            ...(action === 'load' ? { queue: { playlist: playlistSelect.value, category: categorySelect.value, tags: [...selectedTags] } } : {})
-        });
+        const send = (action, data = {}) => {
+            if (!socket.connected) {
+                remoteMessage.textContent = 'Remote disconnected. Reconnecting...';
+                return;
+            }
+            if (state?.media_id) {
+                if (action === 'play') state.paused = 0;
+                else if (action === 'pause') state.paused = 1;
+                else if (action === 'seek') state.position = data.position;
+                else if (action === 'volume') state.volume = data.volume;
+                else if (action === 'audio_only') state.audio_only = Number(data.enabled);
+                progressAt = Date.now();
+                renderState(state);
+            }
+            socket.emit('media_control', {
+                action, ...data, x_token: mediaAccessToken,
+                ...(action === 'load' ? { queue: { playlist: playlistSelect.value, category: categorySelect.value, tags: [...selectedTags] } } : {})
+            });
+        };
         let progressAt = 0;
 
         const xPinDialog = document.getElementById('xPinDialog');
@@ -157,62 +180,6 @@
             }
         });
 
-        const tvIpButton = document.getElementById('tvIpBtn');
-        const tvIpDialog = document.getElementById('tvIpDialog');
-        const tvIpForm = document.getElementById('tvIpForm');
-        const tvIpKey = document.getElementById('tvIpControlKey');
-        const tvIpInput = document.getElementById('tvIpInput');
-        const tvIpStatus = document.getElementById('tvIpStatus');
-        const tvIpLoad = document.getElementById('tvIpLoad');
-        const tvIpSave = document.getElementById('tvIpSave');
-        const tvIpCancel = document.getElementById('tvIpCancel');
-        let tvIpBusy = false;
-        tvIpButton.addEventListener('click', () => {
-            tvIpStatus.textContent = '';
-            tvIpInput.value = '';
-            tvIpDialog.showModal();
-            tvIpKey.focus();
-        });
-        tvIpCancel.addEventListener('click', () => tvIpDialog.close());
-        tvIpDialog.addEventListener('cancel', event => {
-            if (tvIpBusy) event.preventDefault();
-        });
-        tvIpDialog.addEventListener('close', () => { tvIpKey.value = ''; });
-        async function updateTvIp(save) {
-            if (tvIpBusy || !tvIpKey.reportValidity()) return;
-            tvIpBusy = true;
-            const controls = [tvIpButton, tvIpKey, tvIpInput, tvIpLoad, tvIpSave, tvIpCancel];
-            controls.forEach(control => { control.disabled = true; });
-            tvIpForm.setAttribute('aria-busy', 'true');
-            tvIpStatus.textContent = save ? 'Saving...' : 'Loading...';
-            try {
-                const response = await fetch('/mm/api/remote/tv/config', {
-                    method: save ? 'POST' : 'GET',
-                    headers: { 'X-TV-Control-Key': tvIpKey.value, ...(save ? { 'Content-Type': 'application/json' } : {}) },
-                    ...(save ? { body: JSON.stringify({ ip: tvIpInput.value }) } : {})
-                });
-                const result = await readJson(response);
-                if (!response.ok || !result.success) throw new Error(result.error || 'TV IP request failed.');
-                tvIpInput.value = result.ip;
-                tvIpStatus.textContent = '';
-                if (save) {
-                    remoteMessage.textContent = `TV IP saved: ${result.ip}`;
-                    tvIpDialog.close();
-                }
-            } catch (error) {
-                tvIpStatus.textContent = error.message || 'TV IP request failed.';
-            } finally {
-                tvIpBusy = false;
-                controls.forEach(control => { control.disabled = false; });
-                tvIpForm.removeAttribute('aria-busy');
-            }
-        }
-        tvIpLoad.addEventListener('click', () => updateTvIp(false));
-        tvIpForm.addEventListener('submit', event => {
-            event.preventDefault();
-            updateTvIp(true);
-        });
-
         const startTvButton = document.getElementById('startTvBtn');
         startTvButton.addEventListener('click', async () => {
             if (startTvButton.disabled) return;
@@ -250,10 +217,14 @@
             const duration = Math.max(0, Number(state?.duration) || 0);
             seekSlider.max = String(Math.max(duration, 1));
             seekSlider.disabled = !hasMedia || duration <= 0;
-            seekSlider.value = String(Math.min(Number(state?.position) || 0, duration || 1));
-            timeDisplay.textContent = `${formatTime(state?.position)}${duration ? ` / ${formatTime(duration)}` : ''}`;
+            if (document.activeElement !== seekSlider) {
+                seekSlider.value = String(Math.min(Number(state?.position) || 0, duration || 1));
+                timeDisplay.textContent = `${formatTime(state?.position)}${duration ? ` / ${formatTime(duration)}` : ''}`;
+            }
             volumeSlider.disabled = !hasMedia;
-            volumeSlider.value = String(Math.max(0, Math.min(100, Number(state?.volume ?? 100))));
+            if (document.activeElement !== volumeSlider) {
+                volumeSlider.value = String(Math.max(0, Math.min(100, Number(state?.volume ?? 100))));
+            }
             audioOnlyToggle.disabled = !hasMedia;
             audioOnlyToggle.setAttribute('aria-pressed', String(Boolean(Number(state?.audio_only))));
             const chapters = parseChapters(state?.chapter || '');
@@ -265,6 +236,12 @@
                 document.getElementById(id).disabled = !hasMedia;
             });
             const playingKey = hasMedia ? `${state.database_name}:${state.media_id}` : '';
+            editMediaButton.disabled = !hasMedia || state.database_name !== selectedDatabase;
+            addChapterButton.disabled = addingChapter || !hasMedia || state.database_name !== selectedDatabase;
+            if (hasMedia && state.database_name === selectedDatabase && lastMediaIds[selectedDatabase] !== state.media_id) {
+                lastMediaIds[selectedDatabase] = state.media_id;
+                saveView();
+            }
             if (playingKey !== renderedPlayingKey) {
                 renderedPlayingKey = playingKey;
                 renderItems();
@@ -274,12 +251,78 @@
 
         let searchTimer = null;
 
+        function saveView() {
+            if (!viewReady) return;
+            const database = selectedDatabase;
+            const view = {
+                playlist: playlistSelect.value, category: categorySelect.value, tags: [...selectedTags],
+                search: searchInput.value.trim().slice(0, 200), page, media_id: lastMediaIds[database] ?? null
+            };
+            window.clearTimeout(viewTimers[database]);
+            viewTimers[database] = window.setTimeout(() => {
+                fetch(`/mm/api/remote/view/${encodeURIComponent(database)}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(view)
+                }).catch(() => {});
+            }, 400);
+        }
+
+        async function restoreView() {
+            try {
+                const response = await fetch(`/mm/api/remote/view/${encodeURIComponent(selectedDatabase)}`);
+                const result = await response.json();
+                const view = response.ok && result.success ? result.view : null;
+                if (!view) return;
+                pendingView = { playlist: view.playlist, category: view.category };
+                searchInput.value = view.search || '';
+                selectedTags = new Set(view.tags || []);
+                page = view.page || 1;
+                if (view.media_id) {
+                    lastMediaIds[selectedDatabase] = view.media_id;
+                    focusMediaId = view.media_id;
+                }
+            } catch (_error) {
+                pendingView = null;
+            }
+        }
+
+        function renderPageNumbers() {
+            const numbers = new Set([1, pages]);
+            for (let value = Math.max(1, page - 2); value <= Math.min(pages, page + 2); value++) numbers.add(value);
+            const sorted = [...numbers].sort((first, second) => first - second);
+            const children = [];
+            sorted.forEach((value, index) => {
+                if (index && value - sorted[index - 1] > 1) {
+                    const gap = document.createElement('span');
+                    gap.className = 'page-gap';
+                    gap.textContent = '…';
+                    children.push(gap);
+                }
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'page-num';
+                button.textContent = String(value);
+                button.setAttribute('aria-label', `Page ${value}`);
+                if (value === page) button.setAttribute('aria-current', 'page');
+                button.addEventListener('click', () => {
+                    if (value === page) return;
+                    page = value;
+                    loadLibrary();
+                });
+                children.push(button);
+            });
+            pageNumbers.replaceChildren(...children);
+        }
+
         async function loadLibrary() {
             if (['x', 'mov'].includes(selectedDatabase) && !mediaAccessToken) return;
             const requestId = ++libraryRequest;
             const params = new URLSearchParams({ database: selectedDatabase });
-            if (playlistSelect.value) params.set('playlist', playlistSelect.value);
-            if (categorySelect.value) params.set('category', categorySelect.value);
+            const view = pendingView;
+            pendingView = null;
+            const playlist = view ? view.playlist : playlistSelect.value;
+            const category = view ? view.category : categorySelect.value;
+            if (playlist) params.set('playlist', playlist);
+            if (category) params.set('category', category);
             if (searchInput.value.trim()) params.set('search', searchInput.value.trim());
             if (selectedTags.size) params.set('tags', [...selectedTags].join(','));
             if (focusMediaId) params.set('focus_id', String(focusMediaId));
@@ -300,6 +343,7 @@
                 previousPage.disabled = page <= 1;
                 nextPage.disabled = page >= pages;
                 pageIndicator.textContent = `Page ${page} of ${pages} · ${result.total_items} items`;
+                renderPageNumbers();
                 renderTagFilters(result.tags || []);
                 const focused = focusMediaId;
                 if (focused) {
@@ -309,6 +353,8 @@
                 items = result.items;
                 renderItems();
                 if (focused) mediaList.querySelector('.media-item.added')?.scrollIntoView({ block: 'nearest' });
+                viewReady = true;
+                saveView();
                 return true;
             } catch (error) {
                 if (requestId !== libraryRequest) return;
@@ -379,27 +425,62 @@
                 return;
             }
             visible.forEach(item => {
-                const row = document.createElement('button');
-                row.type = 'button';
+                const row = document.createElement('div');
                 row.className = 'media-item';
                 const playing = item.id === state?.media_id && selectedDatabase === state?.database_name;
                 row.classList.toggle('playing', playing);
                 row.classList.toggle('added', item.id === highlightMediaId);
-                row.setAttribute('aria-current', String(playing));
-                const details = document.createElement('div');
+                const main = document.createElement('button');
+                main.type = 'button';
+                main.className = 'media-main';
+                main.setAttribute('aria-current', String(playing));
                 const title = document.createElement('div');
                 title.className = 'media-title';
                 title.textContent = item.title || item.video_id;
+                if (item.tags?.length) {
+                    const tags = document.createElement('span');
+                    tags.className = 'media-tags';
+                    tags.textContent = item.tags.join(', ');
+                    tags.setAttribute('aria-label', `Tags: ${tags.textContent}`);
+                    title.append(' ', tags);
+                }
                 const subtitle = document.createElement('div');
                 subtitle.className = 'media-subtitle';
                 subtitle.textContent = [item.artist, item.category, item.duration ? formatTime(item.duration) : '']
                     .filter(Boolean).join(' · ');
-                details.append(title, subtitle);
-                row.addEventListener('click', () => {
+                main.append(title, subtitle);
+                main.addEventListener('click', () => {
                     remoteMessage.textContent = `Loading ${item.title || item.video_id}…`;
                     send('load', { database: selectedDatabase, media_id: item.id });
                 });
-                row.append(details);
+                const fav = document.createElement('button');
+                fav.type = 'button';
+                fav.className = 'fav-btn';
+                const renderFav = () => {
+                    const liked = Boolean(item.fav);
+                    fav.textContent = liked ? '♥' : '♡';
+                    fav.setAttribute('aria-pressed', String(liked));
+                    fav.setAttribute('aria-label', `${liked ? 'Unlike' : 'Like'} ${item.title || item.video_id}`);
+                    fav.title = liked ? 'Unlike' : 'Like';
+                };
+                renderFav();
+                fav.addEventListener('click', async () => {
+                    const database = selectedDatabase;
+                    fav.disabled = true;
+                    try {
+                        const response = await fetch(`/mm/api/remote/fav/${encodeURIComponent(database)}/${item.id}`, { method: 'POST' });
+                        const result = await readJson(response);
+                        if (!response.ok || !result.success) throw new Error(result.error || 'Could not update like.');
+                        item.fav = result.fav;
+                        renderFav();
+                        if (database === selectedDatabase) loadLibrary();
+                    } catch (error) {
+                        remoteMessage.textContent = error.message || 'Could not update like.';
+                    } finally {
+                        fav.disabled = false;
+                    }
+                });
+                row.append(main, fav);
                 mediaList.append(row);
             });
         }
@@ -460,6 +541,7 @@
             }
             if (!choice) return;
             selectedDatabase = choice.database;
+            viewReady = false;
             mediaAccessToken = choice.access_token || null;
             databaseButton.querySelector('span').textContent = { youtube: 'YouTube', mov: 'Movie', vdo: 'VDO', x: 'X' }[selectedDatabase];
             highlightMediaId = null;
@@ -474,94 +556,98 @@
             searchInput.value = '';
             chapterLookupKey = '';
             socket.emit('media_join');
+            await restoreView();
             loadLibrary();
-        });
-        const addMediaDialog = document.getElementById('addMediaDialog');
-        const addMediaForm = document.getElementById('addMediaForm');
-        const addMediaUrls = document.getElementById('addMediaUrls');
-        const addMediaStatus = document.getElementById('addMediaStatus');
-        const addMediaSubmit = document.getElementById('addMediaSubmit');
-        const addMediaCancel = document.getElementById('addMediaCancel');
-        let addingMedia = false;
-        document.getElementById('addMediaBtn').addEventListener('click', () => {
-            const local = selectedDatabase !== 'youtube';
-            addMediaForm.reset();
-            document.getElementById('addMediaTitle').textContent = `Add ${databaseButton.querySelector('span').textContent} Media`;
-            document.getElementById('addMediaUrlLabel').textContent = local
-                ? 'Video file paths under the media root, one per line'
-                : 'YouTube links or IDs, one per line';
-            document.getElementById('addMediaTitleLabel').hidden = !local;
-            document.getElementById('addMediaPlaylist').value = playlistSelect.value;
-            document.getElementById('addMediaCategory').value = categorySelect.value;
-            document.getElementById('addMediaPlaylists').replaceChildren(...Array.from(playlistSelect.options, option => new Option(option.value)));
-            document.getElementById('addMediaCategories').replaceChildren(...Array.from(categorySelect.options).filter(option => option.value).map(option => new Option(option.value)));
-            addMediaStatus.textContent = '';
-            addMediaDialog.showModal();
-            addMediaUrls.focus();
-        });
-        addMediaCancel.addEventListener('click', () => addMediaDialog.close());
-        addMediaDialog.addEventListener('cancel', event => { if (addingMedia) event.preventDefault(); });
-        addMediaForm.addEventListener('submit', async event => {
-            event.preventDefault();
-            if (addingMedia) return;
-            const urls = [...new Set(addMediaUrls.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean))];
-            const playlist = document.getElementById('addMediaPlaylist').value.trim();
-            const category = document.getElementById('addMediaCategory').value.trim();
-            const tags = document.getElementById('addMediaTags').value.split(',').map(tag => tag.trim()).filter(Boolean);
-            const database = selectedDatabase;
-            const title = database !== 'youtube' && urls.length === 1 ? document.getElementById('addMediaTitleInput').value.trim() : '';
-            if (!playlist || !urls.length || urls.length > 50) {
-                addMediaStatus.textContent = !playlist ? 'Playlist is required.' : 'Enter between 1 and 50 entries.';
-                return;
-            }
-            const endpoint = database === 'youtube' ? '/mm/api/video/add' : `/mm/api/${database}/add`;
-            addingMedia = true;
-            addMediaSubmit.disabled = true;
-            addMediaCancel.disabled = true;
-            const failures = [];
-            let lastId = null;
-            try {
-                for (const [index, url] of urls.entries()) {
-                    addMediaStatus.textContent = `Saving ${index + 1} of ${urls.length}…`;
-                    try {
-                        const response = await fetch(endpoint, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url, title, playlist, category, tags })
-                        });
-                        const result = await response.json();
-                        if (!response.ok || !result.success) throw new Error(result.error || 'Could not add media.');
-                        lastId = result.id;
-                    } catch (error) {
-                        failures.push({ url, error: error.message || 'Could not add media.' });
-                    }
-                }
-            } finally {
-                addingMedia = false;
-                addMediaSubmit.disabled = false;
-                addMediaCancel.disabled = false;
-            }
-            if (lastId !== null && database === selectedDatabase) {
-                if (![...playlistSelect.options].some(option => option.value === playlist)) playlistSelect.append(new Option(playlist, playlist));
-                playlistSelect.value = playlist;
-                if (category && ![...categorySelect.options].some(option => option.value === category)) categorySelect.append(new Option(category, category));
-                categorySelect.value = category;
-                selectedTags.clear();
-                searchInput.value = '';
-                page = 1;
-                focusMediaId = lastId;
-                loadLibrary();
-            }
-            if (failures.length) {
-                addMediaUrls.value = failures.map(failure => failure.url).join('\n');
-                addMediaStatus.textContent = `Saved ${urls.length - failures.length} of ${urls.length}.\n` + failures.map(failure => `${failure.url}: ${failure.error}`).join('\n');
-            } else {
-                addMediaDialog.close();
-                remoteMessage.textContent = `Added ${urls.length} item${urls.length === 1 ? '' : 's'}.`;
-            }
         });
         playlistSelect.addEventListener('change', () => { selectedTags.clear(); page = 1; loadLibrary(); });
         categorySelect.addEventListener('change', () => { selectedTags.clear(); page = 1; loadLibrary(); });
+
+        const editMediaDialog = document.getElementById('editMediaDialog');
+        const editMediaForm = document.getElementById('editMediaForm');
+        const editMediaStatus = document.getElementById('editMediaStatus');
+        const editMediaSubmit = document.getElementById('editMediaSubmit');
+        const editMediaCancel = document.getElementById('editMediaCancel');
+        const editFields = {
+            title: document.getElementById('editTitle'), artist: document.getElementById('editArtist'),
+            playlist: document.getElementById('editPlaylist'), category: document.getElementById('editCategory'),
+            tags: document.getElementById('editTags'), duration: document.getElementById('editDuration'),
+            chapter: document.getElementById('editChapter'), thumbnail_url: document.getElementById('editThumbnail'),
+            url: document.getElementById('editUrl')
+        };
+        let editTarget = null;
+        let savingEdit = false;
+        editMediaButton.addEventListener('click', async () => {
+            if (!state?.media_id || state.database_name !== selectedDatabase) return;
+            const target = { database: state.database_name, id: state.media_id };
+            editMediaButton.disabled = true;
+            try {
+                const response = await fetch(`/mm/api/remote/media/${encodeURIComponent(target.database)}/${target.id}`);
+                const result = await readJson(response);
+                if (!response.ok || !result.success) throw new Error(result.error || 'Could not load the entry.');
+                const media = result.media;
+                editTarget = target;
+                editMediaStatus.textContent = '';
+                editFields.title.value = media.title || '';
+                editFields.artist.value = media.artist || '';
+                editFields.playlist.value = media.playlist || '';
+                editFields.category.value = media.category || '';
+                editFields.tags.value = (media.tags || []).join(', ');
+                editFields.duration.value = String(media.duration || 0);
+                editFields.chapter.value = media.chapter || '';
+                editFields.thumbnail_url.value = media.thumbnail_url || '';
+                editFields.url.value = media.url || '';
+                document.getElementById('editUrlLabel').hidden = !result.local;
+                document.getElementById('editMediaSource').textContent = result.local
+                    ? `${databaseLabels[target.database] || target.database} entry #${media.id}`
+                    : `YouTube video ${media.video_id}`;
+                document.getElementById('editPlaylists').replaceChildren(...Array.from(playlistSelect.options, option => new Option(option.value)));
+                document.getElementById('editCategories').replaceChildren(...Array.from(categorySelect.options).filter(option => option.value).map(option => new Option(option.value)));
+                editMediaDialog.showModal();
+                editFields.title.focus();
+            } catch (error) {
+                remoteMessage.textContent = error.message || 'Could not load the entry.';
+            } finally {
+                renderState(state);
+            }
+        });
+        editMediaCancel.addEventListener('click', () => editMediaDialog.close());
+        editMediaDialog.addEventListener('cancel', event => { if (savingEdit) event.preventDefault(); });
+        editMediaForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            if (savingEdit || !editTarget) return;
+            const duration = Number(editFields.duration.value || 0);
+            if (!Number.isInteger(duration) || duration < 0) {
+                editMediaStatus.textContent = 'Duration must be a whole number of seconds.';
+                return;
+            }
+            savingEdit = true;
+            editMediaSubmit.disabled = true;
+            editMediaCancel.disabled = true;
+            editMediaStatus.textContent = 'Saving…';
+            try {
+                const response = await fetch(`/mm/api/remote/media/${encodeURIComponent(editTarget.database)}/${editTarget.id}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: editFields.title.value, artist: editFields.artist.value,
+                        playlist: editFields.playlist.value, category: editFields.category.value,
+                        tags: editFields.tags.value.split(',').map(tag => tag.trim()).filter(Boolean),
+                        duration, chapter: editFields.chapter.value,
+                        thumbnail_url: editFields.thumbnail_url.value, url: editFields.url.value
+                    })
+                });
+                const result = await readJson(response);
+                if (!response.ok || !result.success) throw new Error(result.error || 'Could not save the entry.');
+                editMediaDialog.close();
+                remoteMessage.textContent = 'Entry saved.';
+                if (editTarget.database === selectedDatabase) loadLibrary();
+            } catch (error) {
+                editMediaStatus.textContent = error.message || 'Could not save the entry.';
+            } finally {
+                savingEdit = false;
+                editMediaSubmit.disabled = false;
+                editMediaCancel.disabled = false;
+            }
+        });
         searchInput.addEventListener('input', () => {
             window.clearTimeout(searchTimer);
             ++libraryRequest;
@@ -572,6 +658,27 @@
         previousPage.addEventListener('click', () => { page = Math.max(1, page - 1); loadLibrary(); });
         nextPage.addEventListener('click', () => { page = Math.min(pages, page + 1); loadLibrary(); });
         togglePlayback.addEventListener('click', () => send(state?.paused ? 'play' : 'pause'));
+        addChapterButton.addEventListener('click', async () => {
+            if (addingChapter || !state?.media_id || state.database_name !== selectedDatabase) return;
+            addingChapter = true;
+            addChapterButton.disabled = true;
+            try {
+                const response = await fetch('/mm/api/remote/chapter', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ database: state.database_name, media_id: state.media_id, position: Number(state.position) || 0 })
+                });
+                const result = await readJson(response);
+                if (!response.ok || !result.success) throw new Error(result.error || 'Could not add the chapter.');
+                remoteMessage.textContent = result.added
+                    ? `Chapter added at ${formatTime(result.position)}.`
+                    : `Skipped: a chapter already exists at ${formatTime(result.nearby)} (within 5 seconds).`;
+            } catch (error) {
+                remoteMessage.textContent = error.message || 'Could not add the chapter.';
+            } finally {
+                addingChapter = false;
+                renderState(state);
+            }
+        });
         document.getElementById('previousTrack').addEventListener('click', () => navigateTrack(-1));
         document.getElementById('nextTrack').addEventListener('click', () => navigateTrack(1));
         document.getElementById('previousChapter').addEventListener('click', () => seekChapter(-1));
@@ -584,22 +691,33 @@
             timeDisplay.textContent = `${formatTime(seekSlider.value)} / ${formatTime(state?.duration)}`;
         });
         seekSlider.addEventListener('change', () => send('seek', { position: Number(seekSlider.value) }));
-        volumeSlider.addEventListener('input', () => send('volume', { volume: Number(volumeSlider.value) }));
+        let volumeTimer = null;
+        const sendVolume = () => {
+            window.clearTimeout(volumeTimer);
+            volumeTimer = null;
+            send('volume', { volume: Number(volumeSlider.value) });
+        };
+        volumeSlider.addEventListener('input', () => {
+            if (volumeTimer === null) volumeTimer = window.setTimeout(sendVolume, 100);
+        });
+        volumeSlider.addEventListener('change', sendVolume);
         audioOnlyToggle.addEventListener('click', () => send('audio_only', { enabled: audioOnlyToggle.getAttribute('aria-pressed') !== 'true' }));
 
-        socket.on('connect', () => {
-            connectionStatus.textContent = 'Connected';
+        socket.on('connect', async () => {
             socket.emit('media_join');
+            if (!viewRestored) {
+                viewRestored = true;
+                await restoreView();
+            }
             loadLibrary();
         });
-        socket.on('disconnect', () => { connectionStatus.textContent = 'Disconnected'; });
         socket.on('media_state', payload => {
             if (payload.command === 'load') {
                 chapterLookupKey = '';
             }
             progressAt = Date.now();
             renderState(payload.state || payload);
-            remoteMessage.textContent = '';
+            if (payload.command !== 'metadata') remoteMessage.textContent = '';
         });
         socket.on('media_progress', progress => {
             if (!state || progress.revision !== state.revision) return;
@@ -770,7 +888,11 @@
             }
             localPlayer.volume = Math.max(0, Math.min(1, Number(state.volume ?? 100) / 100));
             if (state.paused) localPlayer.pause();
-            else localPlayer.play().catch(() => setStatus('Playback blocked; start playback once on this screen.'));
+            else if (localPlayer.paused) localPlayer.play().catch(error => {
+                if (error.name === 'AbortError' || currentState?.revision !== state.revision
+                    || currentState?.paused || !localPlayer.paused) return;
+                console.warn('[TV playback]', error);
+            });
         }
 
         function applyState(payload) {

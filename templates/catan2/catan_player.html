@@ -7,8 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css', v='catan2-light-1') }}">
     <style>
+        body.catan-player-page.catan2-player-page { background: #fff; }
         .catan2-player-page .canvas-wrapper.map-zoom-viewport { position: relative; overflow: hidden; }
         .catan2-player-page .canvas-wrapper.map-zoom-viewport.map-zoomed { overflow: auto; }
         .catan2-player-page .canvas-wrapper.map-zoom-viewport #catanBoard {
@@ -1132,8 +1133,8 @@
 
     </script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-    <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/catan2_game_logic.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan_drawing_utils.js', v='3') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan2_game_logic.js', v='18') }}"></script>
     <script>
     // Build menu: open/close only. Tool selection itself is still handled by catan2_game_logic.js.
     (function () {

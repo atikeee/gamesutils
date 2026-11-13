@@ -20,6 +20,7 @@ from routes.routes_stocks import configure_routes_stocks
 from routes.routes_phototag import configure_routes_phototag
 from routes.routes_mm import configure_routes_mm
 from routes.routes_mm_mp3 import configure_routes_mm_mp3
+from routes.routes_mm_download import configure_routes_mm_download
 from routes.routes_deploy import configure_routes_deploy
 import os
 import random
@@ -53,6 +54,7 @@ configure_routes_phototag(app, socketio)
 configure_routes_mm(app, socketio)
 #configure_routes_mm_mp3(app, socketio)
 configure_routes_mm_mp3(app)
+configure_routes_mm_download(app)
 configure_routes_deploy(app)
 if __name__ == '__main__':
     #app.run(debug=True, host='0.0.0.0')

@@ -323,6 +323,16 @@ function drawCirclePort(ctx, x, y, type, ratio) {
     ctx.restore();
 }
 
+function getBoardRoadEdge(road, edges) {
+    const edge = road?.edge;
+    if (!edge || ![edge.x1, edge.y1, edge.x2, edge.y2].every(Number.isFinite)) return null;
+    const endpoints = [
+        `${Math.round(edge.x1)},${Math.round(edge.y1)}`,
+        `${Math.round(edge.x2)},${Math.round(edge.y2)}`
+    ].sort().join('-');
+    return edges.find(candidate => candidate.id === endpoints) || null;
+}
+
 function drawRoad(ctx, edge, color, offsetX, offsetY) {
     ctx.beginPath();
     ctx.moveTo(edge.x1 + offsetX, edge.y1 + offsetY);

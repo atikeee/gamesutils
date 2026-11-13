@@ -340,10 +340,23 @@ function drawBoard() {
     ctx.save();
     ctx.scale(boardScale, boardScale);
 
+    const lastDice = allPlayersData._lastRoll?.dice;
+    const lastTotal = Array.isArray(lastDice) ? lastDice[0] + lastDice[1] : null;
     boardTiles.forEach(tile => {
         const pixel = hexToPixel(tile.q, tile.r, offsetX, offsetY);
         const image = loadedResourceImages[tile.type];
         drawHex(ctx, pixel.x, pixel.y, TILE_RADIUS, RESOURCE_COLORS[tile.type], image);
+        if (lastTotal !== null && lastTotal !== 7 && tile.number === lastTotal && tile.type !== 'desert') {
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 222, 0, 0.18)';
+            ctx.fill();
+            ctx.strokeStyle = '#ffde00';
+            ctx.lineWidth = 5;
+            ctx.shadowColor = '#ffde00';
+            ctx.shadowBlur = 18;
+            ctx.stroke();
+            ctx.restore();
+        }
         if (tile.number !== null) {
             drawNumber(ctx, pixel.x, pixel.y, tile.number);
         }
@@ -352,11 +365,12 @@ function drawBoard() {
     for (const playerId in allPlayersData) {
         if (playerId.startsWith('player')){
             const playerData = allPlayersData[playerId];
-            if (playerData && playerData.roads && playerData.structures) {
-                playerData.roads.forEach(road => {
-                    drawRoad(ctx, road.edge, window.CATAN_PLAYER_COLORS?.[road.owner] || PLAYER_COLORS[road.owner], offsetX, offsetY);
+            if (playerData) {
+                (playerData.roads || []).forEach(road => {
+                    const edge = getBoardRoadEdge(road, allEdges);
+                    if (edge) drawRoad(ctx, edge, window.CATAN_PLAYER_COLORS?.[road.owner] || PLAYER_COLORS[road.owner] || PLAYER_COLORS[playerId] || '#555555', offsetX, offsetY);
                 });
-                playerData.structures.forEach(structure => {
+                (playerData.structures || []).forEach(structure => {
                     const ownerColor = window.CATAN_PLAYER_COLORS?.[structure.owner] || PLAYER_COLORS[structure.owner];
                     if (structure.type === 'house') {
                         drawHouse(ctx, structure.junction, ownerColor, offsetX, offsetY);
@@ -578,12 +592,14 @@ function updateRollButton() {
 }
 
 async function undoPlayerLastAction() {
+    if (!isPlayerPage || allPlayersData._currentTurnPlayerId !== PLAYER_ID) return;
     const undoStack = Array.isArray(allPlayersData._undoStack) ? allPlayersData._undoStack : [];
     if (!isPlayerPage || undoStack.length === 0) {
         updateUndoButton();
         return;
     }
 
+    if (undoStack.at(-1)?.state?._currentTurnPlayerId !== PLAYER_ID) return;
     const snapshot = undoStack.pop();
     allPlayersData = JSON.parse(JSON.stringify(snapshot.state));
     allPlayersData._undoStack = undoStack;
@@ -777,7 +793,7 @@ async function saveBoardTilesToBackend() {
 }
 async function loadBoardTilesFromBackend() {
     try {
-        const response = await fetch('/catan/load_board');
+        const response = await fetch('/catan/load_board', { cache: 'no-store' });
         const result = await response.json();
         boardEditingAllowed = result.editable === true;
         updateBoardEditingUI();
@@ -856,7 +872,7 @@ async function saveAllPlayerStatesToBackend(forceSave = false) {
 
 async function loadAllPlayerStatesFromBackend() {
     try {
-        const response = await fetch('/catan/load_play_state');
+        const response = await fetch('/catan/load_play_state', { cache: 'no-store' });
         
         const result = await response.json();
         if (result.status === 'success' && result.play_state) {
@@ -917,6 +933,8 @@ async function loadAllPlayerStatesFromBackend() {
             globalDevCardDeck = loadedStates._devDeck || [];
             allPlayersData._devDeckInitialized = Boolean(loadedStates._devDeckInitialized);
             allPlayersData._freeRoads = loadedStates._freeRoads || 0;
+            allPlayersData._freeRoadsPlayerId = loadedStates._freeRoadsPlayerId
+                || (allPlayersData._freeRoads > 0 ? loadedStates._currentTurnPlayerId : null);
             if (isGamePage && loadedStates._lastRoll) renderGameDiceResult(loadedStates._lastRoll.dice, allPlayersData[loadedStates._lastRoll.player]?.playerName);
             const deckCount = document.getElementById('devDeckCount');
 			if (deckCount) deckCount.textContent = loadedStates._devDeck?.length ?? (loadedStates.max_players === 6 ? 34 : 25);
@@ -947,8 +965,8 @@ async function loadAllPlayerStatesFromBackend() {
             const required = allPlayersData._pendingDiscards[PLAYER_ID];
             if (isPlayerPage && required && lastTurnNotice !== `discard:${required}`) {
                 lastTurnNotice = `discard:${required}`;
-                const counts = Object.entries(allPlayersData._pendingDiscards).map(([playerId, count]) => `${allPlayersData[playerId].playerName}: ${count}`).join(', ');
-                chooseOption(`Drop cards: ${counts}`, [{ value: 'select', label: 'OK' }]);
+                const players = Object.keys(allPlayersData._pendingDiscards).map(playerId => allPlayersData[playerId].playerName).join(', ');
+                chooseOption(`Drop one or more cards: ${players}`, [{ value: 'select', label: 'OK' }]);
             }
         } else {
             if (!isPlayerPage) showMessage("No saved player states found. Initializing default player states.", 'info');
@@ -990,6 +1008,7 @@ async function resetgame(mode ='4')
     }
     const result = await response.json().catch(() => null);
     if (response.ok && result?.status === 'success') {
+        await refreshCatanState();
         showMessage(result.message);
     } else {
         const detail = result?.message || `server returned HTTP ${response.status}`;
@@ -1144,6 +1163,7 @@ function getClosestJunction(px, py, threshold = 20) {
 function getClosestEdge(px, py, threshold = 20) {
     let closestEdge = null;
     let minDistance = Infinity;
+    let ambiguous = false;
 
     allEdges.forEach(edge => {
         const edgeX1 = edge.x1 + offsetX;
@@ -1179,12 +1199,16 @@ function getClosestEdge(px, py, threshold = 20) {
         const dy = py - yy;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist < minDistance && dist < threshold) {
+        if (dist >= threshold) return;
+        if (Math.abs(dist - minDistance) <= 0.000001) {
+            ambiguous = true;
+        } else if (dist < minDistance) {
             minDistance = dist;
             closestEdge = edge;
+            ambiguous = false;
         }
     });
-    return closestEdge;
+    return ambiguous ? null : closestEdge;
 }
 
 canvas.addEventListener('click', async (event) => {
@@ -1200,6 +1224,12 @@ canvas.addEventListener('click', async (event) => {
     const mouseX = (event.clientX - rect.left) * scaleX / boardScale;
     const mouseY = (event.clientY - rect.top) * scaleY / boardScale;
     const placementHitRadius = 20 * Math.max(scaleX, scaleY) / boardScale;
+
+    if ((isGamePage || selectedPlayerTool === 'robber')
+        && Object.keys(allPlayersData._pendingDiscards || {}).length) {
+        showMessage('Wait for all players with 8 or more cards to drop cards.', 'error');
+        return;
+    }
 
     if (isGamePage && selectedTool !== 'swap') {
         if (gameRobberMoveSaving) return;
@@ -1358,12 +1388,6 @@ canvas.addEventListener('click', async (event) => {
                     if(checkAndDeductCards(PLAYER_ID,selectedPlayerTool,true))
                     {
                         allPlayersData[PLAYER_ID].structures.push({ type: selectedPlayerTool, junction: clickedJunction, owner: PLAYER_ID });
-                const roadCount = (allPlayersData[PLAYER_ID].roads || []).length;
-                if (roadCount >= PLAYER_PIECE_LIMITS.road) {
-                    showMessage('You have already placed all 15 roads.', 'error');
-                    return;
-                }
-
                         updatePlayerUI();
                         actionSuccessful = true;
                     }
@@ -1388,12 +1412,16 @@ canvas.addEventListener('click', async (event) => {
             }
         } else if (selectedPlayerTool === 'road') {
             if (allPlayersData._phase === 'START_PHASE' && allPlayersData[PLAYER_ID].roads.length > (allPlayersData._setupIndex >= allPlayersData._turnOrder.length ? 1 : 0)) return;
+            if (allPlayersData[PLAYER_ID].roads.filter(road => getBoardRoadEdge(road, allEdges)).length >= PLAYER_PIECE_LIMITS.road) {
+                showMessage('You have already placed all 15 roads.', 'error');
+                return;
+            }
             const clickedEdge = getClosestEdge(mouseX, mouseY, placementHitRadius);
             if (clickedEdge) {
                 let existingRoad = false;
                 for (const pId in allPlayersData) {
                     if (pId.startsWith('player')){
-                        if (allPlayersData[pId].roads.some(r => r.edge.id === clickedEdge.id)) {
+                        if ((allPlayersData[pId].roads || []).some(road => getBoardRoadEdge(road, allEdges)?.id === clickedEdge.id)) {
                             existingRoad = true;
                             break;
                         }
@@ -1412,15 +1440,20 @@ canvas.addEventListener('click', async (event) => {
                     if(checkAndDeductCards(PLAYER_ID,selectedPlayerTool,true))
                     {
                         allPlayersData[PLAYER_ID].roads.push({ edge: clickedEdge, owner: PLAYER_ID });
-                        if (allPlayersData._freeRoads > 0) allPlayersData._freeRoads--;
                         updateLongestRoadHolder();
                         updatePlayerUI();
                         actionSuccessful = true;
                     }
                 }
+            } else {
+                showMessage('Click near the middle of an edge to place a road.', 'error');
             }
         } else if (selectedPlayerTool === 'robber') {
             if (!allPlayersData._robberPending) return;
+            if (Object.keys(allPlayersData._pendingDiscards || {}).length) {
+                showMessage('Wait for all required players to drop cards before moving the robber.', 'error');
+                return;
+            }
             const clickedHex = pixelToHex(mouseX, mouseY, offsetX, offsetY);
             const clickedTile = boardTiles.find(t => t.q === clickedHex.q && t.r === clickedHex.r);
             if (clickedTile) {
@@ -1600,8 +1633,11 @@ function checkAndDeductCards(playerId, actionType, recordUndo = false) {
         if (recordUndo) savePlayerStateToHistory();
         return true;
     }
-    if (actionType === 'road' && allPlayersData._freeRoads > 0) {
+    if (actionType === 'road' && allPlayersData._freeRoads > 0
+        && allPlayersData._freeRoadsPlayerId === playerId
+        && allPlayersData._currentTurnPlayerId === playerId) {
         if (recordUndo) savePlayerStateToHistory();
+        allPlayersData._freeRoads--;
         return true;
     }
     const playerHand = allPlayersData[playerId].hand;
@@ -2000,6 +2036,10 @@ async function transferOrDropSelectedCards(currentPlayerId, targetPlayerId) {
     socket.emit('game_action_log', { pid: currentPlayerId, message: actionMessage });
 }
 async function stealCards(currentPlayerId, targetPlayerId) {
+    if (Object.keys(allPlayersData._pendingDiscards || {}).length) {
+        showMessage('Wait for all required players to drop cards before stealing.', 'error');
+        return;
+    }
     savePlayerStateToHistory(); // Save current state before modification
     const targetHandCards = allPlayersData[targetPlayerId].hand;
     let stolenCard = null;
@@ -2322,6 +2362,7 @@ socket.on('roll_dice_broadcast', (data) => {
     }
     updateRollButton();
     showSharedDiceRoll(dice);
+    drawBoard();
 });
 
 
@@ -2381,6 +2422,7 @@ async function playdevcard(currentPlayerId, item) {
             allPlayersData[currentPlayerId].victory_point +=1;
         } else if (item === 'road_building') {
             allPlayersData._freeRoads = 2;
+            allPlayersData._freeRoadsPlayerId = currentPlayerId;
             selectedPlayerTool = 'road';
         } else if (item === 'monopoly') {
             allPlayersData._turnOrder.filter(playerId => playerId !== currentPlayerId).forEach(playerId => {
@@ -2508,14 +2550,36 @@ async function onCatanPlayerPageLoad() {
     updatePlayerUI();
 }
 
-socket.on('catan_update', async () => {
-    console.log('Received catan_update from server. Reloading state...');
-    // Reload all states from the backend and update the UI
-    await loadAllStatesFromBackend();
-    updatePlayerUI();
+let stateRefreshReady = false;
+let stateRefreshPending = false;
+let stateRefreshPromise = null;
 
-    
+function refreshCatanState() {
+    stateRefreshPending = true;
+    if (!stateRefreshReady) return Promise.resolve();
+    if (stateRefreshPromise) return stateRefreshPromise;
+    stateRefreshPromise = (async () => {
+        try {
+            while (stateRefreshPending) {
+                stateRefreshPending = false;
+                await loadAllStatesFromBackend();
+                updatePlayerUI();
+            }
+        } finally {
+            stateRefreshPromise = null;
+        }
+    })();
+    return stateRefreshPromise;
+}
+
+socket.on('catan_update', refreshCatanState);
+socket.on('connect', refreshCatanState);
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) void refreshCatanState();
 });
+window.setInterval(() => {
+    if (!document.hidden && !socket.connected) void refreshCatanState();
+}, 5000);
 
 socket.on('catan_card_transfer', data => {
     if (!isPlayerPage || (PLAYER_ID !== data.sender && PLAYER_ID !== data.recipient)) return;
@@ -2537,10 +2601,7 @@ socket.on('score_update_broadcast', () => {
 window.addEventListener('load', async () => {
     updateBoardEditingUI();
     await preloadImages();
-    if (isPlayerPage) {
-        await onCatanPlayerPageLoad();
-    } else {
-        await loadAllStatesFromBackend();
-    }
+    stateRefreshReady = true;
+    await refreshCatanState();
 });
 window.addEventListener('resize', resizeCanvas);

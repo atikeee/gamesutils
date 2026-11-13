@@ -197,27 +197,41 @@ def api_library():
 # -----------------------------------------------------------------------------
 @bp_mm_mp3.route("/mm/api/mp3/track/<int:track_id>/update", methods=["POST"])
 def update_track_metadata(track_id):
-    data = request.get_json() or {}
-    new_playlist = data.get("playlist", "").strip()
-    new_category = data.get("category", "").strip() or None
-    new_tags = data.get("tag_list", "").strip()
-    new_chapter = normalize_chapter_timestamps(data['chapter']) if 'chapter' in data else None
-    new_artist = str(data['artist'] or '').strip() if 'artist' in data else None
-
-    if not new_playlist:
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "error": "Invalid metadata request"}), 400
+    fields = ('title', 'artist', 'album', 'playlist', 'category', 'tag_list', 'chapter')
+    updates = {}
+    for field in fields:
+        if field not in data:
+            continue
+        if not isinstance(data[field], str):
+            return jsonify({"success": False, "error": f"{field} must be text"}), 400
+        updates[field] = data[field].strip()
+    if 'playlist' in updates and not updates['playlist']:
         return jsonify({"success": False, "error": "Playlist cannot be empty"}), 400
+    if 'chapter' in updates:
+        updates['chapter'] = normalize_chapter_timestamps(updates['chapter'])
+    if 'category' in updates:
+        updates['category'] = updates['category'] or None
+    if 'duration' in data:
+        if type(data['duration']) is not int or data['duration'] < 0:
+            return jsonify({"success": False, "error": "Duration must be a nonnegative whole number"}), 400
+        updates['duration'] = data['duration']
+    if not updates:
+        return jsonify({"success": False, "error": "No metadata provided"}), 400
 
     conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("""
-    UPDATE tracks 
-    SET playlist = ?, category = ?, tag_list = ?, chapter = COALESCE(?, chapter), artist = COALESCE(?, artist)
-    WHERE id = ?;
-    """, (new_playlist, new_category, new_tags, new_chapter, new_artist, track_id))
-    conn.commit()
-    conn.close()
-
-    return jsonify({"success": True})
+    try:
+        assignments = ', '.join(f'{field} = ?' for field in updates)
+        cursor = conn.execute(f"UPDATE tracks SET {assignments} WHERE id = ?", [*updates.values(), track_id])
+        if not cursor.rowcount:
+            return jsonify({"success": False, "error": "Track not found"}), 404
+        conn.commit()
+        track = dict(conn.execute("SELECT * FROM tracks WHERE id = ?", (track_id,)).fetchone())
+        return jsonify({"success": True, "track": track})
+    finally:
+        conn.close()
 
 
 # -----------------------------------------------------------------------------

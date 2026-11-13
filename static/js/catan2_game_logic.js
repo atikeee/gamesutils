@@ -41,6 +41,8 @@ if (isGamePage) {
 }
 
 const PLAYER_ID = isPlayerPage && window.PLAYER_ID ? 'player' + window.PLAYER_ID : null;
+let gameRobberMoveSelected = false;
+let gameRobberMovePending = false;
 
 function shortPlayerName(name) {
     return Array.from(String(name || '').trim()).slice(0, 5).join('');
@@ -51,14 +53,19 @@ function isActiveCatanPlayer(playerId) {
     return Boolean(name) && !/^(player|playe$)/i.test(name);
 }
 
-function getSetupAction() {
-    if (allPlayersData._turnPhase !== 'setup') return null;
+function getSetupAction(index = Number(allPlayersData._setupIndex) || 0, includeCompleted = false) {
+    if (allPlayersData._turnPhase !== 'setup' && !(includeCompleted && allPlayersData._setupUndoOpen)) return null;
     const order = allPlayersData._turnOrder || [];
-    const index = Number(allPlayersData._setupIndex) || 0;
+    if (!order.length || index < 0 || index >= order.length * 4) return null;
     const cityStage = index >= order.length * 2;
     const stageOrder = cityStage ? [...order].reverse() : order;
     const pair = Math.floor((index % (order.length * 2)) / 2);
     return { player: stageOrder[pair], piece: index % 2 ? 'road' : cityStage ? 'city' : 'house', stage: cityStage ? 'city' : 'house' };
+}
+
+function getSetupUndoAction() {
+    const index = Number(allPlayersData._setupIndex) || 0;
+    return index > 0 ? getSetupAction(index - 1, true) : null;
 }
 
 let setupPlacementPending = false;
@@ -86,6 +93,7 @@ function updateSetupControls() {
         document.getElementById('resourceSelectionTray').hidden = true;
         document.getElementById('selectedCardCount').textContent = '0';
     }
+    updateUndoButton();
 }
 
 async function placeSetupPiece(mouseX, mouseY, threshold) {
@@ -241,13 +249,16 @@ const PROGRESS_CARD_ACTION_HANDLERS = {
     spy: handleSpyProgressCard,
     deserter: handleDeserterProgressCard,
     alchemist: handleAlchemistProgressCard,
-    inventor: handleInventorProgressCard
+    inventor: handleInventorProgressCard,
+    road_building: handleRoadBuildingProgressCard
 };
 const KNIGHT_LEVEL_NAMES = ['', 'basic', 'strong', 'mighty'];
 const INVENTOR_LOCKED_NUMBERS = new Set([2, 6, 8, 12]);
 let diplomatActive = false;
 let pendingDeserterLevel = null;
 let inventorFirstTile = null;
+let inventorRequestPending = false;
+let progressCardUndoPending = false;
 
 function formatCardName(cardName) {
     return String(cardName).replaceAll('_', ' ').replace(/\b\w/g, character => character.toUpperCase());
@@ -267,6 +278,12 @@ function getProgressCardActionConfig(cardName) {
     const myScore = Number(player?.score) || 0;
     const unavailable = message => ({ title: displayName, message, choices: [], confirmLabel: 'OK', unavailable: true });
 
+    if (['resource_monopoly', 'trade_monopoly'].includes(cardName)
+        && allPlayersData._currentTurnPlayerId !== PLAYER_ID) {
+        const currentPlayer = allPlayersData[allPlayersData._currentTurnPlayerId]?.playerName || 'another player';
+        return unavailable(`It is ${currentPlayer}'s turn. Play ${displayName} on your own turn to collect the selected cards automatically.`);
+    }
+
     if (PROGRESS_CARD_PASSIVE_CARDS.has(cardName)) {
         return unavailable('This card is a victory point. It scores automatically, stays in your hand, and does not need to be played.');
     }
@@ -285,7 +302,7 @@ function getProgressCardActionConfig(cardName) {
     if (cardName === 'resource_monopoly') {
         return {
             title: displayName,
-            message: 'Choose a resource to ask every opponent for 2 of.',
+            message: 'Take up to 2 selected resources from each opponent.',
             choices: ['wood', 'brick', 'rock', 'sheep', 'hay'].map(value => ({ value, label: formatCardName(value), image: `/static/images/catan/${value}.webp` }))
         };
     }
@@ -446,6 +463,17 @@ async function playSimpleProgressCard(cardName, detail, logMessage, target) {
     await finishProgressCardPlay(cardName, detail, logMessage, target);
 }
 
+async function handleRoadBuildingProgressCard({ cardName }) {
+    if (allPlayersData._currentTurnPlayerId !== PLAYER_ID || allPlayersData._turnPhase === 'setup'
+        || !allPlayersData[PLAYER_ID].citiesAndKnights.progressCards.includes(cardName)) return;
+    savePlayerStateToHistory();
+    removeOwnProgressCard(cardName);
+    allPlayersData._freeRoads = 2;
+    allPlayersData._freeRoadsPlayerId = PLAYER_ID;
+    selectProgressCardBoardTool('road', 'Place up to two roads for free this turn.');
+    await finishProgressCardPlay(cardName, 'Your next two roads this turn are free.');
+}
+
 function selectProgressCardBoardTool(tool, prompt) {
     selectedPlayerTool = tool;
     document.querySelectorAll('#player-tool-select .btn-tool').forEach(button => button.classList.remove('selected'));
@@ -483,30 +511,38 @@ async function handleMasterMerchantProgressCard({ choice }) {
     );
 }
 
-let tradeMonopolyRequestPending = false;
+let monopolyRequestPending = false;
 
-async function handleTradeMonopolyProgressCard({ choice }) {
-    if (tradeMonopolyRequestPending) return;
-    tradeMonopolyRequestPending = true;
+async function handleMonopolyProgressCard(choice, cardName) {
+    if (monopolyRequestPending) return;
+    if (allPlayersData._currentTurnPlayerId !== PLAYER_ID) {
+        await showProgressCardActionModal(getProgressCardActionConfig(cardName), cardName);
+        return;
+    }
+    monopolyRequestPending = true;
+    const selectionKey = cardName === 'resource_monopoly' ? 'resource' : 'commodity';
     try {
-        const response = await fetch('/catan2/progress_card/trade_monopoly', {
+        const response = await fetch(`/catan2/progress_card/${cardName}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ player_id: PLAYER_ID, commodity: choice })
+            body: JSON.stringify({ player_id: PLAYER_ID, [selectionKey]: choice })
         });
         const result = await response.json();
-        if (!response.ok || result.status !== 'success') throw new Error(result.message || 'Could not play Trade Monopoly.');
-        await loadAllStatesFromBackend();
-        updatePlayerUI();
+        if (!response.ok || result.status !== 'success') throw new Error(result.message || 'Could not play Monopoly.');
+        await refreshCatanState();
     } catch (error) {
         showMessage(error.message, 'error');
     } finally {
-        tradeMonopolyRequestPending = false;
+        monopolyRequestPending = false;
     }
 }
 
+async function handleTradeMonopolyProgressCard({ choice }) {
+    await handleMonopolyProgressCard(choice, 'trade_monopoly');
+}
+
 async function handleResourceMonopolyProgressCard({ choice }) {
-    await playSimpleProgressCard('resource_monopoly', `Ask each opponent for 2 ${choice}.`, `is asking for 2 ${choice}`, choice);
+    await handleMonopolyProgressCard(choice, 'resource_monopoly');
 }
 
 async function handleBishopProgressCard() {
@@ -585,29 +621,43 @@ async function handleAlchemistProgressCard({ choice }) {
     }
 }
 
-function handleInventorProgressCard() {
-    inventorFirstTile = null;
-    selectProgressCardBoardTool('inventor', 'Click two number tokens to swap (2, 6, 8 and 12 cannot be chosen). Press Escape to cancel.');
-    drawBoard();
-}
-
-async function swapNumbersWithInventor(firstTile, secondTile) {
+async function performInventorAction(action, tiles = []) {
+    if (inventorRequestPending || progressCardUndoPending) return false;
+    inventorRequestPending = true;
+    updateUndoButton();
     try {
         const response = await fetch('/catan2/progress_card/inventor', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 player_id: PLAYER_ID,
-                tiles: [{ q: firstTile.q, r: firstTile.r }, { q: secondTile.q, r: secondTile.r }]
+                action,
+                tiles: tiles.map(tile => ({ q: tile.q, r: tile.r }))
             })
         });
         const result = await response.json();
         if (!response.ok || result.status !== 'success') throw new Error(result.message || 'Could not play Inventor');
-        removeOwnProgressCard('inventor');
-        updatePlayerUI();
-        showMessage(`Inventor played. Swapped ${firstTile.number} and ${secondTile.number}.`);
+        await refreshCatanState();
+        return true;
     } catch (error) {
+        await refreshCatanState();
         showMessage(error.message, 'error');
+        return false;
+    } finally {
+        inventorRequestPending = false;
+        updateUndoButton();
+    }
+}
+
+async function handleInventorProgressCard() {
+    if (await performInventorAction('play')) {
+        showMessage('Select two number tokens. 2, 6, 8 and 12 cannot be chosen. Use Undo to reverse each step.');
+    }
+}
+
+async function swapNumbersWithInventor(firstTile, secondTile) {
+    if (await performInventorAction('swap', [firstTile, secondTile])) {
+        showMessage(`Inventor played. Swapped ${firstTile.number} and ${secondTile.number}.`);
     }
 }
 
@@ -906,6 +956,10 @@ async function applyBoardPieceAction(action) {
     await saveAllPlayerStatesToBackend();
 }
 
+function canKnightTakeAction(knight) {
+    return knight?.active === true && knight.activatedThisTurn !== true;
+}
+
 function openKnightActionMenu(knight) {
     setKnightMenuToolbarLock(true);
     selectedKnightActionTarget = knight;
@@ -927,12 +981,14 @@ function openKnightActionMenu(knight) {
     payUpButton.disabled = Boolean(levelUpBlockReason);
     payUpButton.title = levelUpBlockReason || `Pay 1 rock and 1 sheep to level up to ${levelNames[level + 1]}`;
     payUpButton.setAttribute('aria-label', payUpButton.title);
-    moveButton.disabled = !knight.active;
-    moveButton.title = knight.active ? 'Choose a destination on one of your roads' : 'Activate this knight before moving it';
+    const activationWait = knight.active && knight.activatedThisTurn === true;
+    moveButton.disabled = !canKnightTakeAction(knight);
+    moveButton.title = activationWait ? 'Wait until your next turn after activating this knight'
+        : knight.active ? 'Choose a destination on one of your roads' : 'Activate this knight before moving it';
     moveButton.setAttribute('aria-label', moveButton.title);
     const robberNearby = isRobberAdjacentToJunction(knight.junction);
-    attackButton.disabled = !knight.active || !robberNearby;
-    attackButton.title = !knight.active
+    attackButton.disabled = !canKnightTakeAction(knight) || !robberNearby;
+    attackButton.title = activationWait ? 'Wait until your next turn after activating this knight' : !knight.active
         ? 'Activate this knight before attacking'
         : robberNearby ? 'Move the robber from an adjacent hex' : 'No robber in an adjacent hex';
     attackButton.setAttribute('aria-label', attackButton.title);
@@ -981,6 +1037,7 @@ async function applyKnightAction(action) {
         savePlayerStateToHistory();
         player.hand.splice(grainIndex, 1);
         knight.active = true;
+        knight.activatedThisTurn = true;
         actionMessage = 'activated a knight';
     } else if (action === 'remove') {
         savePlayerStateToHistory();
@@ -1146,31 +1203,12 @@ if (modalConfirmBtn && modalCancelBtn) {
 }
 
 function preloadImages() {
-    let imagesToLoad = Object.keys(resourceImagePaths).length;
-    if (imagesToLoad === 0) {
-        loadAllStatesFromBackend();
-        return;
-    }
-
-    for (const type in resourceImagePaths) {
-        const img = new Image();
-        img.src = resourceImagePaths[type];
-        img.onload = () => {
-            loadedResourceImages[type] = img;
-            imagesToLoad--;
-            if (imagesToLoad === 0) {
-                loadAllStatesFromBackend();
-            }
-        };
-        img.onerror = () => {
-            console.error(`Failed to load image for ${type}: ${resourceImagePaths[type]}`);
-            loadedResourceImages[type] = null;
-            imagesToLoad--;
-            if (imagesToLoad === 0) {
-                loadAllStatesFromBackend();
-            }
-        };
-    }
+    return Promise.all(Object.entries(resourceImagePaths).map(([type, path]) => new Promise(resolve => {
+        const image = new Image();
+        image.onload = () => { loadedResourceImages[type] = image; resolve(); };
+        image.onerror = () => { loadedResourceImages[type] = null; resolve(); };
+        image.src = path;
+    })));
 }
 
 function drawBoard() {
@@ -1178,23 +1216,49 @@ function drawBoard() {
     ctx.save();
     ctx.scale(boardScale, boardScale);
 
+    const lastDice = allPlayersData.lastDiceRoll?.dice;
+    const lastTotal = Array.isArray(lastDice) ? lastDice[0] + lastDice[1] : null;
     boardTiles.forEach(tile => {
         const pixel = hexToPixel(tile.q, tile.r, offsetX, offsetY);
         const image = loadedResourceImages[tile.type];
         drawHex(ctx, pixel.x, pixel.y, TILE_RADIUS, RESOURCE_COLORS[tile.type], image);
+        if (lastTotal !== null && lastTotal !== 7 && tile.number === lastTotal && tile.type !== 'desert') {
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 222, 0, 0.18)';
+            ctx.fill();
+            ctx.strokeStyle = '#ffde00';
+            ctx.lineWidth = 5;
+            ctx.shadowColor = '#ffde00';
+            ctx.shadowBlur = 18;
+            ctx.stroke();
+            ctx.restore();
+        }
         if (tile.number !== null) {
             drawNumber(ctx, pixel.x, pixel.y, tile.number);
+        }
+        if (isPlayerPage && selectedPlayerTool === 'inventor' && inventorFirstTile
+            && tile.q === inventorFirstTile.q && tile.r === inventorFirstTile.r) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(pixel.x, pixel.y, NUMBER_RADIUS + 5, 0, Math.PI * 2);
+            ctx.strokeStyle = '#ffde00';
+            ctx.lineWidth = 5;
+            ctx.shadowColor = '#ffde00';
+            ctx.shadowBlur = 16;
+            ctx.stroke();
+            ctx.restore();
         }
     });
 
     for (const playerId in allPlayersData) {
         if (playerId.startsWith('player')){
             const playerData = allPlayersData[playerId];
-            if (playerData && playerData.roads && playerData.structures) {
-                playerData.roads.forEach(road => {
-                    drawRoad(ctx, road.edge, PLAYER_COLORS[road.owner], offsetX, offsetY);
+            if (playerData) {
+                (playerData.roads || []).forEach(road => {
+                    const edge = getBoardRoadEdge(road, allEdges);
+                    if (edge) drawRoad(ctx, edge, PLAYER_COLORS[road.owner] || PLAYER_COLORS[playerId] || '#555555', offsetX, offsetY);
                 });
-                playerData.structures.forEach(structure => {
+                (playerData.structures || []).forEach(structure => {
                     const ownerColor = PLAYER_COLORS[structure.owner];
                     if (structure.type === 'house') {
                         drawHouse(ctx, structure.junction, ownerColor, offsetX, offsetY);
@@ -1220,7 +1284,7 @@ function drawBoard() {
     }
 
     if (isRobberOnBoard()) {
-        const robberReady = isPlayerPage && canPlayerMoveRobber();
+        const robberReady = (isPlayerPage && canPlayerMoveRobber()) || (isGamePage && gameRobberMoveSelected);
         const revealNumber = isPlayerPage && selectedPlayerTool === 'inventor';
         if (robberReady && !revealNumber) drawRobberReadyGlow();
         ctx.save();
@@ -1416,13 +1480,34 @@ function savePlayerStateToHistory() {
     updateUndoButton();
 }
 
+function canPlayerUndoLastAction() {
+    if (!isPlayerPage || setupPlacementPending || inventorRequestPending || progressCardUndoPending) return false;
+    if (allPlayersData._turnPhase === 'setup' || allPlayersData._setupUndoOpen) {
+        return getSetupUndoAction()?.player === PLAYER_ID;
+    }
+    const stack = Array.isArray(allPlayersData._undoStack) ? allPlayersData._undoStack : [];
+    const latest = stack.at(-1);
+    const owner = latest?.player || latest?.state?._currentTurnPlayerId;
+    return allPlayersData._currentTurnPlayerId === PLAYER_ID && owner === PLAYER_ID;
+}
+
 function updateUndoButton() {
     const button = document.getElementById('undoButton');
     if (!button) return;
+    if (allPlayersData._turnPhase === 'setup' || allPlayersData._setupUndoOpen) {
+        const step = getSetupUndoAction();
+        const canUndo = canPlayerUndoLastAction();
+        button.disabled = !canUndo;
+        button.title = canUndo ? `Undo your setup ${step.piece}`
+            : step ? 'Wait for the latest setup action to be undone by its owner' : 'No setup actions to undo';
+        button.setAttribute('aria-disabled', String(!canUndo));
+        return;
+    }
     const undoCount = Array.isArray(allPlayersData._undoStack) ? allPlayersData._undoStack.length : 0;
-    button.disabled = undoCount === 0;
-    button.title = undoCount > 0 ? `Undo last action (${undoCount} available)` : 'Undo unavailable';
-    button.setAttribute('aria-disabled', String(undoCount === 0));
+    const canUndo = canPlayerUndoLastAction();
+    button.disabled = !canUndo;
+    button.title = canUndo ? `Undo last action (${undoCount} available)` : 'Undo unavailable';
+    button.setAttribute('aria-disabled', String(!canUndo));
 }
 
 let turnRequestPending = false;
@@ -1519,6 +1604,7 @@ document.getElementById('undoButton')?.addEventListener('click', () => {
 
 function canPlayerMoveRobber() {
     return isPlayerPage
+        && Object.keys(allPlayersData._pendingDiscards || {}).length === 0
         && allPlayersData._robberMoveAvailable === true
         && allPlayersData._robberMovePlayerId === PLAYER_ID;
 }
@@ -1581,7 +1667,36 @@ function selectRobberTool() {
 }
 
 async function undoPlayerLastAction() {
-    if (allPlayersData._turnPhase === 'setup') return;
+    if (!canPlayerUndoLastAction()) {
+        updateUndoButton();
+        return;
+    }
+    if (allPlayersData._turnPhase === 'setup' || allPlayersData._setupUndoOpen) {
+        const step = getSetupUndoAction();
+        if (!isPlayerPage || setupPlacementPending || step?.player !== PLAYER_ID) return;
+        setupPlacementPending = true;
+        updateSetupControls();
+        try {
+            const response = await fetch('/catan2/setup_undo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ player_id: PLAYER_ID, setup_index: allPlayersData._setupIndex })
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== 'success') throw new Error(result.message || 'Could not undo setup placement.');
+            selectedPlayerTool = null;
+            selectedRoadStartJunction = null;
+            await refreshCatanState();
+        } catch (error) {
+            await refreshCatanState();
+            showMessage(error.message, 'error');
+        } finally {
+            setupPlacementPending = false;
+            updateSetupControls();
+        }
+        return;
+    }
+    if (!isPlayerPage || allPlayersData._currentTurnPlayerId !== PLAYER_ID) return;
     const undoStack = Array.isArray(allPlayersData._undoStack) ? allPlayersData._undoStack : [];
     if (!isPlayerPage || undoStack.length === 0) {
         showMessage('No actions to undo since the last dice roll.', 'error');
@@ -1590,6 +1705,8 @@ async function undoPlayerLastAction() {
     }
 
     if (undoStack[undoStack.length - 1]?.serverUndo) {
+        progressCardUndoPending = true;
+        updateUndoButton();
         try {
             const response = await fetch('/catan2/progress_card/undo', {
                 method: 'POST',
@@ -1598,13 +1715,19 @@ async function undoPlayerLastAction() {
             });
             const result = await response.json();
             if (!response.ok || result.status !== 'success') throw new Error(result.message || 'Could not undo');
+            await refreshCatanState();
             showMessage('Last action undone.');
         } catch (error) {
+            await refreshCatanState();
             showMessage(error.message, 'error');
+        } finally {
+            progressCardUndoPending = false;
+            updateUndoButton();
         }
         return;
     }
 
+    if (undoStack.at(-1)?.state?._currentTurnPlayerId !== PLAYER_ID) return;
     const snapshot = undoStack.pop();
     allPlayersData = JSON.parse(JSON.stringify(snapshot.state));
     allPlayersData._undoStack = undoStack;
@@ -1779,7 +1902,7 @@ async function saveBoardTilesToBackend() {
 
 async function loadBoardTilesFromBackend() {
     try {
-        const response = await fetch('/catan2/load_board');
+        const response = await fetch('/catan2/load_board', { cache: 'no-store' });
         const result = await response.json();
         boardEditingAllowed = result.editable === true;
         updateBoardEditingUI();
@@ -1871,9 +1994,6 @@ async function saveAllPlayerStatesToBackend(forceSave = false) {
             showMessage('Network error saving all player states: ' + e.message, 'error');
         }
     }
-    console.log('sending signal');
-    socket.emit('catan2_update');
-    console.log('sent signal');
 
     
     
@@ -1882,7 +2002,7 @@ async function saveAllPlayerStatesToBackend(forceSave = false) {
 
 async function loadAllPlayerStatesFromBackend() {
     try {
-        const response = await fetch('/catan2/load_play_state');
+        const response = await fetch('/catan2/load_play_state', { cache: 'no-store' });
         
         const result = await response.json();
         if (result.status === 'success' && result.play_state) {
@@ -1909,13 +2029,34 @@ async function loadAllPlayerStatesFromBackend() {
             allPlayersData._undoStack = Array.isArray(loadedStates._undoStack) ? loadedStates._undoStack.slice(-3) : [];
             allPlayersData._turnOrder = Array.isArray(loadedStates._turnOrder) ? loadedStates._turnOrder : [];
             allPlayersData._currentTurnPlayerId = loadedStates._currentTurnPlayerId || allPlayersData._turnOrder[0] || null;
+            allPlayersData._inventorSelection = loadedStates._inventorSelection || null;
+            if (isPlayerPage) {
+                const selection = allPlayersData._inventorSelection;
+                if (selection?.player === PLAYER_ID && allPlayersData._currentTurnPlayerId === PLAYER_ID) {
+                    selectedPlayerTool = 'inventor';
+                    inventorFirstTile = selection.first
+                        ? boardTiles.find(tile => tile.q === selection.first.q && tile.r === selection.first.r) || selection.first
+                        : null;
+                } else if (selectedPlayerTool === 'inventor') {
+                    selectedPlayerTool = null;
+                    inventorFirstTile = null;
+                }
+            }
+            allPlayersData._freeRoads = Number(loadedStates._freeRoads) || 0;
+            allPlayersData._freeRoadsPlayerId = loadedStates._freeRoadsPlayerId
+                || (allPlayersData._freeRoads > 0 ? loadedStates._currentTurnPlayerId : null);
             allPlayersData._turnRolled = loadedStates._turnRolled === true;
             allPlayersData._gameStarted = loadedStates._gameStarted !== false;
             allPlayersData._turnPhase = loadedStates._turnPhase || null;
             allPlayersData._setupIndex = Number(loadedStates._setupIndex) || 0;
+            allPlayersData._setupUndoOpen = loadedStates._setupUndoOpen === true;
             allPlayersData._colorsReady = result.colors_ready !== false;
             allPlayersData._robberMoveAvailable = loadedStates._robberMoveAvailable === true;
             allPlayersData._robberMovePlayerId = loadedStates._robberMovePlayerId || null;
+            allPlayersData._pendingDiscards = loadedStates._pendingDiscards || {};
+            if (isPlayerPage && allPlayersData._pendingDiscards[PLAYER_ID]) {
+                showMessage('A seven was rolled. Select one or more hand cards and drop them before the robber can move.');
+            }
             allPlayersData.lastDiceRoll = loadedStates.lastDiceRoll || null;
             allPlayersData.vpAwardLog = Array.isArray(loadedStates.vpAwardLog) ? loadedStates.vpAwardLog : [];
             allPlayersData.activityLog = Array.isArray(loadedStates.activityLog) ? loadedStates.activityLog : [];
@@ -1971,10 +2112,11 @@ async function resetgame()
 {
     try {
             const response = await fetch('/catan2/reset_game', {
-
+                cache: 'no-store'
             });
             const result = await response.json();
             if (result.status === 'success') {
+                await refreshCatanState();
                 showMessage(result.message);
             } else {
                 console.error('Error reseting game:', result.message);
@@ -2175,6 +2317,10 @@ async function chooseRobberVictim(tile) {
 }
 
 function finishRobberMove(tile) {
+    if (Object.keys(allPlayersData._pendingDiscards || {}).length) {
+        showMessage('Wait for all required players to drop cards before moving the robber.', 'error');
+        return false;
+    }
     const currentRobber = allPlayersData.robber;
     if (currentRobber && currentRobber.q === tile.q && currentRobber.r === tile.r) {
         showMessage('The robber is already on this tile.', 'info');
@@ -2208,6 +2354,7 @@ function getClosestJunction(px, py, threshold = 20) {
 function getClosestEdge(px, py, threshold = 20, middleOnly = false) {
     let closestEdge = null;
     let minDistance = Infinity;
+    let ambiguous = false;
 
     allEdges.forEach(edge => {
         const edgeX1 = edge.x1 + offsetX;
@@ -2244,21 +2391,25 @@ function getClosestEdge(px, py, threshold = 20, middleOnly = false) {
         const dy = py - yy;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist < minDistance && dist < threshold) {
+        if (dist >= threshold) return;
+        if (Math.abs(dist - minDistance) <= 0.000001) {
+            ambiguous = true;
+        } else if (dist < minDistance) {
             minDistance = dist;
             closestEdge = edge;
+            ambiguous = false;
         }
     });
-    return closestEdge;
+    return ambiguous ? null : closestEdge;
 }
 
 canvas.addEventListener('click', async (event) => {
+    if (isPlayerPage && (inventorRequestPending || progressCardUndoPending)) return;
     // Robber moves clear selectedPlayerTool mid-handler, so remember the tool for logging.
-    const toolAtClick = selectedPlayerTool;
-    if (isGamePage && selectedTool === 'swap' && !boardEditingAllowed) {
-        showMessage('Reset the game before editing the board.', 'error');
-        return;
-    }
+    const inventorActive = isPlayerPage && allPlayersData._inventorSelection?.player === PLAYER_ID
+        && allPlayersData._currentTurnPlayerId === PLAYER_ID;
+    const toolAtClick = inventorActive ? 'inventor' : canPlayerMoveRobber() ? 'robber' : selectedPlayerTool;
+    if (toolAtClick === 'robber' || inventorActive) selectedPlayerTool = toolAtClick;
 
     const rect = canvas.getBoundingClientRect();
     console.log("rect size: "+rect.width+":"+rect.height);
@@ -2267,7 +2418,51 @@ canvas.addEventListener('click', async (event) => {
     const mouseX = (event.clientX - rect.left) * scaleX / boardScale;
     const mouseY = (event.clientY - rect.top) * scaleY / boardScale;
 
-    if (isPlayerPage) {
+    if (isGamePage) {
+        if (gameRobberMovePending) return;
+        if (gameRobberMoveSelected) {
+            const destination = pixelToHex(mouseX, mouseY, offsetX, offsetY);
+            const tile = boardTiles.find(candidate => candidate.q === destination.q && candidate.r === destination.r);
+            if (!tile) return;
+            gameRobberMovePending = true;
+            try {
+                const response = await fetch('/catan2/correct_robber', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ q: tile.q, r: tile.r })
+                });
+                const result = await response.json();
+                if (!response.ok || result.status !== 'success') {
+                    showMessage(result.message || 'Could not move the robber.', 'error');
+                    return;
+                }
+                allPlayersData.robber = { q: tile.q, r: tile.r };
+                gameRobberMoveSelected = false;
+                drawBoard();
+                await refreshCatanState();
+            } catch (error) {
+                showMessage('Could not move the robber: ' + error.message, 'error');
+            } finally {
+                gameRobberMovePending = false;
+            }
+            return;
+        }
+        if (isClickOnRobber(mouseX, mouseY)) {
+            gameRobberMoveSelected = true;
+            selectedTool = null;
+            selectedSwapItem1 = null;
+            selectedSwapItem2 = null;
+            updateBoardEditingUI();
+            drawBoard();
+            return;
+        }
+        if (selectedTool === 'swap' && !boardEditingAllowed) {
+            showMessage('Reset the game before editing the board.', 'error');
+            return;
+        }
+    }
+
+    if (isPlayerPage && selectedPlayerTool !== 'robber') {
         if (allPlayersData._turnPhase === 'setup') {
             await placeSetupPiece(mouseX, mouseY, 20 * Math.max(scaleX, scaleY) / boardScale);
             return;
@@ -2280,7 +2475,7 @@ canvas.addEventListener('click', async (event) => {
                 showMessage('Click near an edge to place the road.', 'error');
                 return;
             }
-            if (targetEdge.id === movingRoad.edge.id) {
+            if (targetEdge.id === getBoardRoadEdge(movingRoad, allEdges)?.id) {
                 selectedRoadToMove = null;
                 setKnightMenuToolbarLock(false);
                 showMessage('Road move cancelled.');
@@ -2288,7 +2483,7 @@ canvas.addEventListener('click', async (event) => {
             }
             const edgeOccupied = Object.keys(allPlayersData).some(playerId =>
                 playerId.startsWith('player')
-                && (allPlayersData[playerId].roads || []).some(road => road.edge?.id === targetEdge.id)
+                && (allPlayersData[playerId].roads || []).some(road => getBoardRoadEdge(road, allEdges)?.id === targetEdge.id)
             );
             if (edgeOccupied) {
                 showMessage('A road already occupies that edge.', 'error');
@@ -2311,6 +2506,12 @@ canvas.addEventListener('click', async (event) => {
 
         if (selectedKnightToMove) {
             const movingKnight = selectedKnightToMove;
+            if (!canKnightTakeAction(movingKnight)) {
+                selectedKnightToMove = null;
+                setKnightMenuToolbarLock(false);
+                showMessage('This knight cannot act until your next turn after activation.', 'error');
+                return;
+            }
             if (!clickedJunction) {
                 showMessage('Click an empty intersection connected to one of your roads.', 'error');
                 return;
@@ -2348,13 +2549,6 @@ canvas.addEventListener('click', async (event) => {
             return;
         }
 
-        if (canPlayerMoveRobber() && selectedPlayerTool !== 'robber' && isClickOnRobber(mouseX, mouseY)) {
-            selectedPlayerTool = null;
-            document.querySelectorAll('#player-tool-select .btn-tool').forEach(button => button.classList.remove('selected'));
-            openBoardPieceActionMenu('robber', allPlayersData.robber);
-            return;
-        }
-
         if (selectedPlayerTool === 'inventor') {
             const clickedHex = pixelToHex(mouseX, mouseY, offsetX, offsetY);
             const clickedTile = boardTiles.find(tile => tile.q === clickedHex.q && tile.r === clickedHex.r);
@@ -2366,15 +2560,14 @@ canvas.addEventListener('click', async (event) => {
                 showMessage('2, 6, 8 and 12 cannot be swapped.', 'error');
                 return;
             }
-            if (!inventorFirstTile || (inventorFirstTile.q === clickedTile.q && inventorFirstTile.r === clickedTile.r)) {
-                inventorFirstTile = clickedTile;
-                showMessage(`Number ${clickedTile.number} selected. Click a second number to swap with.`);
+            if (!inventorFirstTile) {
+                if (await performInventorAction('select', [clickedTile])) {
+                    showMessage(`Number ${clickedTile.number} selected. Click a second number to swap with.`);
+                }
                 return;
             }
+            if (inventorFirstTile.q === clickedTile.q && inventorFirstTile.r === clickedTile.r) return;
             const firstTile = inventorFirstTile;
-            inventorFirstTile = null;
-            selectedPlayerTool = null;
-            drawBoard();
             await swapNumbersWithInventor(firstTile, clickedTile);
             return;
         }
@@ -2547,12 +2740,6 @@ canvas.addEventListener('click', async (event) => {
                     {
                         allPlayersData[PLAYER_ID].structures.push({ type: selectedPlayerTool, junction: clickedJunction, owner: PLAYER_ID });
                         showMessage(`${selectedPlayerTool} placed!`);
-                const roadCount = (allPlayersData[PLAYER_ID].roads || []).length;
-                if (roadCount >= PLAYER_PIECE_LIMITS.road) {
-                    showMessage('You have already placed all 15 roads.', 'error');
-                    return;
-                }
-
                         updatePlayerUI();
                         actionSuccessful = true;
                     }
@@ -2612,12 +2799,16 @@ canvas.addEventListener('click', async (event) => {
                 }
             }
         } else if (selectedPlayerTool === 'road') {
+            if (allPlayersData[PLAYER_ID].roads.filter(road => getBoardRoadEdge(road, allEdges)).length >= PLAYER_PIECE_LIMITS.road) {
+                showMessage('You have already placed all 15 roads.', 'error');
+                return;
+            }
             const clickedEdge = getClosestEdge(mouseX, mouseY);
             if (clickedEdge) {
                 let existingRoad = false;
                 for (const pId in allPlayersData) {
                     if (pId.startsWith('player')){
-                        if (allPlayersData[pId].roads.some(r => r.edge.id === clickedEdge.id)) {
+                        if ((allPlayersData[pId].roads || []).some(road => getBoardRoadEdge(road, allEdges)?.id === clickedEdge.id)) {
                             existingRoad = true;
                             break;
                         }
@@ -2637,7 +2828,7 @@ canvas.addEventListener('click', async (event) => {
                     }
                 }
             } else {
-                showMessage('Click near an edge to place a road.', 'error');
+                showMessage('Click near the middle of an edge to place a road.', 'error');
             }
         } else if (selectedPlayerTool === 'wall') {
             const clickedJunction = getClosestJunction(mouseX, mouseY);
@@ -2798,7 +2989,7 @@ if (isPlayerPage) {
         if (!actionButton || actionButton.disabled) return;
         if (actionButton.dataset.knightAction === 'attack') {
             const attackingKnight = selectedKnightActionTarget;
-            if (!attackingKnight?.active || !isRobberAdjacentToJunction(attackingKnight.junction)) return;
+            if (!canKnightTakeAction(attackingKnight) || !isRobberAdjacentToJunction(attackingKnight.junction)) return;
             savePlayerStateToHistory();
             attackingKnight.active = false;
             allPlayersData._robberMoveAvailable = true;
@@ -2806,15 +2997,15 @@ if (isPlayerPage) {
             selectedKnightActionTarget = null;
             knightActionModal.classList.add('hidden');
             setKnightMenuToolbarLock(false);
-            showMessage('Attack ready. Select the Robber tool, then click a hex to move the robber.');
-            socket.emit('catan2_game_action_log', { pid: PLAYER_ID, message: 'used a knight attack to enable moving the robber' });
+            showMessage('Attack ready. Click a hex to move the robber.');
+            socket.emit('catan2_game_action_log', { pid: PLAYER_ID, message: 'moved robber' });
             drawBoard();
             updatePlayerUI();
             await saveAllPlayerStatesToBackend();
             return;
         }
         if (actionButton.dataset.knightAction === 'move') {
-            if (!selectedKnightActionTarget?.active) return;
+            if (!canKnightTakeAction(selectedKnightActionTarget)) return;
             selectedKnightToMove = selectedKnightActionTarget;
             selectedKnightActionTarget = null;
             knightActionModal.classList.add('hidden');
@@ -2826,7 +3017,11 @@ if (isPlayerPage) {
 
     window.addEventListener('keydown', event => {
         if (event.key !== 'Escape') return;
-        if (selectedPlayerTool === 'inventor' || selectedPlayerTool === 'deserter') {
+        if (selectedPlayerTool === 'inventor') {
+            void undoPlayerLastAction();
+            return;
+        }
+        if (selectedPlayerTool === 'deserter') {
             selectedPlayerTool = null;
             inventorFirstTile = null;
             pendingDeserterLevel = null;
@@ -3055,6 +3250,13 @@ if (isPlayerPage) {
 
 function checkAndDeductCards(playerId, actionType, recordUndo = false) {
     if (allPlayersData._turnPhase === 'setup') return false;
+    if (actionType === 'road' && allPlayersData._freeRoads > 0
+        && allPlayersData._freeRoadsPlayerId === playerId
+        && allPlayersData._currentTurnPlayerId === playerId) {
+        if (recordUndo) savePlayerStateToHistory();
+        allPlayersData._freeRoads--;
+        return true;
+    }
     const playerHand = allPlayersData[playerId].hand;
     const requiredCards = CARD_COSTS[actionType];
 
@@ -3274,7 +3476,7 @@ function resolveProgressCardImageUrl(cardName) {
         diplomat: 'diplomat.webp',
         intrigue: 'intrigue.webp',
         saboteur: 'sabotour.webp',
-        spy: 'dev_card.webp',
+        spy: 'spy.webp',
         deserter: 'deserter.webp',
         victory_point: 'victory_point.webp',
         printer: 'printer.webp',
@@ -3288,8 +3490,8 @@ function resolveProgressCardImageUrl(cardName) {
         medicine: 'medicine.webp',
         smith: 'smith.webp',
         road_building: 'roadbuilding.webp',
-        harbor: 'dev_card.webp',
-        warlord: 'dev_card.webp',
+        harbor: 'commercial_harbour.webp',
+        warlord: 'warlord.webp',
         wedding: 'wedding.webp',
         progress: 'dev_card.webp'
     };
@@ -3538,6 +3740,26 @@ async function transferOrDropSelectedCards(currentPlayerId, targetPlayerId) {
         counts[resourceType] = (counts[resourceType] || 0) + 1;
         return counts;
     }, {});
+    if (targetPlayerId === 'NA' && allPlayersData._pendingDiscards?.[currentPlayerId]) {
+        try {
+            const response = await fetch('/catan2/discard_cards', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ player_id: currentPlayerId, cards: transferredCards })
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== 'success') throw new Error(result.message || 'Could not drop cards.');
+            selectedHandCards = [];
+            document.getElementById('selectedCardCount').textContent = '0';
+            updateResourceSelectionTray('drop');
+            socket.emit('catan2_game_action_log', { pid: currentPlayerId, action: 'dropped', cards: cardCounts, message: 'dropped cards after a seven' });
+            await loadAllPlayerStatesFromBackend();
+            updatePlayerUI();
+        } catch (error) {
+            showMessage(error.message, 'error');
+        }
+        return;
+    }
     //fix: add code to update counter
     savePlayerStateToHistory(); // Save current state before modification
     selectedHandCards.forEach(item => {
@@ -3580,6 +3802,10 @@ async function transferOrDropSelectedCards(currentPlayerId, targetPlayerId) {
 }
 async function stealCards(currentPlayerId, targetPlayerId) {
     if (allPlayersData._turnPhase === 'setup') return;
+    if (Object.keys(allPlayersData._pendingDiscards || {}).length) {
+        showMessage('Wait for all required players to drop cards before stealing.', 'error');
+        return;
+    }
     savePlayerStateToHistory(); // Save current state before modification
     const targetHandCards = allPlayersData[targetPlayerId].hand;
     let stolenCard = null;
@@ -3804,6 +4030,7 @@ function clearTurnRequestPending() {
 }
 socket.on('catan2_undo_history_reset', () => {
     allPlayersData._undoStack = [];
+    if (allPlayersData._turnPhase !== 'setup') allPlayersData._setupUndoOpen = false;
     updateUndoButton();
 });
 
@@ -3834,6 +4061,11 @@ socket.on('catan2_turn_ended_broadcast', data => {
     allPlayersData._turnPhase = data?.phase || allPlayersData._turnPhase;
     allPlayersData._robberMoveAvailable = false;
     allPlayersData._robberMovePlayerId = null;
+    allPlayersData._freeRoads = 0;
+    allPlayersData._freeRoadsPlayerId = null;
+    allPlayersData._undoStack = [];
+    allPlayersData._pendingDiscards = {};
+    updateUndoButton();
     clearTurnRequestPending();
     updateRobberToolAvailability();
     renderGameScoreboard();
@@ -3858,6 +4090,7 @@ socket.on('catan2_roll_dice_broadcast', (data) => {
     allPlayersData._turnRolled = true;
     allPlayersData._robberMoveAvailable = data?.robber_move_available === true;
     allPlayersData._robberMovePlayerId = data?.robber_move_player || null;
+    allPlayersData._pendingDiscards = data?.pending_discards || {};
     allPlayersData.lastDiceRoll = {
         dice, event_die: eventFace, player: data.current_player,
         player_name: shortPlayerName(data.player_name || allPlayersData[data.current_player]?.playerName)
@@ -3866,6 +4099,7 @@ socket.on('catan2_roll_dice_broadcast', (data) => {
     updateRobberToolAvailability();
     renderGameScoreboard();
     showSharedDiceRoll(dice, eventFace, data?.alchemist === true);
+    drawBoard();
 });
 
 let progressCardPopupTimeout = null;
@@ -3943,12 +4177,19 @@ function renderVpAwardLog() {
         const item = document.createElement('li');
         const description = document.createElement('span');
         description.textContent = award.type === 'metropolis'
-            ? `${award.track} Metrop > ${award.playerName}`
+            ? `${award.track} Metrop > `
             : award.type === 'title'
-                ? `${award.title} > ${award.playerName}`
+                ? `${award.title} > `
                 : award.type === 'progress_vp'
-                    ? `${award.playerName} > (VP) ${award.card}`
-                    : `Victory Point > ${award.playerName}`;
+                    ? ''
+                    : 'Victory Point > ';
+        const playerName = document.createElement('strong');
+        playerName.className = 'c2-vp-log-player';
+        playerName.textContent = award.playerName;
+        description.appendChild(playerName);
+        if (award.type === 'progress_vp') {
+            description.appendChild(document.createTextNode(` > (VP) ${award.card}`));
+        }
         item.appendChild(description);
         log.appendChild(item);
     });
@@ -3970,7 +4211,7 @@ function renderActivityLog() {
         const received = displayEntries[index];
         const played = displayEntries[index + 1];
         if (received.action === 'received' && played.action === 'played'
-            && played.card === 'trade_monopoly' && received.pid === played.pid) {
+            && ['trade_monopoly', 'resource_monopoly'].includes(played.card) && received.pid === played.pid) {
             [displayEntries[index], displayEntries[index + 1]] = [played, received];
             index++;
         }
@@ -4038,13 +4279,18 @@ function renderActivityLog() {
         }
         if (['progress_draw', 'progress_drop', 'progress_replace'].includes(action)
             || action === 'picked' && entry.kind === 'pick' && !Object.keys(entry.cards || {}).length) {
-            appendCard('/static/images/catan/dev_card.webp', 1, 'Progress card');
+            const recordedDeck = entry.deck || String(entry.message || '').match(/\b(?:drew|took)\s+(politics|trade|science)\b/i)?.[1]?.toLowerCase();
+            const deck = ['politics', 'trade', 'science'].includes(recordedDeck) ? recordedDeck : null;
+            const cardBack = deck ? `/static/images/catan/progressbook/${deck}_b.webp` : '/static/images/catan/dev_card.webp';
+            const cardDescription = deck ? `${formatCardName(deck)} progress card` : 'Progress card';
+            appendCard(action === 'progress_replace' ? '/static/images/catan/dev_card.webp' : cardBack,
+                1, action === 'progress_replace' ? 'Progress card' : cardDescription);
             if (action === 'progress_replace') {
                 const arrow = document.createElement('i');
                 arrow.className = 'fas fa-arrow-right';
                 arrow.setAttribute('aria-hidden', 'true');
                 item.appendChild(arrow);
-                appendCard('/static/images/catan/dev_card.webp', 1, 'Progress card');
+                appendCard(cardBack, 1, cardDescription);
             }
         } else if (action === 'played' && entry.card) {
             appendCard(resolveProgressCardImageUrl(entry.card), 1, formatCardName(entry.card), true);
@@ -4115,12 +4361,24 @@ function renderGameScoreboard() {
         row.classList.toggle('c2-score-inactive', /^playe/i.test(String(player.playerName || '').trim()));
         row.classList.toggle('c2-score-active', playerId === allPlayersData._currentTurnPlayerId);
         row.cells[0].textContent = player.playerName;
+        if (player.longestroad) {
+            const roadIcon = document.createElement('i');
+            roadIcon.className = 'fas fa-road';
+            roadIcon.title = 'Longest road';
+            roadIcon.setAttribute('role', 'img');
+            roadIcon.setAttribute('aria-label', 'Longest road');
+            row.cells[0].appendChild(document.createTextNode(' '));
+            row.cells[0].appendChild(roadIcon);
+        }
         row.cells[1].textContent = player.score;
         row.cells[2].textContent = `${player.hand.length}-${(player.citiesAndKnights?.progressCards || []).length}`;
         const improvements = player.citiesAndKnights?.improvements || {};
-        row.cells[3].textContent = (player.structures || []).reduce((total, structure) =>
-            total + (structure.type === 'knight' && structure.active === true
-                ? Math.max(1, Math.min(3, Number(structure.knightLevel) || 1)) : 0), 0);
+        const knights = (player.structures || []).filter(structure => structure.type === 'knight');
+        const knightStrength = knight => Math.max(1, Math.min(3, Number(knight.knightLevel) || 1));
+        const totalStrength = knights.reduce((total, knight) => total + knightStrength(knight), 0);
+        const activeStrength = knights.reduce((total, knight) => total + (knight.active === true ? knightStrength(knight) : 0), 0);
+        row.cells[3].textContent = `${totalStrength}(${activeStrength})`;
+        row.cells[3].title = `${totalStrength} knight strength (${activeStrength} active strength)`;
         row.cells[4].textContent = getPlayerVictoryPoints(player);
         row.cells[5].textContent = getPlayerMetropolisCount(playerId);
         row.cells[6].textContent = ['trade', 'politics', 'science'].map(track =>
@@ -4354,7 +4612,7 @@ if (awardTitleButton) {
     });
 }
 async function onCatanPlayerPageLoad() {
-    await loadAllStatesFromBackend();
+    await refreshCatanState();
     const registeredName = shortPlayerName(window.PLAYER_NAME);
     if (registeredName && allPlayersData[PLAYER_ID].playerName !== registeredName) {
         allPlayersData[PLAYER_ID].playerName = registeredName;
@@ -4363,14 +4621,36 @@ async function onCatanPlayerPageLoad() {
     updatePlayerUI();
 }
 
-socket.on('catan2_update', async () => {
-    console.log('Received catan2_update from server. Reloading state...');
-    // Reload all states from the backend and update the UI
-    await loadAllStatesFromBackend();
-    updatePlayerUI();
+let stateRefreshReady = false;
+let stateRefreshPending = false;
+let stateRefreshPromise = null;
 
-    
+function refreshCatanState() {
+    stateRefreshPending = true;
+    if (!stateRefreshReady) return Promise.resolve();
+    if (stateRefreshPromise) return stateRefreshPromise;
+    stateRefreshPromise = (async () => {
+        try {
+            while (stateRefreshPending) {
+                stateRefreshPending = false;
+                await loadAllStatesFromBackend();
+                updatePlayerUI();
+            }
+        } finally {
+            stateRefreshPromise = null;
+        }
+    })();
+    return stateRefreshPromise;
+}
+
+socket.on('catan2_update', refreshCatanState);
+socket.on('connect', refreshCatanState);
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) void refreshCatanState();
 });
+window.setInterval(() => {
+    if (!document.hidden && !socket.connected) void refreshCatanState();
+}, 5000);
 
 socket.on('catan2_score_update_broadcast', () => {
     renderGameScoreboard();
@@ -4385,8 +4665,11 @@ socket.on('catan2_activity_log_broadcast', data => {
 window.addEventListener('load', async () => {
     updateBoardEditingUI();
     await preloadImages();
+    stateRefreshReady = true;
     if (isPlayerPage) {
-        onCatanPlayerPageLoad();
+        await onCatanPlayerPageLoad();
+    } else {
+        await refreshCatanState();
     }
 });
 window.addEventListener('resize', resizeCanvas);

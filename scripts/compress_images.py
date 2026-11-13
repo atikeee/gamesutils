@@ -2,7 +2,7 @@ import os
 from PIL import Image
 
 # Path to your Catan images directory
-INPUT_DIR = r"C:\Users\rahmanma\OneDrive - Intel Corporation\Documents\1_docs\gamesutils\static\images\catanbk\t"
+INPUT_DIR = r"C:\github\gamesutils_test\static\images\t"
 #OUTPUT_DIR = r"C:\Users\rahmanma\OneDrive - Intel Corporation\Documents\1_docs\gamesutils\static\catan\images_optimized"
 OUTPUT_DIR = INPUT_DIR
 os.makedirs(OUTPUT_DIR, exist_ok=True)

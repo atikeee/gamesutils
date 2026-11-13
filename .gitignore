@@ -1,3 +1,6 @@
+/data/mm/adb/
+/data/deploy/ssh/
+/.env
 *.pyc
 /.gitignore
 bkp*

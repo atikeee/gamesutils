@@ -120,9 +120,13 @@ can be used in player URLs and `/mm/api/mp3/library`.
 `/mm/youtube` and `/mm/vdo` share the same player and `videos`/`tags`/`video_tags`
 schema, stored separately in `data/mm/youtube.db` and `data/mm/vdo.db`. The VDO
 `url` column stores a local file path and `video_id` is generated from that path.
-Local files must be under `MM_VDO_ROOT`; it defaults to `/Media` when that mount
-exists, otherwise `data/vdo`. Set `MM_VDO_ROOT` to the video directory before
-starting the app if your files are elsewhere.
+Local files must be inside an allowed media root. The default is `MM_VDO_ROOT`
+when set, otherwise `/Media` when that mount exists, or `data/vdo` as a fallback.
+`paths.media_roots` in `data/mm/mm_config.json` adds allowed directories;
+the configured list is `["/Media", "/pm", "/xcinema"]` for VDO, MOV, and X.
+CSV `url` values can use absolute container paths such as
+`"/pm/Movies/my file name.mp4"`. Relative filenames are tried under the default
+root first, then the configured list in order. Spaces do not need escaping.
 
 ## Catan
 

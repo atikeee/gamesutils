@@ -109,8 +109,8 @@
     </div>
 
     <script>window.CATAN_PLAYER_COLORS = {{ player_colors|tojson }};</script>
-    <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}?v=2"></script>
-    <script src="{{ url_for('static', filename='js/catan_game_logic.js') }}"?v=2></script>
+    <script src="{{ url_for('static', filename='js/catan_drawing_utils.js', v='3') }}"></script>
+    <script src="{{ catan_asset_url('js/catan_game_logic.js') }}"></script>
 
     <!-- Display tweaks that run after your JS (no changes to catan_game_logic.js needed) -->
     <script>
@@ -148,23 +148,7 @@
         titleObs.observe(title, { childList: true, characterData: true, subtree: true });
         fixTitle();
 
-        // Reset game -> reload page (short delay lets the reset request go out first)
-        var dlg = document.getElementById('resetDialog');
-        dlg.addEventListener('close', function () {
-            if (dlg.returnValue === 'confirm') setTimeout(function () { location.reload(); }, 1000);
-        });
     })();
-	var dlg = document.getElementById('resetDialog');
-        dlg.addEventListener('close', function () {
-            if (dlg.returnValue === 'confirm') {
-                var selectedMode = dlg.querySelector('input[name="player_mode"]:checked').value;
-                setTimeout(function () { 
-                    fetch('/catan/reset_game?players=' + selectedMode)
-                        .then(res => res.json())
-                        .then(() => location.reload()); 
-                }, 1000);
-            }
-        });
     </script>
 </body>
 </html>

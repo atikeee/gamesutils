@@ -12,7 +12,56 @@ const songsPerPage = 10;
 const selectedTagFilters = new Set(readJsonData(appContainer, 'selectedTags', []));
 
 const audio = document.getElementById('audioEngine');
+const tvSocket = !TV_MODE && typeof io === 'function' ? io() : null;
+let tvPlayback = false;
+let tvState = null;
+const trackSearch = document.getElementById('trackSearch');
+const metadataFields = ['title', 'artist', 'album', 'playlist', 'category', 'tag_list', 'chapter'];
+const showStatus = text => { document.getElementById('mp3Status').textContent = text; };
+if (!TV_MODE) window.lucide?.createIcons();
 setupChapterEditorToggle(document.getElementById('chapterEditorToggle'), document.getElementById('chapterForm'));
+
+function playbackPosition() {
+    return tvPlayback ? Number(tvState?.position) || 0 : audio.currentTime;
+}
+
+function playbackDuration() {
+    return tvPlayback ? Number(tvState?.duration || currentTrack?.duration) || 0 : audio.duration;
+}
+
+function sendTv(action, data = {}) {
+    if (!tvSocket?.connected) {
+        showStatus('TV connection unavailable. Reconnect before sending playback commands.');
+        return false;
+    }
+    tvSocket.emit('media_control', { action, ...data });
+    return true;
+}
+
+function updateTvButton() {
+    const button = document.getElementById('playOnTvBtn');
+    if (!button) return;
+    button.disabled = !currentTrack;
+    button.setAttribute('aria-pressed', String(tvPlayback));
+    button.title = tvPlayback ? 'Play in this browser' : 'Play on TV';
+    button.setAttribute('aria-label', button.title);
+}
+
+function loadTrackOnTv() {
+    if (!currentTrack) return;
+    sendTv('load', {
+        database: 'mp3', media_id: currentTrack.id,
+        queue: { mp3_ids: filteredTracks.map(track => track.id) }
+    });
+}
+
+function updateTimeline() {
+    const duration = playbackDuration();
+    const position = playbackPosition();
+    document.getElementById('scrubber').value = duration > 0 ? position / duration * 100 : 0;
+    document.getElementById('currTime').textContent = formatTime(position);
+    document.getElementById('durTime').textContent = formatTime(duration);
+}
 
 function splitTags(tagList) {
     return (tagList || '').split(',').map(t => t.trim()).filter(Boolean);
@@ -30,9 +79,11 @@ function parseChapters(value) {
 
 function getChapterTarget(direction) {
     if (!audio || !currentTrack) return null;
-    const chapters = parseChapters(currentTrack.chapter).filter(seconds => !Number.isFinite(audio.duration) || seconds <= audio.duration);
-    if (direction > 0) return chapters.find(seconds => seconds > audio.currentTime + 0.05) ?? null;
-    const reached = chapters.filter(seconds => seconds <= audio.currentTime + 0.05);
+    const duration = playbackDuration();
+    const position = playbackPosition();
+    const chapters = parseChapters(currentTrack.chapter).filter(seconds => !Number.isFinite(duration) || seconds <= duration);
+    if (direction > 0) return chapters.find(seconds => seconds > position + 0.05) ?? null;
+    const reached = chapters.filter(seconds => seconds <= position + 0.05);
     return reached.length > 1 ? reached[reached.length - 2] : null;
 }
 
@@ -43,6 +94,10 @@ function updateChapterButtons() {
 
 function seekChapter(direction) {
     const target = getChapterTarget(direction);
+    if (tvPlayback) {
+        if (target !== null) sendTv('seek', { position: target });
+        return;
+    }
     if (target === null || audio.readyState === 0) return;
     audio.currentTime = target;
     updateChapterButtons();
@@ -71,7 +126,15 @@ function selectAndPlayTrack(index, autoPlay = true) {
     renderInlineValue(document.getElementById('categoryEdit'), currentTrack.category || '');
     renderInlineValue(document.getElementById('artistEdit'), currentTrack.artist || '');
     renderActiveTags();
+    const editButton = document.getElementById('editTrackBtn');
+    if (editButton) editButton.disabled = false;
+    updateTvButton();
 
+    if (tvPlayback) {
+        audio.pause();
+        if (autoPlay) loadTrackOnTv();
+        return;
+    }
     if (audio) {
         audio.src = `/mm/api/mp3/stream/${currentTrack.id}`;
         updateChapterButtons();
@@ -103,12 +166,22 @@ function playPrevTrack() {
 }
 
 function skipSeconds(sec) {
+    if (tvPlayback) {
+        const duration = playbackDuration();
+        const position = Math.max(0, playbackPosition() + sec);
+        sendTv('seek', { position: duration > 0 ? Math.min(position, duration) : position });
+        return;
+    }
     if (audio && audio.duration) {
         audio.currentTime = Math.min(Math.max(0, audio.currentTime + sec), audio.duration);
     }
 }
 
 function togglePlay() {
+    if (tvPlayback) {
+        sendTv(tvState?.paused ? 'play' : 'pause');
+        return;
+    }
     if (!audio) return;
     if (audio.paused) audio.play();
     else audio.pause();
@@ -121,26 +194,28 @@ function playNextChapterOrTrack() {
 
 function updateMediaPosition() {
     if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
-    if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
+    const duration = playbackDuration();
+    if (!Number.isFinite(duration) || duration <= 0) {
         navigator.mediaSession.setPositionState();
         return;
     }
     navigator.mediaSession.setPositionState({
-        duration: audio.duration,
+        duration,
         playbackRate: audio.playbackRate,
-        position: Math.min(Math.max(0, audio.currentTime), audio.duration)
+        position: Math.min(Math.max(0, playbackPosition()), duration)
     });
 }
 
 if (audio && 'mediaSession' in navigator) {
     const handlers = {
-        play: () => audio.play().catch(error => console.warn('[Playback]', error)),
-        pause: () => audio.pause(),
+        play: () => tvPlayback ? sendTv('play') : audio.play().catch(error => console.warn('[Playback]', error)),
+        pause: () => tvPlayback ? sendTv('pause') : audio.pause(),
         nexttrack: playNextChapterOrTrack,
         previoustrack: playPrevTrack,
         seekbackward: details => skipSeconds(-(details.seekOffset || 30)),
         seekforward: details => skipSeconds(details.seekOffset || 30),
         seekto: details => {
+            if (tvPlayback) { sendTv('seek', { position: details.seekTime }); return; }
             if (!Number.isFinite(audio.duration)) return;
             audio.currentTime = Math.min(Math.max(0, details.seekTime), audio.duration);
         }
@@ -282,9 +357,17 @@ function filterByTag(tag) {
 }
 
 function applyTagFilters() {
+    const search = (trackSearch?.value || '').trim().toLocaleLowerCase();
     filteredTracks = allTracks.filter(track => {
         const tags = splitTags(track.tag_list);
-        return [...selectedTagFilters].every(tag => tags.includes(tag));
+        const matchesScope = TV_MODE || (
+            track.playlist === document.getElementById('playlistSelect').value
+            && (!document.getElementById('categorySelect').value || track.category === document.getElementById('categorySelect').value)
+            && (!document.getElementById('artistSelect').value || track.artist === document.getElementById('artistSelect').value)
+        );
+        return matchesScope && [...selectedTagFilters].every(tag => tags.includes(tag))
+            && (!search || ['title', 'artist', 'album', 'playlist', 'category', 'tag_list']
+                .some(field => String(track[field] || '').toLocaleLowerCase().includes(search)));
     });
     currentTrackIndex = currentTrack ? filteredTracks.indexOf(currentTrack) : -1;
     queuePage = 1;
@@ -298,6 +381,9 @@ function saveTrack(track) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
+            title: track.title || '',
+            album: track.album || '',
+            duration: track.duration || 0,
             playlist: track.playlist || '',
             category: track.category || '',
             tag_list: track.tag_list || '',
@@ -306,6 +392,7 @@ function saveTrack(track) {
         })
     }).then(r => r.json().then(data => {
         if (!r.ok || !data.success) throw new Error(data.error || 'Server could not save metadata');
+        return data.track;
     }));
 }
 
@@ -375,15 +462,15 @@ function setPlayingUi(isPlaying) {
 
 if (audio) {
     audio.addEventListener('error', () => {
-        if (!currentTrack || !audio.getAttribute('src')) return;
+        if (tvPlayback || !currentTrack || !audio.getAttribute('src')) return;
         console.warn(`[Audio 404] File for track ID ${currentTrack.id} not found.`);
         currentTrack._missing = true;
         document.querySelector(`#queueList .playlist-item[data-index="${currentTrackIndex}"]`)?.classList.add('missing');
-        setTimeout(playNextTrack, 1000);
+        setTimeout(() => { if (!tvPlayback) playNextTrack(); }, 1000);
     });
-    audio.addEventListener('play', () => setPlayingUi(true));
-    audio.addEventListener('pause', () => setPlayingUi(false));
-    audio.addEventListener('ended', playNextTrack);
+    audio.addEventListener('play', () => { if (!tvPlayback) setPlayingUi(true); });
+    audio.addEventListener('pause', () => { if (!tvPlayback) setPlayingUi(false); });
+    audio.addEventListener('ended', () => { if (!tvPlayback) playNextTrack(); });
     audio.addEventListener('emptied', updateMediaPosition);
     audio.addEventListener('loadedmetadata', updateMediaPosition);
     audio.addEventListener('seeked', updateMediaPosition);
@@ -391,6 +478,7 @@ if (audio) {
     audio.addEventListener('loadedmetadata', updateChapterButtons);
     audio.addEventListener('seeked', updateChapterButtons);
     audio.addEventListener('timeupdate', () => {
+        if (tvPlayback) return;
         updateChapterButtons();
         updateMediaPosition();
         if (!audio.duration) return;
@@ -412,6 +500,7 @@ function onFilterChange(event) {
     const cat = document.getElementById('categorySelect')?.value || '';
     const artist = document.getElementById('artistSelect')?.value || '';
     const params = new URLSearchParams({ playlist: pl, category: cat, artist });
+    if (trackSearch?.value.trim()) params.set('search', trackSearch.value.trim());
     selectedTagFilters.forEach(tag => params.append('tag', tag));
     window.location.href = `${window.location.pathname}?${params}`;
 }
@@ -419,6 +508,145 @@ function onFilterChange(event) {
 document.getElementById('playlistSelect')?.addEventListener('change', onFilterChange);
 document.getElementById('categorySelect')?.addEventListener('change', onFilterChange);
 document.getElementById('artistSelect')?.addEventListener('change', onFilterChange);
+trackSearch?.addEventListener('input', applyTagFilters);
+
+document.getElementById('startTvBtn')?.addEventListener('click', async event => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    showStatus('Starting TV...');
+    try {
+        const response = await fetch('/mm/api/remote/tv/start', { method: 'POST' });
+        const result = await response.json().catch(() => { throw new Error(`TV server returned HTTP ${response.status} instead of JSON.`); });
+        if (!response.ok || !result.success) throw new Error(result.error || 'TV command failed.');
+        const link = document.createElement('a');
+        link.href = result.display_url;
+        link.textContent = 'TV display';
+        link.target = '_blank';
+        link.rel = 'noopener';
+        document.getElementById('mp3Status').replaceChildren('TV wake command sent; FunHub launched. ', link);
+    } catch (error) {
+        showStatus(error.message || 'TV connection failed.');
+    } finally {
+        button.disabled = false;
+    }
+});
+
+document.getElementById('playOnTvBtn')?.addEventListener('click', () => {
+    if (!currentTrack) return;
+    if (!tvSocket?.connected) { showStatus('TV connection unavailable. Try again once connected.'); return; }
+    if (!tvPlayback) {
+        tvPlayback = true;
+        audio.pause();
+        loadTrackOnTv();
+        showStatus('Sending audio to /mm/tv...');
+    } else {
+        sendTv('pause');
+        const position = playbackPosition();
+        tvPlayback = false;
+        const trackId = currentTrack.id;
+        audio.src = `/mm/api/mp3/stream/${currentTrack.id}`;
+        audio.addEventListener('loadedmetadata', () => {
+            if (tvPlayback || currentTrack?.id !== trackId) return;
+            audio.currentTime = Math.min(position, Number.isFinite(audio.duration) ? audio.duration : position);
+            audio.play().catch(error => showStatus(error.message));
+        }, { once: true });
+        showStatus('Playing in this browser.');
+    }
+    updateTvButton();
+});
+
+if (tvSocket) {
+    tvSocket.on('connect', () => tvSocket.emit('media_join'));
+    tvSocket.on('disconnect', () => { if (tvPlayback) showStatus('TV connection lost. Reconnecting...'); });
+    tvSocket.on('media_error', result => {
+        if (!tvPlayback) return;
+        tvPlayback = false;
+        setPlayingUi(false);
+        updateTvButton();
+        showStatus(result.error || 'TV playback failed.');
+    });
+    tvSocket.on('media_state', payload => {
+        tvState = payload.state || payload;
+        if (!tvPlayback) return;
+        if (tvState.database_name !== 'mp3') {
+            tvPlayback = false;
+            updateTvButton();
+            setPlayingUi(false);
+            showStatus('The TV is now playing another media source.');
+            return;
+        }
+        const track = allTracks.find(item => item.id === tvState.media_id);
+        if (track && track !== currentTrack) {
+            const index = filteredTracks.indexOf(track);
+            if (index >= 0) selectAndPlayTrack(index, false);
+            else { currentTrack = track; currentTrackIndex = -1; updateCurrentTrackInfo(); renderQueue(); }
+        }
+        setPlayingUi(!tvState.paused);
+        updateTimeline();
+        updateChapterButtons();
+        updateMediaPosition();
+        showStatus(tvState.paused ? 'Paused on TV.' : 'Playing on TV.');
+    });
+    tvSocket.on('media_progress', progress => {
+        if (!tvPlayback || !tvState || progress.revision !== tvState.revision) return;
+        Object.assign(tvState, progress);
+        setPlayingUi(!progress.paused);
+        updateTimeline();
+        updateChapterButtons();
+        updateMediaPosition();
+    });
+}
+
+const editDialog = document.getElementById('editTrackDialog');
+const editForm = document.getElementById('editTrackForm');
+let editingTrack = null;
+document.getElementById('editTrackBtn')?.addEventListener('click', () => {
+    if (!currentTrack) return;
+    editingTrack = currentTrack;
+    [...metadataFields, 'duration', 'path'].forEach(field => {
+        editForm.elements.namedItem(field).value = editingTrack[field] ?? (field === 'duration' ? 0 : '');
+    });
+    document.getElementById('editTrackStatus').textContent = '';
+    editDialog.showModal();
+});
+document.getElementById('editTrackCancel')?.addEventListener('click', () => editDialog.close());
+editDialog?.addEventListener('cancel', event => {
+    if (document.getElementById('editTrackSave').disabled) event.preventDefault();
+});
+editForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!editingTrack) return;
+    const track = editingTrack;
+    const draft = { ...track };
+    metadataFields.forEach(field => { draft[field] = editForm.elements.namedItem(field).value.trim(); });
+    draft.duration = Number(editForm.elements.namedItem('duration').value);
+    const button = document.getElementById('editTrackSave');
+    const cancel = document.getElementById('editTrackCancel');
+    button.disabled = true;
+    cancel.disabled = true;
+    document.getElementById('editTrackStatus').textContent = 'Saving...';
+    try {
+        const saved = await saveTrack(draft);
+        Object.assign(track, saved);
+        ['playlist', 'category', 'artist'].forEach(field => addInlineOption(field, track[field] || ''));
+        buildTagChips();
+        applyTagFilters();
+        if (track === currentTrack) {
+            updateCurrentTrackInfo();
+            ['playlist', 'category', 'artist'].forEach(field => renderInlineValue(document.getElementById(`${field}Edit`), track[field] || ''));
+            renderActiveTags();
+            document.getElementById('chapterInput').value = track.chapter || '';
+            updateChapterButtons();
+        }
+        editDialog.close();
+        showStatus('Song information saved.');
+    } catch (error) {
+        document.getElementById('editTrackStatus').textContent = error.message;
+    } finally {
+        button.disabled = false;
+        cancel.disabled = false;
+    }
+});
 
 document.getElementById('tagChipsBar').addEventListener('click', (e) => {
     const chip = e.target.closest('.tag-chip');
@@ -526,6 +754,7 @@ document.getElementById('chapterForm')?.addEventListener('submit', async event =
 });
 
 document.getElementById('scrubber').addEventListener('change', (e) => {
+    if (tvPlayback) { sendTv('seek', { position: e.target.value / 100 * playbackDuration() }); return; }
     if (audio && audio.duration) audio.currentTime = (e.target.value / 100) * audio.duration;
 });
 

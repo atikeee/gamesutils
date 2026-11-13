@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Download</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { color-scheme: dark; --ink: #edf2ee; --muted: #a7b3ab; --line: #343c37; --accent: #76d4ad; --surface: #1e2220; --field: #151816; --bad: #f28b78; }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; color: var(--ink); background: linear-gradient(180deg, #1b1e1c, #111312 360px); font-family: "DM Sans", sans-serif; }
+        main { width: min(1500px, 100%); margin: 0 auto; padding: 28px 20px 40px; }
+        header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+        h1 { margin: 0; font-size: 26px; }
+        a { color: var(--accent); }
+        .panel { margin-top: 18px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+        .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+        textarea { flex: 1 1 420px; min-width: 0; resize: vertical; }
+        input, textarea, button { font: inherit; }
+        input:not([type="checkbox"]), textarea { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--field); }
+        button { padding: 8px 14px; border: 1px solid var(--accent); border-radius: 6px; color: #10251c; background: var(--accent); font-weight: 700; cursor: pointer; }
+        button.secondary { color: var(--ink); background: transparent; border-color: var(--line); }
+        button:disabled { opacity: .5; cursor: not-allowed; }
+        label { display: inline-flex; align-items: center; gap: 6px; }
+        #message { min-height: 22px; margin: 10px 0 0; color: var(--muted); }
+        #message.error { color: var(--bad); }
+        .table-scroll { overflow: auto; max-height: 70vh; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 6px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+        thead th { position: sticky; top: 0; z-index: 1; background: #252a27; color: var(--muted); }
+        thead tr.batch th { top: 33px; }
+        td input:not([type="checkbox"]), th input:not([type="checkbox"]) { width: 100%; min-width: 120px; padding: 6px 8px; }
+        td.wide input, th.wide input { min-width: 220px; }
+        img { display: block; width: 96px; height: 54px; object-fit: cover; border-radius: 4px; }
+        .status { min-width: 160px; color: var(--muted); }
+        .status[data-state="complete"] { color: var(--accent); }
+        .status[data-state="failed"] { color: var(--bad); }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+<main>
+    <header>
+        <h1>Media Download</h1>
+        <a href="{{ url_for('routes_mm.mm_dashboard') }}">Media home</a>
+    </header>
+
+    <section class="panel">
+        <form id="sourceForm" class="row">
+            <textarea id="sourceUrl" rows="4" placeholder="Video or playlist links" required maxlength="1001000" aria-label="Video or playlist links, one per line"></textarea>
+            <label><input type="checkbox" id="audioOnly"> Audio only</label>
+            <button type="submit" id="processButton">Process links</button>
+        </form>
+        <p id="message" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="panel hidden" id="tablePanel">
+        <div class="row">
+            <span id="summary"></span>
+            <button type="button" class="secondary" id="applyBatch">Apply to selected</button>
+            <button type="button" class="secondary" id="removeSelected">Remove selected</button>
+            <button type="button" id="downloadButton">Download links</button>
+        </div>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr id="labelRow"></tr>
+                    <tr class="batch" id="batchRow"></tr>
+                </thead>
+                <tbody id="rows"></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+<script>
+(() => {
+    const FIELDS = [
+        { key: 'title', label: 'Title', wide: true },
+        { key: 'artist', label: 'Artist' },
+        { key: 'album', label: 'Album', audio: true },
+        { key: 'playlist', label: 'Playlist' },
+        { key: 'category', label: 'Category' },
+        { key: 'tag_list', label: 'Tags' },
+        { key: 'chapter', label: 'Chapters (seconds)' }
+    ];
+    const $ = id => document.getElementById(id);
+    const audioOnly = $('audioOnly');
+    let rows = [];
+    let polling = null;
+    let modes = ['audio', 'video'];
+    const batchValues = {};
+
+    const message = (text, error = false) => { $('message').textContent = text; $('message').classList.toggle('error', error); };
+    const fields = () => FIELDS.filter(field => !field.audio || audioOnly.checked);
+    const selected = () => rows.filter(row => row.selected);
+    const formatDuration = seconds => {
+        const parts = [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60];
+        return (parts[0] ? [parts[0], String(parts[1]).padStart(2, '0')] : [parts[1]]).concat(String(parts[2]).padStart(2, '0')).join(':');
+    };
+    const cell = (tag, child, className) => {
+        const element = document.createElement(tag);
+        if (className) element.className = className;
+        if (child instanceof Node) element.appendChild(child); else if (child !== undefined) element.textContent = child;
+        return element;
+    };
+    const input = (value, label, onInput) => {
+        const element = document.createElement('input');
+        element.value = value;
+        element.setAttribute('aria-label', label);
+        element.addEventListener('input', () => onInput(element.value));
+        return element;
+    };
+    const checkbox = (checked, label, onChange) => {
+        const element = document.createElement('input');
+        element.type = 'checkbox';
+        element.checked = checked;
+        element.setAttribute('aria-label', label);
+        element.addEventListener('change', () => onChange(element.checked));
+        return element;
+    };
+
+    function renderHeader() {
+        const label = $('labelRow');
+        const batch = $('batchRow');
+        label.replaceChildren(cell('th', checkbox(rows.length > 0 && rows.every(row => row.selected), 'Select all rows', checked => {
+            rows.forEach(row => { row.selected = checked; });
+            render();
+        })));
+        batch.replaceChildren(cell('th', 'Set'));
+        if (!audioOnly.checked) { label.appendChild(cell('th', 'Thumbnail')); batch.appendChild(cell('th')); }
+        fields().forEach(field => {
+            label.appendChild(cell('th', field.label, field.wide ? 'wide' : ''));
+            const value = input(batchValues[field.key] || '', `Set ${field.label} for selected rows`, text => { batchValues[field.key] = text; });
+            value.dataset.field = field.key;
+            value.placeholder = `Set ${field.label.toLowerCase()}...`;
+            batch.appendChild(cell('th', value, field.wide ? 'wide' : ''));
+        });
+        ['Duration', 'Video', 'Status'].forEach(text => { label.appendChild(cell('th', text)); batch.appendChild(cell('th')); });
+    }
+
+    function render() {
+        renderHeader();
+        $('rows').replaceChildren(...rows.map((row, index) => {
+            const tr = document.createElement('tr');
+            tr.appendChild(cell('td', checkbox(row.selected, `Select row ${index + 1}`, checked => { row.selected = checked; render(); })));
+            if (!audioOnly.checked) {
+                const image = document.createElement('img');
+                if (row.thumbnail_url) image.src = row.thumbnail_url;
+                image.alt = '';
+                image.loading = 'lazy';
+                tr.appendChild(cell('td', image));
+            }
+            fields().forEach(field => tr.appendChild(cell('td', input(row[field.key], `${field.label} row ${index + 1}`, value => { row[field.key] = value; }), field.wide ? 'wide' : '')));
+            tr.appendChild(cell('td', formatDuration(row.duration)));
+            const link = document.createElement('a');
+            link.href = row.url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = row.video_id;
+            tr.appendChild(cell('td', link));
+            const status = cell('td', '', 'status');
+            row.statusCell = status;
+            renderStatus(row);
+            tr.appendChild(status);
+            return tr;
+        }));
+        renderControls();
+    }
+
+    function renderStatus(row) {
+        row.statusCell.textContent = row.message || '';
+        row.statusCell.dataset.state = row.status || '';
+    }
+
+    function renderControls() {
+        $('summary').textContent = `${selected().length} of ${rows.length} selected`;
+        $('downloadButton').disabled = Boolean(polling) || selected().length === 0;
+        $('tablePanel').classList.toggle('hidden', rows.length === 0);
+    }
+
+    async function postJson(url, body) {
+        const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) throw new Error(result.error || `Request failed (${response.status}).`);
+        return result;
+    }
+
+    $('sourceForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        $('processButton').disabled = true;
+        message('Processing links...');
+        try {
+            const result = await postJson('/mm/api/download/process', { url: $('sourceUrl').value });
+            rows = result.rows.map(row => ({ ...row, selected: true, status: '', message: '' }));
+            modes = result.modes;
+            if (modes.length === 1) audioOnly.checked = modes[0] === 'audio';
+            audioOnly.disabled = modes.length < 2;
+            audioOnly.parentElement.title = audioOnly.disabled ? `${result.site} allows ${modes[0]} only.` : '';
+            message(`${rows.length} ${result.site} video${rows.length === 1 ? '' : 's'} found${result.source === 'playlist' ? ` in ${result.playlist}` : ''}.`);
+            render();
+        } catch (error) {
+            message(error.message, true);
+        } finally {
+            $('processButton').disabled = false;
+        }
+    });
+
+    audioOnly.addEventListener('change', render);
+
+    $('applyBatch').addEventListener('click', () => {
+        const targets = selected();
+        if (!targets.length) { message('Select rows to edit.', true); return; }
+        const values = [...$('batchRow').querySelectorAll('input[data-field]')].filter(field => field.value.trim());
+        if (!values.length) { message('Enter at least one value in the Set row.', true); return; }
+        targets.forEach(row => values.forEach(field => { row[field.dataset.field] = field.value.trim(); }));
+        message(`Updated ${targets.length} row${targets.length === 1 ? '' : 's'}.`);
+        Object.keys(batchValues).forEach(key => { delete batchValues[key]; });
+        render();
+    });
+
+    $('removeSelected').addEventListener('click', () => {
+        rows = rows.filter(row => !row.selected);
+        render();
+    });
+
+    $('downloadButton').addEventListener('click', async () => {
+        const targets = selected();
+        if (!targets.length) return;
+        const audio = audioOnly.checked;
+        if (!modes.includes(audio ? 'audio' : 'video')) { message(`${audio ? 'Audio' : 'Video'} downloads are not allowed for this site.`, true); return; }
+        targets.forEach(row => { row.status = 'queued'; row.message = 'Queued...'; });
+        polling = true;
+        render();
+        try {
+            const payload = targets.map(row => Object.fromEntries(['url', 'video_id', 'thumbnail_url', 'duration', ...FIELDS.map(field => field.key)].map(key => [key, row[key]])));
+            const { job_id: jobId } = await postJson('/mm/api/download/start', { audio, rows: payload });
+            message(`Downloading ${targets.length} ${audio ? 'audio' : 'video'} file${targets.length === 1 ? '' : 's'}...`);
+            polling = setInterval(async () => {
+                try {
+                    const response = await fetch(`/mm/api/video/download/${encodeURIComponent(jobId)}`);
+                    const job = await response.json();
+                    if (!response.ok || !job.success) throw new Error(job.error || 'Could not read download status.');
+                    job.items.forEach((item, index) => {
+                        targets[index].status = item.status;
+                        targets[index].message = item.status === 'downloading' ? `${item.message} ${item.progress}%` : item.message;
+                        if (targets[index].statusCell) renderStatus(targets[index]);
+                    });
+                    message(job.message, job.status === 'failed');
+                    if (job.status === 'complete' || job.status === 'failed') { clearInterval(polling); polling = null; }
+                } catch (error) {
+                    clearInterval(polling);
+                    polling = null;
+                    message(error.message, true);
+                }
+                renderControls();
+            }, 1500);
+        } catch (error) {
+            polling = null;
+            targets.forEach(row => { row.status = 'failed'; row.message = error.message; });
+            message(error.message, true);
+        }
+        render();
+    });
+})();
+</script>
+</body>
+</html>

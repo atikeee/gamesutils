@@ -14,9 +14,32 @@
     "youtube_seed": "data/mm/youtube_videos.json",
     "youtube_credentials": "data/mm/youtube_token.json",
     "media_mount": "/Media",
+    "media_roots": ["/Media", "/pm", "/xcinema", "c:\\users\\rahmanma\\OneDrive - Intel Corporation\\Videos"],
     "vdo_root": "data/vdo",
     "download_audio_root": "/Media/Audio",
-    "download_video_root": "/Media/Video"
+    "download_video_root": "/Media/Video",
+    "download_x_root": "/pm"
+
+  },
+  "download_sites": {
+    "youtube": {
+      "label": "YouTube",
+      "hosts": ["youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be"],
+      "audio": {"database": "mp3_db", "root": "download_audio_root"},
+      "video": {"database": "vdo_db", "root": "download_video_root"}
+    },
+    "facebook": {
+      "label": "Facebook",
+      "hosts": ["facebook.com", "www.facebook.com", "m.facebook.com", "web.facebook.com", "fb.watch"],
+      "audio": {"database": "mp3_db", "root": "download_audio_root"},
+      "video": {"database": "vdo_db", "root": "download_x_root"}
+    }
+    ,
+    "pornhub": {
+      "label": "Pornhub",
+      "hosts": ["pornhub.com", "www.pornhub.com", "m.pornhub.com"],
+      "video": {"database": "x_db", "root": "download_video_root"}
+    }
   },
   "tv": {
     "ip": "192.168.0.245",

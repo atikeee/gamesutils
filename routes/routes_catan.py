@@ -356,6 +356,7 @@ def configure_routes_catan(app,socketio):
                     state = json.loads(load_play_state_from_json() or '{}')
                     state['robber'] = catan_desert_position()
                     save_play_state_to_json(json.dumps(state))
+                    socketio.emit('catan_update')
                     return jsonify({"status": "success", "message": "Board state saved successfully!"}), 200
                 return jsonify({"status": "error", "message": "Failed to save board state to file."}), 500
             return jsonify({"status": "error", "message": "No board state provided."}), 400
@@ -383,6 +384,8 @@ def configure_routes_catan(app,socketio):
         state = json.loads(load_play_state_from_json() or '{}')
         if not state.get('_started'):
             return jsonify({'status': 'error', 'message': 'Start the game before moving the robber.'}), 409
+        if state.get('_pendingDiscards'):
+            return jsonify({'status': 'error', 'message': 'Wait for all players with 8 or more cards to drop cards.'}), 409
         position = request.get_json(silent=True) or {}
         try:
             board = json.loads(load_latest_catan_board_state_from_json() or '{}')
@@ -607,6 +610,7 @@ def configure_routes_catan(app,socketio):
         )
 
     @app.route('/catan/card_action', methods=['POST'])
+    @catan_registry_locked
     def catan_card_action():
         data = request.get_json(silent=True) or {}
         registry = load_catan_player_registry()
@@ -706,6 +710,11 @@ def configure_routes_catan(app,socketio):
                 registry = load_catan_player_registry()
                 sync_catan_turn_order(previous, registry['players'])
                 actor = previous.get('_currentTurnPlayerId')
+                if previous.get('_pendingDiscards') and (
+                    play_state.get('robber') != previous.get('robber')
+                    or play_state.get('_robberPending') is False
+                ):
+                    return jsonify({'status': 'error', 'message': 'Wait for all required players to drop cards before moving the robber.'}), 409
                 seat_ids = [f"player{player['seat']}" for player in registry['players']]
                 authorized_ids = [player_id for player_id in seat_ids if catan_authenticated_seat(registry, player_id)]
                 changed = [player_id for player_id in seat_ids if play_state.get(player_id) != previous.get(player_id)]
@@ -983,12 +992,16 @@ def configure_routes_catan(app,socketio):
         if not state.get('_started') or state.get('_phase') != 'MAIN_PHASE' or not state.get('_rolled'):
             socketio.emit('roll_rejected', {'message': 'Roll before ending your turn.'}, to=request.sid)
             return
+        if state.get('_pendingDiscards'):
+            socketio.emit('roll_rejected', {'message': 'Wait for all required players to drop cards before ending your turn.'}, to=request.sid)
+            return
         order = state['_turnOrder']
         state['_currentTurnPlayerId'] = order[(order.index(actor) + 1) % len(order)]
         state['_rolled'] = False
         state['_robberPending'] = False
         state['_pendingDiscards'] = {}
         state['_freeRoads'] = 0
+        state['_freeRoadsPlayerId'] = None
         state['_undoStack'] = []
         save_play_state_to_json(json.dumps(state))
         socketio.emit('catan_update')

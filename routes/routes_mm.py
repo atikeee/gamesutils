@@ -171,23 +171,37 @@ def get_vdo_root():
         return os.path.realpath(media_mount)
     return os.path.realpath(mm_path('vdo_root'))
 
+def get_vdo_roots():
+    roots = [get_vdo_root()]
+    configured_roots = load_mm_config()['paths'].get('media_roots', [])
+    if not isinstance(configured_roots, list):
+        raise ValueError('paths.media_roots must be a list of directories')
+    for root in configured_roots:
+        if not isinstance(root, str) or not root.strip():
+            raise ValueError('Each media root must be a non-empty directory path')
+        expanded = os.path.expanduser(os.path.expandvars(root))
+        if not os.path.isabs(expanded):
+            expanded = os.path.join(Path(__file__).resolve().parent.parent, expanded)
+        resolved = os.path.realpath(expanded)
+        if os.path.normcase(resolved) not in {os.path.normcase(value) for value in roots}:
+            roots.append(resolved)
+    return roots
+
 def resolve_vdo_file(path):
     if not path:
         return None
-    root = get_vdo_root()
+    roots = get_vdo_roots()
     expanded_path = os.path.expanduser(path)
-    candidate = expanded_path if os.path.isabs(expanded_path) else os.path.join(root, expanded_path)
-    resolved = os.path.realpath(candidate)
-    try:
-        if os.path.commonpath((root, resolved)) != root:
-            return None
-    except ValueError:
-        return None
-    if not os.path.isfile(resolved) or os.path.splitext(resolved)[1].lower() not in {
-        '.mp4', '.mkv', '.avi', '.mov', '.webm', '.m4v', '.ts', '.ogv'
-    }:
-        return None
-    return resolved
+    candidates = [expanded_path] if os.path.isabs(expanded_path) else [os.path.join(root, expanded_path) for root in roots]
+    for candidate in candidates:
+        resolved = os.path.realpath(candidate)
+        if not any(Path(resolved).is_relative_to(Path(root)) for root in roots):
+            continue
+        if os.path.isfile(resolved) and os.path.splitext(resolved)[1].lower() in {
+            '.mp4', '.mkv', '.avi', '.mov', '.webm', '.m4v', '.ts', '.ogv'
+        }:
+            return resolved
+    return None
 
 def get_db_connection(db_path=None):
     conn = sqlite3.connect(db_path or get_db_path())
@@ -533,6 +547,24 @@ def _get_media_database(database):
 
 
 def _load_remote_media(state, database, media_id):
+    if database == 'mp3':
+        from routes.routes_mm_mp3 import get_db
+        conn = get_db()
+        try:
+            row = conn.execute('SELECT * FROM tracks WHERE id = ?', (media_id,)).fetchone()
+        finally:
+            conn.close()
+        if not row:
+            return 'Track not found.'
+        if not os.path.isfile(row['path']):
+            return 'Audio file is unavailable.'
+        state.update({
+            'database_name': database, 'media_id': row['id'], 'video_id': '',
+            'title': row['title'] or 'Untitled', 'duration': row['duration'] or 0,
+            'chapter': row['chapter'] or '', 'position': 0, 'paused': 0,
+            'audio_only': 1, 'revision': int(state['revision']) + 1
+        })
+        return None
     selected = _get_media_database(database)
     if not selected:
         return 'Unknown media database.'
@@ -567,12 +599,20 @@ def _queue_context(data):
     return {
         'playlist': str(data.get('playlist') or '').strip()[:200],
         'category': str(data.get('category') or '').strip()[:200],
-        'tags': [str(tag).strip()[:100] for tag in tags[:20] if str(tag).strip()]
+        'tags': [str(tag).strip()[:100] for tag in tags[:20] if str(tag).strip()],
+        'mp3_ids': list(dict.fromkeys(value for value in data.get('mp3_ids', [])
+                                    if type(value) is int and value > 0))[:10000]
+                   if isinstance(data.get('mp3_ids'), list) else []
     }
 
 
 def _next_queue_media_id(database, media_id, queue):
     """Next item in the remote list order (title, id), wrapping to the first."""
+    if database == 'mp3':
+        ids = queue.get('mp3_ids') or []
+        if media_id not in ids or ids.index(media_id) + 1 >= len(ids):
+            return None
+        return ids[ids.index(media_id) + 1]
     selected = _get_media_database(database)
     if not selected:
         return None
@@ -720,6 +760,11 @@ def mm_tv():
     return render_template('mm/tv.html')
 
 
+FAV_TAG = 'fav'
+FAV_SQL = ("EXISTS (SELECT 1 FROM video_tags fvt JOIN tags ft ON ft.id = fvt.tag_id "
+           "WHERE fvt.video_id = {id} AND ft.name = '" + FAV_TAG + "')")
+
+
 @routes_mm.route('/mm/api/remote/library')
 def api_remote_library():
     database = request.args.get('database', 'youtube').strip().lower()
@@ -774,7 +819,7 @@ def api_remote_library():
         total_pages = max(1, (total_items + page_size - 1) // page_size)
         page = min(page, total_pages)
         rows = conn.execute(f"""
-            SELECT v.id, v.video_id, v.title, v.artist, v.duration, v.playlist, v.category, v.chapter
+            SELECT v.id, v.video_id, v.title, v.artist, v.duration, v.playlist, v.category, v.chapter, {FAV_SQL.format(id='v.id')} AS fav
             FROM videos v JOIN video_tags vt ON vt.video_id = v.id JOIN tags t ON t.id = vt.tag_id
             WHERE v.playlist = ? AND (? = '' OR v.category = ?) AND t.name IN ({placeholders}){search_clause}
             GROUP BY v.id HAVING COUNT(DISTINCT t.id) = ?
@@ -799,7 +844,7 @@ def api_remote_library():
             page = rank // page_size + 1
         page = min(page, total_pages)
         rows = conn.execute(f"""
-            SELECT id, video_id, title, artist, duration, playlist, category, chapter
+            SELECT id, video_id, title, artist, duration, playlist, category, chapter, {FAV_SQL.format(id='videos.id')} AS fav
             FROM videos WHERE playlist = ? AND (? = '' OR category = ?){search_clause}
             ORDER BY title COLLATE NOCASE, id LIMIT ? OFFSET ?
         """, scope_params + [page_size, (page - 1) * page_size]).fetchall()
@@ -807,6 +852,15 @@ def api_remote_library():
         total_items = 0
         total_pages = 1
         rows = []
+    items = [dict(row, tags=[]) for row in rows]
+    if items:
+        items_by_id = {item['id']: item for item in items}
+        placeholders = ','.join('?' for _ in items)
+        for tag in conn.execute(f"""
+            SELECT vt.video_id, t.name FROM video_tags vt JOIN tags t ON t.id = vt.tag_id
+            WHERE vt.video_id IN ({placeholders}) ORDER BY t.name COLLATE NOCASE
+        """, list(items_by_id)).fetchall():
+            items_by_id[tag['video_id']]['tags'].append(tag['name'])
     conn.close()
     return jsonify({
         'success': True,
@@ -821,7 +875,7 @@ def api_remote_library():
         'pages': total_pages,
         'total_items': total_items,
         'page_size': page_size,
-        'items': [dict(row) for row in rows]
+        'items': items
     })
 
 
@@ -831,6 +885,214 @@ def api_remote_state():
     if state['database_name'] in {'x', 'mov'} and not _media_access_valid(state['database_name']):
         return jsonify({'success': False, 'error': 'X PIN required.'}), 403
     return jsonify(state)
+
+
+def _remote_view_connection():
+    conn = sqlite3.connect(_remote_state_db_path(), timeout=5)
+    conn.row_factory = sqlite3.Row
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS remote_view_state (
+            database_name TEXT PRIMARY KEY,
+            playlist TEXT NOT NULL DEFAULT '',
+            category TEXT NOT NULL DEFAULT '',
+            tags TEXT NOT NULL DEFAULT '[]',
+            search TEXT NOT NULL DEFAULT '',
+            page INTEGER NOT NULL DEFAULT 1,
+            media_id INTEGER
+        )
+    """)
+    return conn
+
+
+def _remote_database_error(database):
+    if not _get_media_database(database):
+        return jsonify({'success': False, 'error': 'Unknown media database.'}), 400
+    if database not in _unlocked_remote_databases():
+        return jsonify({'success': False, 'error': 'Enter the PIN for this database.'}), 403
+    return None
+
+
+@routes_mm.route('/mm/api/remote/view/<database>', methods=['GET', 'POST'])
+def api_remote_view(database):
+    error = _remote_database_error(database)
+    if error:
+        return error
+    conn = _remote_view_connection()
+    try:
+        if request.method == 'GET':
+            row = conn.execute('SELECT * FROM remote_view_state WHERE database_name = ?', (database,)).fetchone()
+            if not row:
+                return jsonify({'success': True, 'view': None})
+            view = dict(row)
+            view['tags'] = json.loads(view['tags'] or '[]')
+            return jsonify({'success': True, 'view': view})
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'success': False, 'error': 'Invalid view state.'}), 400
+        text = {key: data.get(key, '') for key in ('playlist', 'category', 'search')}
+        tags = data.get('tags', [])
+        page = data.get('page', 1)
+        media_id = data.get('media_id')
+        if (any(not isinstance(value, str) or len(value) > 200 for value in text.values())
+                or not isinstance(tags, list) or len(tags) > 20
+                or any(not isinstance(tag, str) or len(tag) > 100 for tag in tags)
+                or type(page) is not int or not 1 <= page <= 100000
+                or (media_id is not None and type(media_id) is not int)):
+            return jsonify({'success': False, 'error': 'Invalid view state.'}), 400
+        conn.execute("""
+            INSERT INTO remote_view_state (database_name, playlist, category, tags, search, page, media_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(database_name) DO UPDATE SET playlist = excluded.playlist, category = excluded.category,
+                tags = excluded.tags, search = excluded.search, page = excluded.page, media_id = excluded.media_id
+        """, (database, text['playlist'].strip(), text['category'].strip(), json.dumps([tag.strip() for tag in tags if tag.strip()]),
+              text['search'].strip(), page, media_id))
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
+
+
+MEDIA_EDIT_LIMITS = {'title': 300, 'artist': 200, 'playlist': 200, 'category': 200, 'thumbnail_url': 2000, 'url': 2000}
+CHAPTER_MARKER_GAP = 5
+
+
+@routes_mm.route('/mm/api/remote/fav/<database>/<int:media_id>', methods=['POST'])
+def api_remote_toggle_fav(database, media_id):
+    error = _remote_database_error(database)
+    if error:
+        return error
+    db_path = _get_media_database(database)[1]
+    init_db(None if database == 'youtube' else db_path)
+    conn = get_db_connection(db_path)
+    try:
+        if not conn.execute('SELECT 1 FROM videos WHERE id = ?', (media_id,)).fetchone():
+            return jsonify({'success': False, 'error': 'Media item not found.'}), 404
+        conn.execute('INSERT OR IGNORE INTO tags (name) VALUES (?)', (FAV_TAG,))
+        tag_id = conn.execute('SELECT id FROM tags WHERE name = ?', (FAV_TAG,)).fetchone()['id']
+        removed = conn.execute('DELETE FROM video_tags WHERE video_id = ? AND tag_id = ?', (media_id, tag_id)).rowcount
+        if not removed:
+            conn.execute('INSERT INTO video_tags (video_id, tag_id) VALUES (?, ?)', (media_id, tag_id))
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({'success': True, 'fav': not removed})
+
+
+@routes_mm.route('/mm/api/remote/chapter', methods=['POST'])
+def api_remote_add_chapter():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or not isinstance(data.get('database'), str) or type(data.get('media_id')) is not int:
+        return jsonify({'success': False, 'error': 'Invalid chapter request.'}), 400
+    position = data.get('position')
+    if type(position) not in (int, float) or not math.isfinite(position) or position < 0:
+        return jsonify({'success': False, 'error': 'Invalid playback position.'}), 400
+    database, media_id = data['database'], data['media_id']
+    error = _remote_database_error(database)
+    if error:
+        return error
+    state = _get_remote_state()
+    if state['database_name'] != database or state['media_id'] != media_id:
+        return jsonify({'success': False, 'error': 'The playing item changed. Try again.'}), 409
+    if state['duration']:
+        position = min(position, state['duration'])
+    seconds = int(position)
+    db_path = _get_media_database(database)[1]
+    init_db(None if database == 'youtube' else db_path)
+    conn = get_db_connection(db_path)
+    try:
+        row = conn.execute('SELECT chapter FROM videos WHERE id = ?', (media_id,)).fetchone()
+        if not row:
+            return jsonify({'success': False, 'error': 'Media item not found.'}), 404
+        existing = [float(value) for value in normalize_chapter_timestamps(row['chapter'] or '').split()]
+        nearby = next((value for value in existing if abs(value - seconds) <= CHAPTER_MARKER_GAP), None)
+        if nearby is not None:
+            return jsonify({'success': True, 'added': False, 'position': seconds, 'nearby': nearby,
+                            'chapter': row['chapter'] or ''})
+        chapter = normalize_chapter_timestamps(' '.join([row['chapter'] or '', str(seconds)]))
+        conn.execute('UPDATE videos SET chapter = ?, chapter_checked = 1 WHERE id = ?', (chapter, media_id))
+        conn.commit()
+    finally:
+        conn.close()
+    state['chapter'] = chapter
+    _save_remote_state(state)
+    socketio = current_app.extensions.get('socketio')
+    if socketio:
+        socketio.emit('media_state', {'state': _display_state(state), 'command': 'metadata'})
+    return jsonify({'success': True, 'added': True, 'position': seconds, 'chapter': chapter})
+
+
+@routes_mm.route('/mm/api/remote/media/<database>/<int:media_id>', methods=['GET', 'POST'])
+def api_remote_media_entry(database, media_id):
+    error = _remote_database_error(database)
+    if error:
+        return error
+    db_path = _get_media_database(database)[1]
+    init_db(None if database == 'youtube' else db_path)
+    conn = get_db_connection(db_path)
+    try:
+        row = conn.execute('SELECT * FROM videos WHERE id = ?', (media_id,)).fetchone()
+        if not row:
+            return jsonify({'success': False, 'error': 'Media item not found.'}), 404
+        if request.method == 'GET':
+            tags = [tag['name'] for tag in conn.execute("""
+                SELECT t.name FROM tags t JOIN video_tags vt ON vt.tag_id = t.id
+                WHERE vt.video_id = ? ORDER BY t.name COLLATE NOCASE
+            """, (media_id,)).fetchall()]
+            return jsonify({'success': True, 'local': database != 'youtube',
+                            'media': {**{key: row[key] for key in row.keys()}, 'tags': tags}})
+
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'success': False, 'error': 'Invalid media entry.'}), 400
+        values = {}
+        for field, limit in MEDIA_EDIT_LIMITS.items():
+            value = data.get(field, '')
+            if not isinstance(value, str) or len(value) > limit:
+                return jsonify({'success': False, 'error': f'Invalid {field.replace("_", " ")}.'}), 400
+            values[field] = value.strip()
+        tags = data.get('tags', [])
+        duration = data.get('duration', 0)
+        chapter = data.get('chapter', '')
+        if (not isinstance(tags, list) or len(tags) > 50 or any(not isinstance(tag, str) or len(tag) > 100 for tag in tags)
+                or type(duration) is not int or duration < 0 or not isinstance(chapter, str) or len(chapter) > 4000):
+            return jsonify({'success': False, 'error': 'Check tags, duration and chapters.'}), 400
+        if not values['playlist']:
+            return jsonify({'success': False, 'error': 'Playlist is required.'}), 400
+        if values['thumbnail_url'] and urllib.parse.urlsplit(values['thumbnail_url']).scheme not in {'http', 'https'}:
+            return jsonify({'success': False, 'error': 'Thumbnail must be an http(s) link.'}), 400
+        url = row['url']
+        if database != 'youtube' and values['url'] != row['url']:
+            if not resolve_vdo_file(values['url']):
+                return jsonify({'success': False, 'error': 'File path must be an existing video under a media root.'}), 400
+            url = values['url']
+        chapter = normalize_chapter_timestamps(chapter)
+        try:
+            conn.execute("""
+                UPDATE videos SET title = ?, artist = ?, duration = ?, thumbnail_url = ?, chapter = ?, chapter_checked = 1,
+                    playlist = ?, category = ?, url = ?, is_new = 0
+                WHERE id = ?
+            """, (values['title'] or 'Untitled Video', values['artist'] or 'Unknown Artist', duration,
+                  values['thumbnail_url'] or None, chapter, values['playlist'], values['category'] or None, url, media_id))
+        except sqlite3.IntegrityError:
+            return jsonify({'success': False, 'error': 'Another entry already uses that file path.'}), 409
+        conn.execute('DELETE FROM video_tags WHERE video_id = ?', (media_id,))
+        for tag in dict.fromkeys(tag.strip() for tag in tags if tag.strip()):
+            conn.execute('INSERT OR IGNORE INTO tags (name) VALUES (?)', (tag,))
+            tag_id = conn.execute('SELECT id FROM tags WHERE name = ?', (tag,)).fetchone()['id']
+            conn.execute('INSERT INTO video_tags (video_id, tag_id) VALUES (?, ?)', (media_id, tag_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+    state = _get_remote_state()
+    if state['database_name'] == database and state['media_id'] == media_id:
+        state.update(title=values['title'] or 'Untitled Video', duration=duration or state['duration'], chapter=chapter)
+        _save_remote_state(state)
+        socketio = current_app.extensions.get('socketio')
+        if socketio:
+            # 'metadata' updates text on screens without reloading or seeking the player.
+            socketio.emit('media_state', {'state': _display_state(state), 'command': 'metadata'})
+    return jsonify({'success': True})
 
 
 def _export_media_csv(database, db_path):
@@ -908,7 +1170,7 @@ def _import_media_csv(database, db_path, uploaded_file):
         if local_media:
             url = resolve_vdo_file(url)
             if not url:
-                raise ValueError(f'Row {line}: local path must resolve to an existing video under the configured media root')
+                raise ValueError(f'Row {line}: local path must resolve to an existing video under one of the configured media roots')
             url_key = os.path.normcase(url)
         else:
             extracted_id = extract_video_id(url)
@@ -1388,27 +1650,27 @@ def _render_media_library(media_source, local_kind=None):
                            stream_endpoint=f'/mm/api/{local_kind}/stream' if local_kind else '',
                            route_endpoint=f'routes_mm.mm_{local_kind}' if local_kind else 'routes_mm.mm_youtube')
 
-def _register_media_download(record, kind, path, info):
+def _register_media_download(record, kind, path, info, db_path=None):
     duration = int(record.get('duration') or info.get('duration') or 0)
     chapter = normalize_chapter_timestamps(record.get('chapter') or '')
     if kind == 'audio':
-        db_path = _mp3_database_path()
+        db_path = db_path or _mp3_database_path()
         _init_mp3_csv_database(db_path)
         conn = sqlite3.connect(db_path, timeout=5)
         try:
             conn.execute("""
                 INSERT INTO tracks (path, title, artist, album, playlist, category, tag_list, chapter, duration, size_bytes)
-                VALUES (?, ?, ?, '', ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(path) DO UPDATE SET title = excluded.title, artist = excluded.artist,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(path) DO UPDATE SET title = excluded.title, artist = excluded.artist, album = excluded.album,
                     playlist = excluded.playlist, category = excluded.category, tag_list = excluded.tag_list,
                     chapter = excluded.chapter, duration = excluded.duration, size_bytes = excluded.size_bytes
-            """, (str(path), record['title'], record['artist'], record['playlist'], record['category'],
+            """, (str(path), record['title'], record['artist'], record.get('album') or '', record['playlist'], record['category'],
                   record['tag_list'] or '', chapter, duration, path.stat().st_size))
             conn.commit()
         finally:
             conn.close()
         return
-    db_path = get_vdo_db_path()
+    db_path = db_path or get_vdo_db_path()
     init_db(db_path)
     conn = get_db_connection(db_path)
     try:
@@ -1462,8 +1724,8 @@ def api_download_video(vid_id):
         return jsonify({'success': False, 'error': 'The selected item is not a valid YouTube video.'}), 400
     try:
         destination = download_folder(mm_path(f'download_{kind}_root'), record['playlist'], record['category'])
-        if kind == 'video' and not destination.is_relative_to(Path(get_vdo_root()).resolve()):
-            return jsonify({'success': False, 'error': 'The video download root must be inside the configured local-media root.'}), 400
+        if kind == 'video' and not any(destination.is_relative_to(Path(root)) for root in get_vdo_roots()):
+            return jsonify({'success': False, 'error': 'The video download root must be inside one of the configured local-media roots.'}), 400
     except (KeyError, ValueError, OSError):
         return jsonify({'success': False, 'error': 'Check the download roots in mm_config.json.'}), 400
     app = current_app._get_current_object()
@@ -1547,7 +1809,7 @@ def api_add_vdo():
     file_path = resolve_vdo_file((data.get('url') or '').strip())
     playlist = (data.get('playlist') or '').strip()
     if not file_path:
-        return jsonify({'success': False, 'error': 'Choose an existing video file under the configured media root'}), 400
+        return jsonify({'success': False, 'error': 'Choose an existing video file under one of the configured media roots'}), 400
     if not playlist:
         return jsonify({'success': False, 'error': 'Playlist required'}), 400
 

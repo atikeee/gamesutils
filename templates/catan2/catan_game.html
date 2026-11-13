@@ -33,9 +33,10 @@
         .catan2-game-page .right-column:not(:has([id$="log"] *)) { display: flex; }
         .catan2-game-page .middle-section { flex: none; min-width: 0; margin: 0; padding: 10px; overflow: visible; }
         .catan2-game-page #assignpoint { width: 100%; overflow: visible; }
-        .catan2-game-page #assignpoint table { width: 100%; table-layout: fixed; }
+        .catan2-game-page #assignpoint table { width: 100%; height: auto; max-height: none; table-layout: fixed; }
+        .catan2-game-page #assignpoint tr { height: 40px; }
         .catan2-game-page #assignpoint th,
-        .catan2-game-page #assignpoint td { padding: 6px 2px; font-size: 0.72rem; line-height: 1.2; overflow-wrap: anywhere; }
+        .catan2-game-page #assignpoint td { box-sizing: border-box; height: 40px; padding: 6px 2px; font-size: 0.9rem; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
         .catan2-game-page .c2-game-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
         .catan2-game-page .c2-game-heading h1 { min-width: 0; margin: 0; }
         .catan2-game-page .dice-roll-section { flex: 0 0 auto; width: min(100%, 210px); }
@@ -188,7 +189,7 @@
         .c2-metropolis-trade { border-color: #b39410; background: #d2b51d; color: #28281a; }
         .c2-metropolis-politics { border-color: #205c9d; background: #3275bc; }
         .c2-metropolis-science { border-color: #28723e; background: #37844a; }
-        .catan-game-page #assignpoint .c2-progress-level-heading { font-size: 0.72rem; line-height: 1.1; }
+        .catan-game-page #assignpoint .c2-progress-level-heading { font-size: 0.9rem; line-height: 20px; }
         .catan-game-page #assignpoint .c2-progress-levels { white-space: nowrap; font-variant-numeric: tabular-nums; }
         .catan-game-page #assignpoint tr.c2-score-leader { background: #e1f1df; color: #244b39; font-weight: 700; }
         .catan-game-page #assignpoint tr.c2-score-leader td:first-child { box-shadow: inset 4px 0 #c49c26; }
@@ -240,7 +241,8 @@
         .c2-progress-card-popup-player { font-size: 1.1rem; font-weight: 700; }
         .c2-progress-card-popup-name { font-size: 1rem; font-weight: 600; }
         .c2-vp-log { max-height: 320px; margin: 0; padding: 0 0 0 16px; overflow-y: auto; list-style: none; }
-        .c2-vp-log li { position: relative; padding: 4px 8px; border-left: 2px solid #c9d7d3; color: #29453e; font-size: 0.78rem; line-height: 1.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .c2-vp-log li { position: relative; padding: 4px 8px; border-left: 2px solid #c9d7d3; color: #29453e; font-size: 1rem; line-height: 1.5; overflow-wrap: anywhere; }
+        .c2-vp-log-player { font-size: 1.15rem; font-weight: 700; }
         .c2-vp-log li::before {
             content: '';
             position: absolute;
@@ -255,7 +257,7 @@
         .c2-vp-log .c2-vp-log-empty::before { background: #c9d7d3; }
         @media (min-width: 901px) {
             .catan2-game-page .c2-game-heading { display: none; }
-            .catan2-game-page #assignpoint table { height: 132px; }
+            .catan2-game-page #assignpoint table { height: auto; }
             .catan2-game-page .middle-column { overflow-x: hidden; overflow-y: auto; }
             .catan2-game-page .game-map {
                 width: min(100%, calc((100dvh - 24px) * 1.2));
@@ -279,11 +281,11 @@
             .catan2-game-page .middle-section .assign-point-section { margin-top: 4px; }
             .catan2-game-page #assignpoint th,
             .catan2-game-page #assignpoint td {
-                padding: 4px 2px;
+                padding: 6px 2px;
                 border-right: 1px solid #cbd5d1;
                 border-left: 1px solid #cbd5d1;
-                font-size: 0.66rem;
-                line-height: 1.1;
+                font-size: 0.9rem;
+                line-height: 20px;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -310,9 +312,9 @@
                 text-overflow: ellipsis;
             }
             .catan2-game-page .c2-vp-footer h2 { margin: 4px 0 2px; font-size: 0.82rem; }
-            .catan2-game-page .c2-vp-log { max-height: 54px; padding-left: 12px; }
-            .catan2-game-page .c2-vp-log li { padding: 2px 4px; font-size: 0.62rem; line-height: 1.1; }
-            .catan2-game-page .c2-vp-log li::before { top: 5px; width: 7px; height: 7px; }
+            .catan2-game-page .c2-vp-log { max-height: 90px; padding-left: 12px; }
+            .catan2-game-page .c2-vp-log li { padding: 3px 4px; font-size: 1rem; line-height: 1.5; }
+            .catan2-game-page .c2-vp-log li::before { top: 12px; width: 7px; height: 7px; }
             .catan2-game-page .c2-activity-section { padding: 4px 6px; }
             .catan2-game-page .c2-activity-section h2 { margin-bottom: 3px; font-size: 0.82rem; }
             .catan2-game-page .c2-activity-log li {
@@ -457,7 +459,7 @@
                             <th class="py-3 px-2 text-left border-b-2 border-gray-300 rounded-tl-lg">NAME</th>
                             <th class="py-3 px-2 text-left border-b-2 border-gray-300"><span class="c2-score-desktop-label">Sc</span><span class="c2-score-mobile-label">Score</span></th>
                             <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Resource and commodity cards - Progress cards">Cards</th>
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Active knight strength">KN</th>
+                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Total knight strength (active knight strength)">KN</th>
                             <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Victory Points">VP</th>
                             <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Metropolises (2 points each)"><span class="c2-score-desktop-label">MT</span><span class="c2-score-mobile-label">Metro</span></th>
                             <th class="py-3 px-2 text-left border-b-2 border-gray-300 c2-progress-level-heading" title="Trade - Politics - Science"><span class="c2-score-desktop-label">LVL</span><span class="c2-score-mobile-label">Prog Lvl</span></th>
@@ -576,7 +578,7 @@
         </div>
     </div>
     <script>window.CATAN_PLAYER_COLORS = {{ player_colors|tojson }};</script>
-    <script src="{{ url_for('static', filename='js/catan_drawing_utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/catan2_game_logic.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan_drawing_utils.js', v='3') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan2_game_logic.js', v='18') }}"></script>
 </body>
 </html>
