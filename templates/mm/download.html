@@ -20,6 +20,9 @@
         input:not([type="checkbox"]), textarea { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--field); }
         button { padding: 8px 14px; border: 1px solid var(--accent); border-radius: 6px; color: #10251c; background: var(--accent); font-weight: 700; cursor: pointer; }
         button.secondary { color: var(--ink); background: transparent; border-color: var(--line); }
+        button.add-links { color: #132b3b; background: #9bccef; border-color: #9bccef; }
+        button.add-links:hover:not(:disabled) { background: #bbdef6; border-color: #bbdef6; }
+        button.add-links:focus-visible { outline: 2px solid #d5edff; outline-offset: 3px; }
         button:disabled { opacity: .5; cursor: not-allowed; }
         label { display: inline-flex; align-items: center; gap: 6px; }
         #message { min-height: 22px; margin: 10px 0 0; color: var(--muted); }
@@ -59,6 +62,7 @@
             <span id="summary"></span>
             <button type="button" class="secondary" id="applyBatch">Apply to selected</button>
             <button type="button" class="secondary" id="removeSelected">Remove selected</button>
+            <button type="button" class="add-links" id="addLinksButton">Add links</button>
             <button type="button" id="downloadButton">Download links</button>
         </div>
         <div class="table-scroll">
@@ -87,6 +91,7 @@
     const audioOnly = $('audioOnly');
     let rows = [];
     let polling = null;
+    let adding = false;
     let modes = ['audio', 'video'];
     const batchValues = {};
 
@@ -174,7 +179,10 @@
 
     function renderControls() {
         $('summary').textContent = `${selected().length} of ${rows.length} selected`;
-        $('downloadButton').disabled = Boolean(polling) || selected().length === 0;
+        $('downloadButton').disabled = Boolean(polling) || adding || selected().length === 0;
+        $('addLinksButton').disabled = Boolean(polling) || adding || selected().length === 0;
+        $('removeSelected').disabled = adding;
+        $('applyBatch').disabled = adding;
         $('tablePanel').classList.toggle('hidden', rows.length === 0);
     }
 
@@ -221,6 +229,41 @@
     $('removeSelected').addEventListener('click', () => {
         rows = rows.filter(row => !row.selected);
         render();
+    });
+
+    $('addLinksButton').addEventListener('click', async () => {
+        const targets = selected();
+        if (!targets.length || adding || polling) return;
+        adding = true;
+        $('processButton').disabled = true;
+        targets.forEach(row => {
+            row.status = 'saving';
+            row.message = 'Adding link...';
+            renderStatus(row);
+        });
+        message('Adding YouTube links...');
+        renderControls();
+        try {
+            const payload = targets.map(row => Object.fromEntries(['url', 'video_id', 'thumbnail_url', 'duration', ...FIELDS.map(field => field.key)].map(key => [key, row[key]])));
+            const result = await postJson('/mm/api/download/add', { rows: payload });
+            result.items.forEach((item, index) => {
+                targets[index].status = item.status;
+                targets[index].message = item.message;
+                renderStatus(targets[index]);
+            });
+            message(`Added ${result.added} links to YouTube; ${result.existing} already present; ${result.skipped} non-YouTube links skipped. No files downloaded.`);
+        } catch (error) {
+            targets.forEach(row => {
+                row.status = 'failed';
+                row.message = error.message;
+                renderStatus(row);
+            });
+            message(error.message, true);
+        } finally {
+            adding = false;
+            $('processButton').disabled = false;
+            renderControls();
+        }
     });
 
     $('downloadButton').addEventListener('click', async () => {

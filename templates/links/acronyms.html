@@ -1,18 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Acronym Dictionary</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <!-- Sakura CSS for styling -->
-  
-  
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/work.css') }}?v=2">
-</head>
-<body class="work-page work-acronyms">
+{% extends 'work/base.html' %}
+{% block title %}Acronym Dictionary{% endblock %}
+{% block body_class %}work-acronyms{% endblock %}
+{% block content %}
   <div class="container">
-    {% include 'work/_back_button.html' %}
     <h1>Acronym Dictionary</h1>
     <input class="search-box" type="text" id="search" placeholder="Type to filter acronyms..." autofocus>
 
@@ -165,5 +155,4 @@
       }
     });
   </script>
-</body>
-</html>
+{% endblock %}

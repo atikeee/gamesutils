@@ -182,8 +182,25 @@ function getHexVertices(centerX, centerY, size) {
     }
     return vertices;
 }
-const TILE_OPACITY = 0.6;      // the tile picture/colour
+const TILE_OPACITY = 0.8;      // the tile picture/colour
 const BORDER_OPACITY = 0.2;    // the hex outline (lower = fainter)
+const DICE_HIGHLIGHT_INSET_PERCENT = 10;
+
+function drawDiceHighlight(ctx, x, y, size) {
+    const vertices = getHexVertices(x, y, size * (1 - DICE_HIGHLIGHT_INSET_PERCENT / 100));
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(vertices[0].x, vertices[0].y);
+    vertices.slice(1).forEach(vertex => ctx.lineTo(vertex.x, vertex.y));
+    ctx.closePath();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#ffff00';
+    ctx.lineWidth = 5;
+    ctx.shadowColor = '#ffff00';
+    ctx.shadowBlur = 18;
+    ctx.stroke();
+    ctx.restore();
+}
 
 function drawHex(ctx, x, y, size, fillColor, image = null, strokeColor = '#333', lineWidth = 2) {
     ctx.globalAlpha = TILE_OPACITY;

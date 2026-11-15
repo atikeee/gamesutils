@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css', v='catan2-light-1') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css', v='catan2-light-2') }}">
     <style>
         body.catan-player-page.catan2-player-page { background: #fff; }
         .catan2-player-page .canvas-wrapper.map-zoom-viewport { position: relative; overflow: hidden; }
@@ -187,6 +187,7 @@
             touch-action: manipulation;
         }
         .c2-turn-button:focus-visible { outline: 3px solid #f1c40f; outline-offset: 2px; }
+        .c2-turn-player-name { position: absolute; right: 8px; bottom: 56px; z-index: 1; }
         .c2-turn-button[data-state="waiting"] {
             background: radial-gradient(circle at 35% 35%, #ff8a80, #d32f2f 60%, #8e1b1b);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), 0 0 10px rgba(211, 47, 47, 0.6);
@@ -213,6 +214,7 @@
             .c2-build-menu { bottom: 50px; width: 40px; gap: 6px; }
             .catan2-player-page .c2-build-menu .btn-tool { width: 36px; min-width: 36px; height: 36px; min-height: 36px; font-size: 0.95rem; }
             .c2-turn-button { right: 4px; bottom: 4px; width: 40px; height: 40px; font-size: 1.15rem; }
+            .c2-turn-player-name { right: 4px; bottom: 48px; }
             .c2-map-undo-button,
             .c2-map-zoom-button,
             .c2-build-toggle { width: 40px; height: 40px; font-size: 1rem; }
@@ -876,7 +878,6 @@
     </style>
 </head>
 <body class="catan-player-page catan2-player-page{% if player_color %} has-player-color{% endif %}" data-player-id="{{ player_id }}"{% if player_color %} style="--player-color: {{ player_color }}; --player-color-text: {{ '#1a1a1a' if player_color == '#F1C40F' else '#ffffff' }}"{% endif %}>
-    
     <div class="container player-page-container">
         {% if not player_color %}
         <section class="player-color-picker" aria-labelledby="player-color-title">
@@ -922,6 +923,7 @@
                     </div>
                     <button type="button" class="c2-build-toggle" id="buildMenuToggle" title="Build" aria-label="Build" aria-expanded="false" aria-controls="buildMenu"><i class="fas fa-hammer" aria-hidden="true"></i></button>
                 </div>
+                <span class="turn-player-name c2-turn-player-name" id="currentTurnPlayerName" hidden></span>
                 <button type="button" class="c2-turn-button" id="turnButton" data-state="waiting" title="Not your turn" aria-label="Not your turn" aria-disabled="true"><i class="fas fa-dice" aria-hidden="true"></i></button>
             </div>
             <div class="c2-metropolis-markers" aria-label="Metropolis ownership">
@@ -1052,6 +1054,14 @@
         </div>
     </div>
 
+    <div id="robberSelfDiscardModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="robberSelfDiscardMessage">
+        <div class="modal-content">
+            <p id="robberSelfDiscardMessage" class="modal-message"></p>
+            <div class="modal-buttons"><button type="button" class="btn btn-confirm" id="robberSelfDiscardOk">OK</button></div>
+        </div>
+    </div>
+
+
     <div id="progressCardModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Choose a progress card deck">
         <div class="modal-content c2-progress-modal c2-deck-choice-modal">
             <div class="c2-deck-choices">
@@ -1130,11 +1140,13 @@
         window.PLAYER_NAME = {{ player_name|tojson }};
         window.CATAN_PLAYER_COLORS = {{ player_colors|tojson }};
         window.CATAN2_PROGRESS_CARD_NOTES = {{ progress_card_notes|tojson }};
+        window.CATAN_DEBUG_FORCE_ROLL_SEVEN = {{ debug_force_roll_seven|tojson }};
+        window.CATAN_USE_BALANCED_DICE_POOL = {{ use_balanced_dice_pool|tojson }};
 
     </script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-    <script src="{{ url_for('static', filename='js/catan_drawing_utils.js', v='3') }}"></script>
-    <script src="{{ url_for('static', filename='js/catan2_game_logic.js', v='18') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan_drawing_utils.js', v='4') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan2_game_logic.js', v='28') }}"></script>
     <script>
     // Build menu: open/close only. Tool selection itself is still handled by catan2_game_logic.js.
     (function () {

@@ -1,0 +1,4 @@
+R_DEF: Internal format may change without notice
+local
+id tvWebView
+layout activity_main

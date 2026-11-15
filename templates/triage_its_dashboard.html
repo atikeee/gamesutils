@@ -1,16 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HSD-ES Tickets</title>
-    
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/work.css') }}?v=2">
-</head>
-<body class="work-page work-its">
+{% extends 'work/base.html' %}
+{% block title %}HSD-ES Tickets{% endblock %}
+{% block body_class %}work-its{% endblock %}
+{% block content %}
     <header>
-        {% include 'work/_back_button.html' %}
         <h1>HSD-ES Tickets</h1>
         <button id="run-scan-btn" type="button">Run Scan</button>
     </header>
@@ -184,5 +176,4 @@
             });
         });
     </script>
-</body>
-</html>
+{% endblock %}

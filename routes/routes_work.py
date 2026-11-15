@@ -1,4 +1,4 @@
-from flask import jsonify, render_template, request
+from flask import jsonify, redirect, render_template, request, url_for
 from dashboard import PROJECT_ROOT, dashboard_tile
 import os
 import re
@@ -70,14 +70,14 @@ def configure_routes_work(app, socketio):
     @app.route('/work/')
     @dashboard_tile(section='tools', title='Work', description='Triage and reference tools.', icon='clipboard', order=10)
     def work_dashboard():
-        return render_template('work/dashboard.html')
+        return redirect(url_for('triage_email_dashboard'))
 
     # ── VIEW PAGE ────────────────────────────────────────────────
     @app.route("/links")
     @dashboard_tile(section="tools", title="Useful Links", description="Browse the curated collection of links.", icon="link", order=20)
     def links():
         structure = _get_structure()
-        return render_template("links/links.html", structure=structure)
+        return render_template("work/links.html", structure=structure)
 
     # ── EDITOR: GET (show editor) ────────────────────────────────
     @app.route("/links/edit", methods=["GET"])
@@ -87,7 +87,7 @@ def configure_routes_work(app, socketio):
                 content = f.read()
         except FileNotFoundError:
             content = ""
-        return render_template("links/links_edit.html", content=content)
+        return render_template("work/links_edit.html", content=content)
 
     # ── EDITOR: POST (save file) ─────────────────────────────────
     @app.route("/links/edit", methods=["POST"])
@@ -120,7 +120,7 @@ def configure_routes_work(app, socketio):
         """
         Render the acronyms page. The page will fetch acronym.csv via /acronyms/data.
         """
-        return render_template("links/acronyms.html")
+        return render_template("work/acronyms.html")
         #return "hello"
     # ── ACRONYMS: APPEND NEW ROW (API) ───────────────────────────
     @app.route("/acronyms/add", methods=["POST"])

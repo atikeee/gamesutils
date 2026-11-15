@@ -1,0 +1,13 @@
+plugins {
+    id 'com.android.application' version '8.2.2' apply false
+    id 'org.jetbrains.kotlin.android' version '1.9.22' apply false
+}
+
+// Redirect build outputs outside of OneDrive to prevent OneDrive sync engine file-locking (AccessDeniedException)
+subprojects {
+    layout.buildDirectory.set(file("C:/tmp/androidTVapp/${project.name}"))
+}
+
+task clean(type: Delete) {
+    delete "C:/tmp/androidTVapp"
+}

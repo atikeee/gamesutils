@@ -22,6 +22,7 @@ from routes.routes_mm import configure_routes_mm
 from routes.routes_mm_mp3 import configure_routes_mm_mp3
 from routes.routes_mm_download import configure_routes_mm_download
 from routes.routes_deploy import configure_routes_deploy
+from routes.routes_weather import configure_routes_weather
 import os
 import random
 
@@ -56,6 +57,7 @@ configure_routes_mm(app, socketio)
 configure_routes_mm_mp3(app)
 configure_routes_mm_download(app)
 configure_routes_deploy(app)
+configure_routes_weather(app)
 if __name__ == '__main__':
     #app.run(debug=True, host='0.0.0.0')
     socketio.run(app, debug=os.environ.get('APP_DEBUG', '1') == '1', host='0.0.0.0',

@@ -8,7 +8,7 @@ button:hover:not(:disabled), button[aria-selected="true"], button[aria-pressed="
 button:disabled { opacity: .5; cursor: default; }
 a { color: var(--gain); text-decoration: none; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--gain); outline-offset: 3px; }
-.stocks-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 12px 24px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.stocks-toolbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 12px 24px; border-bottom: 1px solid var(--line); background: var(--surface); }
 .view-tabs, .toolbar-right, .actions, .periods { display: flex; align-items: center; gap: 8px; }
 .view-tabs button { width: 44px; height: 42px; padding: 0; }
 .view-tabs svg { width: 21px; height: 21px; }
@@ -74,8 +74,30 @@ body:has(#stockDetail[open]) { overflow: hidden; }
 .analysis-search { width: 460px; max-width: 100%; margin-bottom: 20px; }
 #analysisStatus { color: var(--loss); }
 .analysis-note { color: var(--muted); font-size: 13px; }
+.signal-help { width: 680px; font-size: 16px; line-height: 1.6; }
+.signal-help-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.signal-help-heading h2 { margin: 0; font-size: 21px; }
+.signal-help-heading button { flex: 0 0 38px; padding: 0; }
+.signal-help h3 { margin: 22px 0 12px; font-size: 18px; }
+.signal-help dl { margin: 0; }
+.signal-help dt { font-weight: 700; }
+.signal-help dd { margin: 4px 0 16px; color: var(--muted); }
+.signal-help dd strong { color: var(--text); }
+.signal-help .analysis-note { font-size: 14px; }
 #analysisRows td:last-child { white-space: normal; min-width: 280px; }
 .analysis-search + #analysisStatus:empty { display: none; }
 [hidden] { display: none !important; }
 @media (max-width: 900px) { .stock-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 600px) { .stock-grid { grid-template-columns: 1fr; } main { padding: 16px 12px; } .stocks-toolbar { padding: 10px 12px; } .view-heading { align-items: flex-start; flex-wrap: wrap; } .toolbar-right span { max-width: 130px; text-align: right; } }
+@media (max-width: 600px) {
+	body { font-size: 16px; line-height: 1.6; }
+	.stock-grid { grid-template-columns: 1fr; }
+	main { padding: 16px 12px; }
+	.stocks-toolbar { padding: 10px 12px; }
+	.view-heading { align-items: flex-start; flex-wrap: wrap; }
+	.toolbar-right span { max-width: 130px; text-align: right; }
+	.stock-name, .card-heading .change, .card-metrics span, th, label { font-size: 14px; }
+	.analysis-note, .detail-news p { font-size: 16px; }
+	.detail-news a { font-size: 18px; line-height: 1.5; font-weight: 600; overflow-wrap: anywhere; }
+	.detail-news small { font-size: 14px; }
+	.signal-help { padding: 18px; }
+}

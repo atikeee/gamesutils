@@ -55,6 +55,7 @@ button, select { font-family: inherit; }
 .map-corner-bottom-left { bottom: 8px; left: 8px; }
 .map-corner-bottom-right { bottom: 8px; right: 8px; }
 .map-tool { display: grid; place-items: center; flex: 0 0 auto; width: 36px; height: 36px; padding: 0; border: 1px solid #b8c8c1; border-radius: 6px; background: #fff; color: #21493c; font-size: 1rem; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+.map-tool:focus-visible { outline: 3px solid #c49c26; outline-offset: 2px; }
 .map-tool:hover:not(:disabled) { background: #e4f0ec; }
 .map-tool.selected, .map-tool[aria-pressed="true"] { border-color: #176b5b; background: #176b5b; color: #fff; }
 .map-tool-danger { color: #b22b31; }

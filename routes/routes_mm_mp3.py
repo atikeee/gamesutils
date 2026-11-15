@@ -72,12 +72,24 @@ def mp3_player(tv_mode=False):
     if not selected_playlist and all_playlists:
         selected_playlist = all_playlists[0]
 
-    cursor.execute("SELECT DISTINCT category FROM tracks WHERE playlist = ? AND category IS NOT NULL AND category != '' ORDER BY category;", (selected_playlist,))
-    all_categories = [row["category"] for row in cursor.fetchall()]
+    cursor.execute("""
+        SELECT CASE WHEN category IS NULL OR TRIM(category) = '' THEN '' ELSE category END AS category,
+               COUNT(*) AS count
+        FROM tracks WHERE playlist = ? GROUP BY 1 ORDER BY 1;
+    """, (selected_playlist,))
+    category_rows = cursor.fetchall()
+    category_counts = {row['category']: row['count'] for row in category_rows if row['category']}
+    all_categories = list(category_counts)
+    uncategorized_count = next((row['count'] for row in category_rows if not row['category']), 0)
+    playlist_count = sum(row['count'] for row in category_rows)
+    if selected_category == '__uncategorized__' and not uncategorized_count:
+        selected_category = None
 
     conditions = "playlist = ?"
     params = [selected_playlist]
-    if selected_category:
+    if selected_category == '__uncategorized__':
+        conditions += " AND (category IS NULL OR TRIM(category) = '')"
+    elif selected_category:
         conditions += " AND category = ?"
         params.append(selected_category)
     cursor.execute(f"SELECT DISTINCT artist FROM tracks WHERE {conditions} AND artist IS NOT NULL AND artist != '' ORDER BY artist;", params)
@@ -95,6 +107,9 @@ def mp3_player(tv_mode=False):
         all_playlists=all_playlists,
         selected_playlist=selected_playlist,
         all_categories=all_categories,
+        category_counts=category_counts,
+        uncategorized_count=uncategorized_count,
+        playlist_count=playlist_count,
         selected_category=selected_category,
         all_artists=all_artists,
         selected_artist=selected_artist,
@@ -195,6 +210,27 @@ def api_library():
 # -----------------------------------------------------------------------------
 # 3. Real-Time Single Track Update
 # -----------------------------------------------------------------------------
+@bp_mm_mp3.route("/mm/api/mp3/track/<int:track_id>/fav", methods=["POST"])
+def toggle_track_fav(track_id):
+    conn = get_db()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT tag_list FROM tracks WHERE id = ?", (track_id,)).fetchone()
+        if not row:
+            return jsonify({"success": False, "error": "Track not found"}), 404
+        tags = _split_tags(row['tag_list'])
+        liked = any(tag.casefold() == 'fav' for tag in tags)
+        tags = [tag for tag in tags if tag.casefold() != 'fav']
+        if not liked:
+            tags.append('fav')
+        tag_list = ', '.join(tags)
+        conn.execute("UPDATE tracks SET tag_list = ? WHERE id = ?", (tag_list, track_id))
+        conn.commit()
+        return jsonify({"success": True, "fav": not liked, "tag_list": tag_list})
+    finally:
+        conn.close()
+
+
 @bp_mm_mp3.route("/mm/api/mp3/track/<int:track_id>/update", methods=["POST"])
 def update_track_metadata(track_id):
     data = request.get_json(silent=True)

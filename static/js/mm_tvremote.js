@@ -40,6 +40,7 @@
     else initTv();
 
     function initRemote() {
+        const uncategorizedCategory = '__uncategorized__';
         const databaseButton = document.getElementById('databaseButton');
         const playlistSelect = document.getElementById('playlistSelect');
         const categorySelect = document.getElementById('categorySelect');
@@ -335,8 +336,14 @@
                 if (requestId !== libraryRequest) return;
                 playlistSelect.replaceChildren(...result.playlists.map(playlist => new Option(playlist, playlist)));
                 playlistSelect.value = result.playlist;
-                categorySelect.replaceChildren(new Option('All', ''), ...result.categories.map(category => new Option(category, category)));
-                categorySelect.value = result.category;
+                categorySelect.replaceChildren(
+                    new Option(`All (${result.playlist_count})`, ''),
+                    ...(result.uncategorized_count > 0
+                        ? [new Option(`NA (${result.uncategorized_count})`, uncategorizedCategory)] : []),
+                    ...result.categories.map(category => new Option(`${category} (${result.category_counts[category]})`, category))
+                );
+                categorySelect.value = result.category === uncategorizedCategory && !result.uncategorized_count
+                    ? '' : result.category;
                 selectedTags = new Set(result.selected_tags || []);
                 page = result.page;
                 pages = result.pages;
@@ -562,6 +569,72 @@
         playlistSelect.addEventListener('change', () => { selectedTags.clear(); page = 1; loadLibrary(); });
         categorySelect.addEventListener('change', () => { selectedTags.clear(); page = 1; loadLibrary(); });
 
+        const addMediaDialog = document.getElementById('addMediaDialog');
+        const addMediaForm = document.getElementById('addMediaForm');
+        const addMediaStatus = document.getElementById('addMediaStatus');
+        const addMediaSubmit = document.getElementById('addMediaSubmit');
+        const addMediaCancel = document.getElementById('addMediaCancel');
+        let addDatabase = null;
+        let savingAdd = false;
+        document.getElementById('addMediaBtn').addEventListener('click', () => {
+            addDatabase = selectedDatabase;
+            addMediaForm.reset();
+            addMediaStatus.textContent = '';
+            document.getElementById('addMediaTitle').textContent = `Add ${databaseLabels[addDatabase] || addDatabase} Entry`;
+            document.getElementById('addMediaUrlLabel').textContent = addDatabase === 'youtube' ? 'YouTube URL or ID' : 'Server file path';
+            document.getElementById('addMediaPlaylist').value = playlistSelect.value || databaseLabels[addDatabase] || addDatabase;
+            document.getElementById('addMediaCategory').value = categorySelect.value === uncategorizedCategory ? '' : categorySelect.value;
+            document.getElementById('addMediaTags').value = [...selectedTags].join(', ');
+            document.getElementById('addMediaPlaylists').replaceChildren(...Array.from(playlistSelect.options, option => new Option(option.value)));
+            document.getElementById('addMediaCategories').replaceChildren(...Array.from(categorySelect.options).filter(option => option.value && option.value !== uncategorizedCategory).map(option => new Option(option.value)));
+            addMediaDialog.showModal();
+            document.getElementById('addMediaUrl').focus();
+        });
+        addMediaCancel.addEventListener('click', () => addMediaDialog.close());
+        addMediaDialog.addEventListener('cancel', event => { if (savingAdd) event.preventDefault(); });
+        addMediaForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            if (savingAdd || !addDatabase) return;
+            const database = addDatabase;
+            const playlist = document.getElementById('addMediaPlaylist').value.trim();
+            const category = document.getElementById('addMediaCategory').value.trim();
+            const url = document.getElementById('addMediaUrl').value.trim();
+            if (!url || !playlist) { addMediaStatus.textContent = 'URL or file path and playlist are required.'; return; }
+            savingAdd = true;
+            addMediaSubmit.disabled = true;
+            addMediaCancel.disabled = true;
+            addMediaStatus.textContent = 'Adding...';
+            try {
+                const apiDatabase = database === 'youtube' ? 'video' : database;
+                const response = await fetch(`/mm/api/${encodeURIComponent(apiDatabase)}/add`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url, playlist, category,
+                        title: document.getElementById('addMediaEntryTitle').value.trim(),
+                        tags: document.getElementById('addMediaTags').value.split(',').map(tag => tag.trim()).filter(Boolean)
+                    })
+                });
+                const result = await readJson(response);
+                if (!response.ok || !result.success) throw new Error(result.error || 'Could not add the entry.');
+                addMediaDialog.close();
+                remoteMessage.textContent = `Entry added to ${databaseLabels[database] || database}.`;
+                if (database === selectedDatabase) {
+                    selectedTags.clear();
+                    searchInput.value = '';
+                    page = 1;
+                    focusMediaId = result.id;
+                    pendingView = { playlist, category };
+                    await loadLibrary();
+                }
+            } catch (error) {
+                addMediaStatus.textContent = error.message || 'Could not add the entry.';
+            } finally {
+                savingAdd = false;
+                addMediaSubmit.disabled = false;
+                addMediaCancel.disabled = false;
+            }
+        });
+
         const editMediaDialog = document.getElementById('editMediaDialog');
         const editMediaForm = document.getElementById('editMediaForm');
         const editMediaStatus = document.getElementById('editMediaStatus');
@@ -601,7 +674,7 @@
                     ? `${databaseLabels[target.database] || target.database} entry #${media.id}`
                     : `YouTube video ${media.video_id}`;
                 document.getElementById('editPlaylists').replaceChildren(...Array.from(playlistSelect.options, option => new Option(option.value)));
-                document.getElementById('editCategories').replaceChildren(...Array.from(categorySelect.options).filter(option => option.value).map(option => new Option(option.value)));
+                document.getElementById('editCategories').replaceChildren(...Array.from(categorySelect.options).filter(option => option.value && option.value !== uncategorizedCategory).map(option => new Option(option.value)));
                 editMediaDialog.showModal();
                 editFields.title.focus();
             } catch (error) {
@@ -747,6 +820,11 @@
         const status = document.getElementById('tvStatus');
         const audioOverlay = document.getElementById('tvAudioOverlay');
         const audioTitle = document.getElementById('tvAudioTitle');
+        const audioArtist = document.getElementById('tvAudioArtist');
+        const audioDetails = document.getElementById('tvAudioDetails');
+        const audioTime = document.getElementById('tvAudioTime');
+        const audioChapterList = document.getElementById('tvAudioChapters');
+        let audioChapters = [];
         let youtubePlayer = null;
         let youtubeReady = false;
         let youtubeApiRequested = false;
@@ -806,7 +884,65 @@
             const enabled = Boolean(Number(state?.audio_only));
             stage.classList.toggle('audio-only', enabled);
             audioOverlay.hidden = !enabled;
-            audioTitle.textContent = state?.title || '';
+            const track = state?.track || {};
+            audioTitle.textContent = track.title || state?.title || '';
+            if (!enabled || !audioDetails) return;
+            audioArtist.textContent = track.artist || '';
+            audioDetails.replaceChildren();
+            const details = [
+                ['Album', track.album], ['Playlist', track.playlist], ['Category', track.category],
+                ['Tags', track.tag_list], ['Duration', (track.duration || state.duration) > 0 ? formatAudioTime(track.duration || state.duration) : ''],
+                ['File size', track.size_bytes > 0 ? `${(track.size_bytes / (1024 * 1024)).toFixed(1)} MB` : ''],
+                ['Added', track.created_at], ['File', track.path]
+            ];
+            details.forEach(([label, value]) => {
+                if (!value) return;
+                const detail = document.createElement('div');
+                if (label === 'Tags' || label === 'File') detail.className = 'audio-detail-wide';
+                const name = document.createElement('dt');
+                name.textContent = label;
+                const text = document.createElement('dd');
+                text.textContent = value;
+                detail.append(name, text);
+                audioDetails.append(detail);
+            });
+            audioChapters = parseChapters(track.chapter ?? state.chapter);
+            audioChapterList.replaceChildren();
+            audioChapterList.hidden = audioChapters.length === 0;
+            if (audioChapters.length) {
+                const label = document.createElement('span');
+                label.className = 'audio-chapter-label';
+                label.textContent = 'Chapters';
+                audioChapterList.append(label);
+                audioChapters.forEach(seconds => {
+                    const chapter = document.createElement('span');
+                    chapter.className = 'audio-chapter-time';
+                    chapter.dataset.seconds = String(seconds);
+                    chapter.textContent = formatAudioTime(seconds);
+                    audioChapterList.append(chapter);
+                });
+            }
+            updateAudioProgress(state.position, state.duration || track.duration, state.paused);
+        }
+
+        function formatAudioTime(value) {
+            const total = Math.max(0, Math.floor(Number(value) || 0));
+            const hours = Math.floor(total / 3600);
+            const parts = [Math.floor(total / 60) % 60, total % 60];
+            if (hours) parts.unshift(hours);
+            return parts.map(part => String(part).padStart(2, '0')).join(':');
+        }
+
+        function updateAudioProgress(position, duration, paused) {
+            if (audioOverlay.hidden || !audioTime) return;
+            audioTime.textContent = `${formatAudioTime(position)} / ${formatAudioTime(duration)}${paused ? ' - Paused' : ''}`;
+            const activeChapter = audioChapters.filter(seconds => seconds <= Number(position)).at(-1);
+            audioChapterList.querySelectorAll('.audio-chapter-time').forEach(chapter => {
+                const active = Number(chapter.dataset.seconds) === activeChapter;
+                chapter.classList.toggle('current', active);
+                if (active) chapter.setAttribute('aria-current', 'true');
+                else chapter.removeAttribute('aria-current');
+            });
         }
 
         function ensureYoutubeApi() {
@@ -954,6 +1090,11 @@
                 socket.emit('media_ended', { revision: currentState.revision });
             }
         });
+        localPlayer.addEventListener('timeupdate', () => {
+            if (currentState?.database_name === 'youtube') return;
+            updateAudioProgress(localPlayer.currentTime, Number.isFinite(localPlayer.duration) ? localPlayer.duration : currentState?.duration,
+                localPlayer.paused);
+        });
         socket.on('connect', () => {
             setStatus('Waiting for media selection');
             socket.emit('media_join');
@@ -974,6 +1115,7 @@
                 paused = localPlayer.paused;
                 duration = localPlayer.duration || duration;
             }
+            updateAudioProgress(position, duration, paused);
             socket.emit('media_progress', { position, paused, duration, revision: currentState.revision });
         }, 2000);
     }

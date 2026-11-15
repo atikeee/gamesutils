@@ -6,7 +6,7 @@
     <title>My Music{% if tv_mode %} TV{% endif %}</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mm.css') }}?v=3">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm_mp3.css') }}?v={{ 4 if tv_mode else 6 }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mm_mp3.css') }}?v={{ 4 if tv_mode else 7 }}">
 </head>
 <body class="mp3-page{% if tv_mode %} mp3-tv{% endif %}">
     <div class="mm-container" id="appContainer"
@@ -27,9 +27,12 @@
             </label>
             <label class="mp3-filter"><span>Category</span>
             <select id="categorySelect" class="playlist-select category-select" aria-label="Category">
-                <option value="" {% if not selected_category %}selected{% endif %}>All</option>
+                <option value="" {% if not selected_category %}selected{% endif %}>All ({{ playlist_count }})</option>
+                {% if uncategorized_count %}
+                <option value="__uncategorized__" {% if selected_category == '__uncategorized__' %}selected{% endif %}>NA ({{ uncategorized_count }})</option>
+                {% endif %}
                 {% for cat in all_categories %}
-                    <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat }}</option>
+                    <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat }} ({{ category_counts[cat] }})</option>
                 {% endfor %}
             </select>
             </label>
@@ -177,7 +180,7 @@
     {% endif %}
 
     <script src="{{ url_for('static', filename='js/mm_common.js') }}?v=2"></script>
-    <script src="{{ url_for('static', filename='js/mm_mp3.js') }}?v={{ 3 if tv_mode else 4 }}"></script>
+    <script src="{{ url_for('static', filename='js/mm_mp3.js') }}?v={{ 4 if tv_mode else 7 }}"></script>
 </body>
 </html>
 

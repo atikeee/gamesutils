@@ -463,7 +463,7 @@ def configure_routes_triage_its(app):
         except (OSError, ValueError) as exception:
             validation_data = {'scanned_at': None, 'rows': []}
             error = error or f'Could not read validation data: {exception}'
-        return render_template('triage_its_dashboard.html', data=data, validation_data=validation_data, error=error)
+        return render_template('work/triage_its_dashboard.html', data=data, validation_data=validation_data, error=error)
 
     @app.route('/triage_its/delete', methods=['POST'])
     def triage_its_delete_rows():

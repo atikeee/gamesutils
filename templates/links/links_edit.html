@@ -1,15 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Edit Bookmarks</title>
-  
-  
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/work.css') }}?v=2">
-</head>
-<body class="work-page work-editor">
+{% extends 'work/base.html' %}
+{% block title %}Edit Bookmarks{% endblock %}
+{% block body_class %}work-editor{% endblock %}
+{% block content %}
 
 <header>
   <a href="/links" class="back">← Bookmarks</a>
@@ -208,5 +200,4 @@
     if (isDirty) { e.preventDefault(); e.returnValue = ''; }
   });
 </script>
-</body>
-</html>
+{% endblock %}

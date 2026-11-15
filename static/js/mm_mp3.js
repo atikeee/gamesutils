@@ -9,17 +9,28 @@ let currentTrack = null;
 
 let queuePage = 1;
 const songsPerPage = 10;
+const pendingLikes = new Set();
 const selectedTagFilters = new Set(readJsonData(appContainer, 'selectedTags', []));
 
 const audio = document.getElementById('audioEngine');
 const tvSocket = !TV_MODE && typeof io === 'function' ? io() : null;
 let tvPlayback = false;
+if (!TV_MODE) {
+    try { tvPlayback = sessionStorage.getItem('mmMp3Output') === 'tv'; } catch (_error) {}
+}
 let tvState = null;
 const trackSearch = document.getElementById('trackSearch');
 const metadataFields = ['title', 'artist', 'album', 'playlist', 'category', 'tag_list', 'chapter'];
 const showStatus = text => { document.getElementById('mp3Status').textContent = text; };
 if (!TV_MODE) window.lucide?.createIcons();
 setupChapterEditorToggle(document.getElementById('chapterEditorToggle'), document.getElementById('chapterForm'));
+
+function setTvPlayback(enabled) {
+    tvPlayback = enabled;
+    if (!TV_MODE) {
+        try { sessionStorage.setItem('mmMp3Output', enabled ? 'tv' : 'local'); } catch (_error) {}
+    }
+}
 
 function playbackPosition() {
     return tvPlayback ? Number(tvState?.position) || 0 : audio.currentTime;
@@ -113,6 +124,22 @@ function selectAndPlayTrack(index, autoPlay = true) {
     if (page !== queuePage) queuePage = page;
     renderQueue();
 
+    renderCurrentTrackDetails();
+
+    if (tvPlayback) {
+        audio.pause();
+        if (autoPlay) loadTrackOnTv();
+        return;
+    }
+    if (audio) {
+        audio.src = `/mm/api/mp3/stream/${currentTrack.id}`;
+        updateChapterButtons();
+        if (autoPlay) audio.play().catch(e => console.warn('[Playback]', e));
+    }
+}
+
+function renderCurrentTrackDetails() {
+    if (!currentTrack) return;
     updateCurrentTrackInfo();
     const chapterInput = document.getElementById('chapterInput');
     if (chapterInput) {
@@ -129,17 +156,6 @@ function selectAndPlayTrack(index, autoPlay = true) {
     const editButton = document.getElementById('editTrackBtn');
     if (editButton) editButton.disabled = false;
     updateTvButton();
-
-    if (tvPlayback) {
-        audio.pause();
-        if (autoPlay) loadTrackOnTv();
-        return;
-    }
-    if (audio) {
-        audio.src = `/mm/api/mp3/stream/${currentTrack.id}`;
-        updateChapterButtons();
-        if (autoPlay) audio.play().catch(e => console.warn('[Playback]', e));
-    }
 }
 
 function updateCurrentTrackInfo() {
@@ -246,15 +262,41 @@ function renderQueue() {
         const globalIdx = start + idx;
         const isPlaying = !!currentTrack && currentTrack.id === t.id;
         const tags = splitTags(t.tag_list).map(tag => `<span class="mini-tag">${escapeHtml(tag)}</span>`).join('');
+        const liked = splitTags(t.tag_list).some(tag => tag.toLowerCase() === 'fav');
+        const likeButton = TV_MODE ? '' : `<button type="button" class="mp3-fav-btn" data-track-id="${t.id}" aria-pressed="${liked}" aria-label="${liked ? 'Unlike' : 'Like'} ${escapeHtml(t.title || 'Untitled')}" title="${liked ? 'Unlike' : 'Like'}" ${pendingLikes.has(t.id) ? 'disabled' : ''}><i data-lucide="heart" aria-hidden="true"></i></button>`;
         return `
             <div class="playlist-item${isPlaying ? ' active' : ''}${t._missing ? ' missing' : ''}" id="queue-track-${t.id}" data-index="${globalIdx}" tabindex="0" role="option" aria-selected="${isPlaying}">
                 <div class="item-info">
                     <span class="item-title">${escapeHtml(t.title || 'Untitled')}</span>${tags}
                 </div>
+                ${likeButton}
             </div>`;
     }).join('');
 
+    if (!TV_MODE) window.lucide?.createIcons();
     renderPagination(maxPages);
+}
+
+async function toggleTrackLike(track, button) {
+    if (TV_MODE || !track || pendingLikes.has(track.id)) return;
+    const restoreFocus = document.activeElement === button;
+    pendingLikes.add(track.id);
+    button.disabled = true;
+    try {
+        const response = await fetch(`/mm/api/mp3/track/${track.id}/fav`, { method: 'POST' });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || 'Could not update like.');
+        track.tag_list = result.tag_list;
+        if (track === currentTrack) renderActiveTags();
+        buildTagChips();
+        showStatus(result.fav ? 'Song liked.' : 'Song unliked.');
+    } catch (error) {
+        showStatus(error.message || 'Could not update like.');
+    } finally {
+        pendingLikes.delete(track.id);
+        applyTagFilters(false);
+        if (restoreFocus) document.querySelector(`.mp3-fav-btn[data-track-id="${track.id}"]`)?.focus({ preventScroll: true });
+    }
 }
 
 function renderPagination(maxPages) {
@@ -356,13 +398,14 @@ function filterByTag(tag) {
     applyTagFilters();
 }
 
-function applyTagFilters() {
+function applyTagFilters(resetPage = true) {
     const search = (trackSearch?.value || '').trim().toLocaleLowerCase();
+    const category = document.getElementById('categorySelect').value;
     filteredTracks = allTracks.filter(track => {
         const tags = splitTags(track.tag_list);
         const matchesScope = TV_MODE || (
             track.playlist === document.getElementById('playlistSelect').value
-            && (!document.getElementById('categorySelect').value || track.category === document.getElementById('categorySelect').value)
+            && (!category || (category === '__uncategorized__' ? !String(track.category || '').trim() : track.category === category))
             && (!document.getElementById('artistSelect').value || track.artist === document.getElementById('artistSelect').value)
         );
         return matchesScope && [...selectedTagFilters].every(tag => tags.includes(tag))
@@ -370,7 +413,7 @@ function applyTagFilters() {
                 .some(field => String(track[field] || '').toLocaleLowerCase().includes(search)));
     });
     currentTrackIndex = currentTrack ? filteredTracks.indexOf(currentTrack) : -1;
-    queuePage = 1;
+    if (resetPage) queuePage = 1;
     renderQueue();
 }
 
@@ -535,14 +578,14 @@ document.getElementById('playOnTvBtn')?.addEventListener('click', () => {
     if (!currentTrack) return;
     if (!tvSocket?.connected) { showStatus('TV connection unavailable. Try again once connected.'); return; }
     if (!tvPlayback) {
-        tvPlayback = true;
+        setTvPlayback(true);
         audio.pause();
         loadTrackOnTv();
         showStatus('Sending audio to /mm/tv...');
     } else {
         sendTv('pause');
         const position = playbackPosition();
-        tvPlayback = false;
+        setTvPlayback(false);
         const trackId = currentTrack.id;
         audio.src = `/mm/api/mp3/stream/${currentTrack.id}`;
         audio.addEventListener('loadedmetadata', () => {
@@ -560,7 +603,7 @@ if (tvSocket) {
     tvSocket.on('disconnect', () => { if (tvPlayback) showStatus('TV connection lost. Reconnecting...'); });
     tvSocket.on('media_error', result => {
         if (!tvPlayback) return;
-        tvPlayback = false;
+        setTvPlayback(false);
         setPlayingUi(false);
         updateTvButton();
         showStatus(result.error || 'TV playback failed.');
@@ -569,18 +612,23 @@ if (tvSocket) {
         tvState = payload.state || payload;
         if (!tvPlayback) return;
         if (tvState.database_name !== 'mp3') {
-            tvPlayback = false;
+            setTvPlayback(false);
             updateTvButton();
             setPlayingUi(false);
             showStatus('The TV is now playing another media source.');
             return;
         }
-        const track = allTracks.find(item => item.id === tvState.media_id);
+        const knownTrack = allTracks.find(item => item.id === tvState.media_id);
+        if (knownTrack && tvState.track) Object.assign(knownTrack, tvState.track);
+        const track = knownTrack || tvState.track;
         if (track && track !== currentTrack) {
             const index = filteredTracks.indexOf(track);
-            if (index >= 0) selectAndPlayTrack(index, false);
-            else { currentTrack = track; currentTrackIndex = -1; updateCurrentTrackInfo(); renderQueue(); }
+            currentTrack = track;
+            currentTrackIndex = index;
+            if (index >= 0) queuePage = Math.floor(index / songsPerPage) + 1;
+            renderQueue();
         }
+        renderCurrentTrackDetails();
         setPlayingUi(!tvState.paused);
         updateTimeline();
         updateChapterButtons();
@@ -658,6 +706,12 @@ document.getElementById('tagChipsBar').addEventListener('click', (e) => {
 });
 
 document.getElementById('queueList').addEventListener('click', (e) => {
+    const likeButton = e.target.closest('.mp3-fav-btn');
+    if (likeButton) {
+        const track = allTracks.find(item => item.id === Number(likeButton.dataset.trackId));
+        toggleTrackLike(track, likeButton);
+        return;
+    }
     const row = e.target.closest('.playlist-item');
     if (row) {
         const index = Number(row.dataset.index);
@@ -666,6 +720,7 @@ document.getElementById('queueList').addEventListener('click', (e) => {
     }
 });
 document.getElementById('queueList').addEventListener('keydown', event => {
+    if (event.target.closest('.mp3-fav-btn')) return;
     if (!['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) return;
     event.preventDefault();
     const focusedRow = event.target.closest('.playlist-item');

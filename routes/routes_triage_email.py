@@ -76,7 +76,7 @@ def configure_routes_triage_email(app):
         if not selected_file:
             # No JSON yet; the import script creates it.
             return render_template(
-                'triage_email_dashboard.html',
+                'work/triage_email_dashboard.html',
                 data={},
                 data_files=[],
                 selected_data_file=DATA_FILE,
@@ -88,7 +88,7 @@ def configure_routes_triage_email(app):
         with open(data_file_path, 'r') as f:
             data = json.load(f)
         return render_template(
-            'triage_email_dashboard.html',
+            'work/triage_email_dashboard.html',
             data=data,
             data_files=data_files,
             selected_data_file=selected_file,

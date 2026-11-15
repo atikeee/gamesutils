@@ -1,0 +1,133 @@
+{% extends 'work/base.html' %}
+{% block title %}Bookmarks{% endblock %}
+{% block body_class %}work-links{% endblock %}
+{% block content %}
+
+<!-- HEADER -->
+<header>
+  <h1>🔗 Bookmarks</h1>
+  <div class="header-actions">
+    <button class="btn btn-outline" id="toggleAllBtn">Expand All</button>
+    <a href="/links/edit" class="btn btn-primary">✏️ Edit</a>
+  </div>
+</header>
+
+<!-- SEARCH -->
+<div class="search-wrap">
+  <div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Search links, topics, URLs…" autocomplete="off"/>
+  </div>
+</div>
+
+<!-- SEARCH RESULTS -->
+<div id="searchPanel">
+  <div class="main">
+    <div class="sr-label" id="srLabel">Results</div>
+    <div id="searchResults"></div>
+  </div>
+</div>
+
+<!-- BOOKMARK TREE -->
+<div class="main" id="bookmarkTree">
+{% for topic, subtopics in structure.items() %}
+{% set link_count = namespace(n=0) %}
+{% for subtopic, links in subtopics.items() %}{% set link_count.n = link_count.n + links|length %}{% endfor %}
+<div class="topic-block" id="topic-{{ loop.index0 }}">
+  <div class="topic-header" onclick="toggleTopic('topic-{{ loop.index0 }}')">
+    <span class="topic-bar"></span>
+    <span class="topic-chevron">▶</span>
+    <span class="topic-name">{{ topic }}</span>
+    <span class="topic-count">{{ link_count.n }} links</span>
+  </div>
+  <div class="topic-body">
+    {% for subtopic, links in subtopics.items() %}
+    <div class="subtopic-block">
+      <div class="subtopic-header" onclick="toggleSub(this)">
+        <span class="sub-chevron">▶</span>
+        <span class="subtopic-name">{{ subtopic }}</span>
+        <span class="sub-count">{{ links|length }}</span>
+      </div>
+      <div class="subtopic-body">
+        {% for text, url in links %}
+        <div class="link-row"
+             data-topic="{{ topic|e }}"
+             data-subtopic="{{ subtopic|e }}"
+             data-url="{{ url|e }}"
+             data-name="{{ text|e }}">
+          <span class="link-dot"></span>
+          <span class="link-name">{{ text }}</span>
+          <span class="link-sep">→</span>
+          <a class="link-url" href="{{ url }}" target="_blank" rel="noopener">{{ url }}</a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+</div>
+
+<script>
+  function toggleTopic(id) {
+    document.getElementById(id).classList.toggle('open');
+  }
+  function toggleSub(header) {
+    header.closest('.subtopic-block').classList.toggle('open');
+  }
+
+  // Expand / Collapse All
+  const toggleBtn = document.getElementById('toggleAllBtn');
+  let allExpanded = false;
+  toggleBtn.addEventListener('click', () => {
+    allExpanded = !allExpanded;
+    document.querySelectorAll('.topic-block').forEach(b => b.classList.toggle('open', allExpanded));
+    document.querySelectorAll('.subtopic-block').forEach(b => b.classList.toggle('open', allExpanded));
+    toggleBtn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
+  });
+
+  // Search
+  const searchInput   = document.getElementById('searchInput');
+  const searchPanel   = document.getElementById('searchPanel');
+  const searchResults = document.getElementById('searchResults');
+  const srLabel       = document.getElementById('srLabel');
+  const bookmarkTree  = document.getElementById('bookmarkTree');
+
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    if (!q) {
+      searchPanel.classList.remove('active');
+      bookmarkTree.style.display = '';
+      return;
+    }
+    searchPanel.classList.add('active');
+    bookmarkTree.style.display = 'none';
+    searchResults.innerHTML = '';
+
+    const rows = document.querySelectorAll('.link-row');
+    let count = 0;
+    rows.forEach(row => {
+      const name     = row.dataset.name.toLowerCase();
+      const url      = row.dataset.url.toLowerCase();
+      const topic    = row.dataset.topic.toLowerCase();
+      const subtopic = row.dataset.subtopic.toLowerCase();
+      if (name.includes(q) || url.includes(q) || topic.includes(q) || subtopic.includes(q)) {
+        const item = document.createElement('div');
+        item.className = 'sr-item';
+        item.innerHTML = `
+          <span class="sr-badge">${escH(row.dataset.topic)} › ${escH(row.dataset.subtopic)}</span>
+          <span class="sr-name">${escH(row.dataset.name)}</span>
+          <a class="sr-url" href="${escH(row.dataset.url)}" target="_blank" rel="noopener">${escH(row.dataset.url)}</a>`;
+        searchResults.appendChild(item);
+        count++;
+      }
+    });
+    srLabel.textContent = count ? `${count} result${count > 1 ? 's' : ''}` : 'No results found';
+  });
+
+  function escH(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+{% endblock %}

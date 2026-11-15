@@ -11,6 +11,7 @@ import re
 import math
 from functools import wraps
 from collections import Counter
+from routes.catan_dice import roll_number_dice
 from threading import Lock
 
 CATAN2_DATA_DIR = os.path.join(PROJECT_ROOT, "data", "catan2")
@@ -30,6 +31,8 @@ PLAYER_COLOR_OPTIONS = [
 ]
 DEFAULT_PLAYER_COLORS = [option["value"] for option in PLAYER_COLOR_OPTIONS[:4]]
 STARTING_HAND = []
+DEBUG_FORCE_ROLL_SEVEN = False  # TEMP DEBUG: set True for robber testing.
+USE_BALANCED_DICE_POOL = True
 
 
 def catan2_setup_sequence(turn_order):
@@ -776,6 +779,8 @@ def configure_routes_catan2(app, socketio):
             ],
             player_colors=get_catan_player_colors(),
             progress_card_notes=PROGRESS_CARD_NOTES,
+            debug_force_roll_seven=DEBUG_FORCE_ROLL_SEVEN,
+            use_balanced_dice_pool=USE_BALANCED_DICE_POOL,
             error=error,
         )
 
@@ -789,12 +794,22 @@ def configure_routes_catan2(app, socketio):
         if not any(tile.get('q') == position['q'] and tile.get('r') == position['r']
                    for tile in board.get('boardTiles', [])):
             return jsonify(status='error', message='Choose a tile on the board.'), 400
-        state = json.loads(load_play_state_from_json() or '{}')
+        player_id = position.get('player_id')
+        if player_id:
+            state, is_current_player = load_turn_state_for_request(player_id)
+            if not is_current_player or state.get('_robberMoveAvailable') is not True or state.get('_robberMovePlayerId') != player_id:
+                return jsonify(status='error', message='It is not your pending robber move.'), 409
+        else:
+            state = json.loads(load_play_state_from_json() or '{}')
         state['robber'] = {'q': position['q'], 'r': position['r']}
+        state['_robberMoveAvailable'] = False
+        state['_robberMovePlayerId'] = None
+        if player_id and isinstance(position.get('_undoStack'), list):
+            state['_undoStack'] = position['_undoStack'][-3:]
         if not save_play_state_to_json(json.dumps(state)):
             return jsonify(status='error', message='Failed to save robber position.'), 500
         socketio.emit('catan2_update')
-        return jsonify(status='success')
+        return jsonify(status='success', robber=state['robber'], robber_move_available=state['_robberMoveAvailable'])
 
     @app.route('/catan2/save_play_state', methods=['POST'])
     @catan2_setup_locked
@@ -809,20 +824,14 @@ def configure_routes_catan2(app, socketio):
                     saved_state = {}
                 if saved_state.get('_turnPhase') == 'setup':
                     return jsonify(status='error', message='Complete setup using the required free placement.'), 409
-                pending_discards = dict(saved_state.get('_pendingDiscards') or {})
-                if pending_discards and (
-                    play_state.get('robber') != saved_state.get('robber')
-                    or play_state.get('_robberMoveAvailable') is False
-                ):
-                    return jsonify(status='error', message='Wait for all required players to drop cards before moving the robber.'), 409
-                play_state['_pendingDiscards'] = pending_discards
+                play_state['_pendingDiscards'] = dict(saved_state.get('_pendingDiscards') or {})
                 play_state['progressCardDecks'] = normalize_progress_card_decks(
                     play_state.get('progressCardDecks', saved_state.get('progressCardDecks'))
                 )
                 play_state['activityLog'] = load_catan2_activity_log(saved_state)
                 play_state['vpAwardLog'] = merge_catan2_award_log(saved_state.get('vpAwardLog'), play_state.get('vpAwardLog'))
                 # Turn progression is server-owned; ignore stale client copies.
-                for turn_key in ('_turnOrder', '_currentTurnPlayerId', '_turnRolled', '_alchemistDice', '_gameStarted', '_turnPhase', '_setupQueue', '_setupIndex', '_setupUndoOpen', '_inventorSelection'):
+                for turn_key in ('_turnOrder', '_currentTurnPlayerId', '_turnRolled', '_alchemistDice', '_gameStarted', '_turnPhase', '_setupQueue', '_setupIndex', '_setupUndoOpen', '_inventorSelection', '_numberDicePool'):
                     if turn_key in saved_state:
                         play_state[turn_key] = saved_state[turn_key]
                     else:
@@ -1590,7 +1599,10 @@ def configure_routes_catan2(app, socketio):
             isinstance(alchemist_dice, list) and len(alchemist_dice) == 2
             and all(isinstance(value, int) and 1 <= value <= 6 for value in alchemist_dice)
         )
-        dice = list(alchemist_dice) if alchemist_used else [random.randint(1, 6), random.randint(1, 6)]
+        dice = ([3, 4] if DEBUG_FORCE_ROLL_SEVEN
+            else list(alchemist_dice) if alchemist_used
+            else roll_number_dice(state, USE_BALANCED_DICE_POOL))
+        alchemist_used = alchemist_used and not DEBUG_FORCE_ROLL_SEVEN
         robber_move_available = sum(dice) == 7
         state['_pendingDiscards'] = {
             player_id: True for player_id in state['_turnOrder']

@@ -12,16 +12,11 @@ if (isGamePage) {
     const diceRollSection = document.querySelector('.dice-roll-section');
     const diceRollDesktopSlot = document.getElementById('diceRollDesktopSlot');
     const diceRollMobileSlot = document.querySelector('.c2-game-heading');
-    const boardControlsToggle = document.getElementById('boardControlsToggle');
-    const boardControlsDesktopSlot = document.querySelector('.map-corner-bottom-left');
-    const boardControlsMobileSlot = document.getElementById('boardControlsMobileHome');
     const updateGameLayout = () => {
         if (desktopLayout.matches) {
             diceRollDesktopSlot.append(diceRollSection);
-            boardControlsDesktopSlot.prepend(boardControlsToggle);
         } else {
             diceRollMobileSlot.append(diceRollSection);
-            boardControlsMobileSlot.append(boardControlsToggle);
         }
         window.requestAnimationFrame(() => resizeCanvas());
     };
@@ -104,7 +99,7 @@ async function placeSetupPiece(mouseX, mouseY, threshold) {
         return;
     }
     const junction = step.piece === 'road' ? null : getClosestJunction(mouseX, mouseY, threshold);
-    const edge = step.piece === 'road' ? getClosestEdge(mouseX, mouseY, threshold) : null;
+    const edge = step.piece === 'road' ? getClosestEdge(mouseX, mouseY, threshold, true) : null;
     if (!junction && !edge) {
         showMessage(step.piece === 'road' ? 'Choose an edge beside your new house or city.' : 'Choose an empty intersection.', 'error');
         return;
@@ -139,6 +134,9 @@ let pendingResourceCards = [];
 let diceAnimationInterval = null;
 let diceAnimationTimeout = null;
 let diceOverlayHideTimeout = null;
+let diceRollInProgress = false;
+let diceHighlightVisible = false;
+let diceResultDismissedForRoll = true;
 
 const socket = io();
 const STARTING_HAND = [];
@@ -669,7 +667,6 @@ let boardCenterRawX = 0;
 let boardCenterRawY = 0;
 
 let selectedTool = null;
-let boardControlsEnabled = false;
 let selectedSwapItem1 = null;
 let selectedSwapItem2 = null;
 let builderHistoryStack = [];
@@ -689,6 +686,23 @@ const confirmationModal = document.getElementById('confirmationModal');
 const modalMessage = document.getElementById('modalMessage');
 const modalConfirmBtn = document.getElementById('modalConfirmBtn');
 const modalCancelBtn = document.getElementById('modalCancelBtn');
+const robberSelfDiscardModal = document.getElementById('robberSelfDiscardModal');
+const robberWaitModal = document.getElementById('robberWaitModal');
+let lastRobberReminderKey = null;
+let lastRobberSelfPromptKey = null;
+let robberSelfDiscardModalOpen = false;
+let robberWaitModalOpen = false;
+
+document.getElementById('robberSelfDiscardOk')?.addEventListener('click', () => {
+    robberSelfDiscardModal?.classList.add('hidden');
+    robberSelfDiscardModalOpen = false;
+    showCatan2RobberWaitReminder();
+});
+
+document.getElementById('robberWaitOk')?.addEventListener('click', () => {
+    robberWaitModal?.classList.add('hidden');
+    robberWaitModalOpen = false;
+});
 let modalResolve;
 
 const mapZoomToggle = document.getElementById('mapZoomToggle');
@@ -719,18 +733,6 @@ if (mapZoomToggle) {
     mapZoomToggle.addEventListener('click', () => setMapZoom(mapZoomLevel === 1 ? 2 : 1));
 }
 
-const boardControlsToggle = document.getElementById('boardControlsToggle');
-if (boardControlsToggle) {
-    boardControlsToggle.addEventListener('click', () => {
-        boardControlsEnabled = !boardControlsEnabled;
-        boardControlsToggle.setAttribute('aria-pressed', String(boardControlsEnabled));
-        boardControlsToggle.querySelector('i').className = `fas ${boardControlsEnabled ? 'fa-eye' : 'fa-eye-slash'}`;
-        boardControlsToggle.title = boardControlsEnabled ? 'Disable map controls' : 'Enable map controls';
-        boardControlsToggle.setAttribute('aria-label', boardControlsToggle.title);
-        updateBoardEditingUI();
-        drawBoard();
-    });
-}
 function normalizeCitiesAndKnightsState(source = {}) {
     const improvements = source.improvements || {};
     const knights = source.knights || {};
@@ -1133,7 +1135,6 @@ function dismissPlayerMessage() {
 function showMessage(message, type = 'info') {
     if (![
         'Click a hex to move the robber.',
-        'No opponent has a house or city beside this hex.',
         'That player no longer has a card available to steal.'
     ].includes(message)) return;
     if (isGamePage) {
@@ -1222,16 +1223,8 @@ function drawBoard() {
         const pixel = hexToPixel(tile.q, tile.r, offsetX, offsetY);
         const image = loadedResourceImages[tile.type];
         drawHex(ctx, pixel.x, pixel.y, TILE_RADIUS, RESOURCE_COLORS[tile.type], image);
-        if (lastTotal !== null && lastTotal !== 7 && tile.number === lastTotal && tile.type !== 'desert') {
-            ctx.save();
-            ctx.fillStyle = 'rgba(255, 222, 0, 0.18)';
-            ctx.fill();
-            ctx.strokeStyle = '#ffde00';
-            ctx.lineWidth = 5;
-            ctx.shadowColor = '#ffde00';
-            ctx.shadowBlur = 18;
-            ctx.stroke();
-            ctx.restore();
+        if (diceHighlightVisible && lastTotal !== null && lastTotal !== 7 && tile.number === lastTotal && tile.type !== 'desert') {
+            drawDiceHighlight(ctx, pixel.x, pixel.y, TILE_RADIUS);
         }
         if (tile.number !== null) {
             drawNumber(ctx, pixel.x, pixel.y, tile.number);
@@ -1409,14 +1402,14 @@ function saveBuilderState() {
 
 function updateBoardEditingUI() {
     if (!isGamePage) return;
-    if (!boardControlsEnabled || !boardEditingAllowed) {
+    if (!boardEditingAllowed) {
         selectedTool = null;
         selectedSwapItem1 = null;
         selectedSwapItem2 = null;
     }
     document.querySelectorAll('#boardTools .map-tool:not(#mapZoomToggle)').forEach(button => {
         const editsBoard = ['swap', 'shuffle-cells', 'shuffle-numbers', 'undo'].includes(button.dataset.tool);
-        button.disabled = !boardControlsEnabled || (editsBoard && !boardEditingAllowed);
+        button.disabled = editsBoard && !boardEditingAllowed;
         if (editsBoard && !boardEditingAllowed) button.title = 'Reset the game to edit the board';
         else if (button.dataset.label) button.title = button.dataset.label;
     });
@@ -1561,6 +1554,12 @@ function updateRollButton() {
     const isMyTurn = gameStarted && isPlayerPage && currentPlayerId === PLAYER_ID;
     const isSetup = allPlayersData._turnPhase === 'setup';
     const currentPlayerName = allPlayersData[currentPlayerId]?.playerName || 'the next player';
+    const currentPlayerLabel = document.getElementById('currentTurnPlayerName');
+    if (currentPlayerLabel) {
+        currentPlayerLabel.textContent = currentPlayerId ? `=> ${shortPlayerName(currentPlayerName)}` : '';
+        currentPlayerLabel.title = currentPlayerId ? currentPlayerName : '';
+        currentPlayerLabel.hidden = !currentPlayerId;
+    }
     const colorsReady = allPlayersData._colorsReady !== false;
     const state = !isMyTurn ? 'waiting'
         : turnRequestPending ? 'busy'
@@ -1604,9 +1603,49 @@ document.getElementById('undoButton')?.addEventListener('click', () => {
 
 function canPlayerMoveRobber() {
     return isPlayerPage
-        && Object.keys(allPlayersData._pendingDiscards || {}).length === 0
         && allPlayersData._robberMoveAvailable === true
         && allPlayersData._robberMovePlayerId === PLAYER_ID;
+}
+
+function isCatan2RobberRoller() {
+    const roll = allPlayersData.lastDiceRoll;
+    return isPlayerPage && roll?.player === PLAYER_ID
+        && Array.isArray(roll.dice) && roll.dice[0] + roll.dice[1] === 7;
+}
+
+function isCatan2RobberMoveComplete() {
+    return isCatan2RobberRoller()
+        && allPlayersData._robberMoveAvailable !== true
+        && !allPlayersData._robberMovePlayerId;
+}
+
+function showCatan2RobberWaitReminder() {
+    if (!diceResultDismissedForRoll || !isCatan2RobberMoveComplete() || robberWaitModalOpen) return;
+    const roll = allPlayersData.lastDiceRoll;
+    const key = `${roll?.player}:${roll?.dice?.join('-') || 'seven'}`;
+    if (key === lastRobberReminderKey) return;
+    lastRobberReminderKey = key;
+    robberWaitModalOpen = true;
+    robberWaitModal?.classList.remove('hidden');
+}
+
+function syncCatan2RobberReminders() {
+    if (!isCatan2RobberRoller()) return;
+    const roll = allPlayersData.lastDiceRoll;
+    const key = `${roll.player}:${roll.dice.join('-')}`;
+    if (allPlayersData._pendingDiscards?.[PLAYER_ID]) {
+        if (key !== lastRobberSelfPromptKey && !robberSelfDiscardModalOpen) {
+            const required = Math.floor((allPlayersData[PLAYER_ID]?.hand?.length || 0) / 2);
+            document.getElementById('robberSelfDiscardMessage').textContent = `You have ${required} cards to discard. Drop them when convenient; you can move the robber without waiting for other discards.`;
+            lastRobberSelfPromptKey = key;
+            robberSelfDiscardModalOpen = true;
+            robberSelfDiscardModal?.classList.remove('hidden');
+            return;
+        }
+        if (diceResultDismissedForRoll && !robberSelfDiscardModalOpen) showCatan2RobberWaitReminder();
+        return;
+    }
+    showCatan2RobberWaitReminder();
 }
 
 function isRobberOnBoard() {
@@ -1620,7 +1659,9 @@ let robberGlowInterval = null;
 function updateRobberToolAvailability() {
     if (!isPlayerPage) return;
     const canMove = canPlayerMoveRobber();
-    if (!canMove && selectedPlayerTool === 'robber') selectedPlayerTool = null;
+    if (canMove && selectedPlayerTool !== 'robber') selectRobberTool(false);
+    else if (!canMove && selectedPlayerTool === 'robber') selectedPlayerTool = null;
+    syncCatan2RobberReminders();
     if (canMove !== robberReadyShown) {
         robberReadyShown = canMove;
         window.clearInterval(robberGlowInterval);
@@ -1660,10 +1701,10 @@ function isClickOnRobber(mouseX, mouseY) {
     return Math.hypot(mouseX - pixel.x, mouseY - pixel.y) < HEX_SIZE * 0.42;
 }
 
-function selectRobberTool() {
+function selectRobberTool(showNotice = true) {
     selectedPlayerTool = 'robber';
     document.querySelectorAll('#player-tool-select .btn-tool').forEach(button => button.classList.remove('selected'));
-    showMessage('Click a hex to move the robber.');
+    if (showNotice && canPlayerMoveRobber()) showMessage('Click a hex to move the robber.');
 }
 
 async function undoPlayerLastAction() {
@@ -2058,6 +2099,7 @@ async function loadAllPlayerStatesFromBackend() {
                 showMessage('A seven was rolled. Select one or more hand cards and drop them before the robber can move.');
             }
             allPlayersData.lastDiceRoll = loadedStates.lastDiceRoll || null;
+            if (!diceRollInProgress) diceHighlightVisible = Boolean(loadedStates.lastDiceRoll);
             allPlayersData.vpAwardLog = Array.isArray(loadedStates.vpAwardLog) ? loadedStates.vpAwardLog : [];
             allPlayersData.activityLog = Array.isArray(loadedStates.activityLog) ? loadedStates.activityLog : [];
             allPlayersData.metropolisOwners = {
@@ -2282,6 +2324,7 @@ function isRobberAdjacentToJunction(junction) {
 function getRobberVictimChoices(tile) {
     return Object.keys(allPlayersData)
         .filter(playerId => playerId.startsWith('player') && playerId !== PLAYER_ID && isActiveCatanPlayer(playerId))
+        .filter(playerId => (allPlayersData[playerId].hand || []).length > 0)
         .filter(playerId => (allPlayersData[playerId].structures || []).some(structure =>
             ['house', 'city'].includes(structure.type) && structure.junction
             && getTilesAdjacentToJunction(structure.junction).some(adjacent => adjacent.q === tile.q && adjacent.r === tile.r)
@@ -2295,11 +2338,8 @@ function getRobberVictimChoices(tile) {
 
 async function chooseRobberVictim(tile) {
     const choices = getRobberVictimChoices(tile);
-    if (!choices.length) {
-        showMessage('No opponent has a house or city beside this hex.');
-        return;
-    }
-    const canSteal = choices.some(choice => !choice.disabled);
+    if (!choices.length) return;
+    const canSteal = true;
     const result = await showProgressCardActionModal({
         title: 'Steal a card',
         message: canSteal ? 'Choose a player beside the robber.' : 'These players have no cards to steal.',
@@ -2313,14 +2353,10 @@ async function chooseRobberVictim(tile) {
         showMessage('That player no longer has a card available to steal.');
         return;
     }
-    await stealCards(PLAYER_ID, victim.value);
+    await stealCards(PLAYER_ID, victim.value, false);
 }
 
-function finishRobberMove(tile) {
-    if (Object.keys(allPlayersData._pendingDiscards || {}).length) {
-        showMessage('Wait for all required players to drop cards before moving the robber.', 'error');
-        return false;
-    }
+async function finishRobberMove(tile) {
     const currentRobber = allPlayersData.robber;
     if (currentRobber && currentRobber.q === tile.q && currentRobber.r === tile.r) {
         showMessage('The robber is already on this tile.', 'info');
@@ -2328,10 +2364,40 @@ function finishRobberMove(tile) {
     }
 
     savePlayerStateToHistory();
-    allPlayersData.robber = tile;
+    let response;
+    try {
+        response = await fetch('/catan2/correct_robber', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ q: tile.q, r: tile.r, player_id: PLAYER_ID, _undoStack: allPlayersData._undoStack })
+        });
+    } catch (error) {
+        showMessage(`Could not move the robber: ${error.message}`, 'error');
+        return false;
+    }
+    const result = await response.json();
+    if (!response.ok || result.status !== 'success') {
+        showMessage(result.message || 'Could not move the robber.', 'error');
+        return false;
+    }
+
+    const confirmedRobber = result.robber || { q: tile.q, r: tile.r };
+    allPlayersData.robber = confirmedRobber;
     allPlayersData._robberMoveAvailable = false;
     allPlayersData._robberMovePlayerId = null;
+    selectedPlayerTool = null;
     updateRobberToolAvailability();
+    drawBoard();
+    await refreshCatanState();
+    if (allPlayersData.robber?.q !== confirmedRobber.q || allPlayersData.robber?.r !== confirmedRobber.r
+        || canPlayerMoveRobber()) {
+        allPlayersData.robber = confirmedRobber;
+        allPlayersData._robberMoveAvailable = false;
+        allPlayersData._robberMovePlayerId = null;
+        updateRobberToolAvailability();
+        showMessage('The server has not confirmed the robber move yet.', 'error');
+        return false;
+    }
     return true;
 }
 
@@ -2470,7 +2536,7 @@ canvas.addEventListener('click', async (event) => {
         const clickedJunction = getClosestJunction(mouseX, mouseY);
         if (selectedRoadToMove) {
             const movingRoad = selectedRoadToMove;
-            const targetEdge = getClosestEdge(mouseX, mouseY);
+            const targetEdge = getClosestEdge(mouseX, mouseY, 20, true);
             if (!targetEdge) {
                 showMessage('Click near an edge to place the road.', 'error');
                 return;
@@ -2803,7 +2869,7 @@ canvas.addEventListener('click', async (event) => {
                 showMessage('You have already placed all 15 roads.', 'error');
                 return;
             }
-            const clickedEdge = getClosestEdge(mouseX, mouseY);
+            const clickedEdge = getClosestEdge(mouseX, mouseY, 20, true);
             if (clickedEdge) {
                 let existingRoad = false;
                 for (const pId in allPlayersData) {
@@ -2890,7 +2956,7 @@ canvas.addEventListener('click', async (event) => {
             const clickedHex = pixelToHex(mouseX, mouseY, offsetX, offsetY);
             const clickedTile = boardTiles.find(t => t.q === clickedHex.q && t.r === clickedHex.r);
             if (clickedTile) {
-                if (finishRobberMove(clickedTile)) {
+                if (await finishRobberMove(clickedTile)) {
                     showMessage(`Robber moved to ${clickedTile.type} tile.`);
                     actionSuccessful = true;
                 }
@@ -2925,10 +2991,11 @@ canvas.addEventListener('click', async (event) => {
             if (toolAtClick === 'robber' || toolAtClick === 'merchant') {
                 selectedPlayerTool = null;
             }
-            console.log("trying to save playerstate");
-            //await saveAllPlayerStatesToBackend();
-            await saveAllPlayerStatesToBackend();
-            if (toolAtClick === 'robber') await chooseRobberVictim(allPlayersData.robber);
+            if (toolAtClick === 'robber') {
+                if (!canPlayerMoveRobber()) await chooseRobberVictim(allPlayersData.robber);
+            } else {
+                await saveAllPlayerStatesToBackend();
+            }
             //fix : add code to show in game play. 
         } else if (isGamePage) {
             saveBuilderState();
@@ -2942,7 +3009,7 @@ if (isGamePage) {
     document.querySelectorAll('#boardTools .map-tool').forEach(button => { button.dataset.label = button.title; });
     document.getElementById('boardTools').addEventListener('click', async (event) => {
         const target = event.target.closest('.map-tool[data-tool]');
-        if (!target || target.disabled || !boardControlsEnabled) return;
+        if (!target || target.disabled) return;
         const tool = target.dataset.tool;
 
         if (tool === 'swap') {
@@ -3802,10 +3869,6 @@ async function transferOrDropSelectedCards(currentPlayerId, targetPlayerId) {
 }
 async function stealCards(currentPlayerId, targetPlayerId) {
     if (allPlayersData._turnPhase === 'setup') return;
-    if (Object.keys(allPlayersData._pendingDiscards || {}).length) {
-        showMessage('Wait for all required players to drop cards before stealing.', 'error');
-        return;
-    }
     savePlayerStateToHistory(); // Save current state before modification
     const targetHandCards = allPlayersData[targetPlayerId].hand;
     let stolenCard = null;
@@ -3959,9 +4022,14 @@ function dismissDiceRollOverlay() {
     diceOverlayHideTimeout = null;
     overlay.classList.remove('is-visible', 'is-result');
     overlay.hidden = true;
+    diceResultDismissedForRoll = true;
+    syncCatan2RobberReminders();
 }
 
 function showSharedDiceRoll(finalDice, finalEventFace, fixedNumberDice = false) {
+    diceRollInProgress = true;
+    diceHighlightVisible = false;
+    diceResultDismissedForRoll = false;
     if (diceAnimationInterval) window.clearInterval(diceAnimationInterval);
     if (diceAnimationTimeout) window.clearTimeout(diceAnimationTimeout);
     if (diceOverlayHideTimeout) window.clearTimeout(diceOverlayHideTimeout);
@@ -3991,12 +4059,12 @@ function showSharedDiceRoll(finalDice, finalEventFace, fixedNumberDice = false) 
         overlay.classList.remove('is-rolling');
         overlay.classList.add('is-result');
 
+        diceRollInProgress = false;
+        diceHighlightVisible = true;
         renderGameDiceResult(finalDice, finalEventFace);
+        drawBoard();
 
-        diceOverlayHideTimeout = window.setTimeout(() => {
-            overlay.classList.remove('is-visible', 'is-result');
-            overlay.hidden = true;
-        }, 5000);
+        diceOverlayHideTimeout = window.setTimeout(dismissDiceRollOverlay, 5000);
     }, 1500);
 }
 
@@ -4087,6 +4155,10 @@ socket.on('catan2_roll_dice_broadcast', (data) => {
         ? data.event_die
         : getRandomCitiesAndKnightsEventFace();
     if (data.current_player) allPlayersData._currentTurnPlayerId = data.current_player;
+    lastRobberReminderKey = null;
+    lastRobberSelfPromptKey = null;
+    diceHighlightVisible = false;
+    diceResultDismissedForRoll = false;
     allPlayersData._turnRolled = true;
     allPlayersData._robberMoveAvailable = data?.robber_move_available === true;
     allPlayersData._robberMovePlayerId = data?.robber_move_player || null;

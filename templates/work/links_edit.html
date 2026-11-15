@@ -1,0 +1,203 @@
+{% extends 'work/base.html' %}
+{% block title %}Edit Bookmarks{% endblock %}
+{% block body_class %}work-editor{% endblock %}
+{% block content %}
+
+<header>
+  <a href="/links" class="back">← Bookmarks</a>
+  <h1>✏️ Edit Bookmarks</h1>
+  <span class="unsaved-dot" id="unsavedDot" title="Unsaved changes"></span>
+  <span class="status-msg" id="statusMsg"></span>
+  <button class="btn btn-discard" id="discardBtn">Discard</button>
+  <button class="btn btn-save" id="saveBtn">Save</button>
+</header>
+
+<div class="workspace">
+
+  <!-- SYNTAX GUIDE -->
+  <aside class="guide">
+    <h3>Format Guide</h3>
+
+    <div class="guide-block">
+      <div class="guide-label">Structure</div>
+      <div class="guide-sample"><span class="g-topic">Topic</span>
+    <span class="g-sub">Subtopic</span>
+        <span class="g-link">Link name</span>,<span class="g-url">https://...</span>
+        <span class="g-link">Link name</span>,<span class="g-url">https://...</span></div>
+    </div>
+
+    <div class="guide-block">
+      <div class="guide-label">Indent Rules</div>
+      <div class="guide-note">
+        <code>0 spaces</code> → Topic<br/>
+        <code>4 spaces</code> → Subtopic<br/>
+        <code>8 spaces</code> → Link, URL<br/>
+        Use comma or tab to separate name from URL.
+      </div>
+    </div>
+
+    <div class="guide-block">
+      <div class="guide-label">Comments &amp; Blanks</div>
+      <div class="guide-note">
+        Lines starting with <code>#</code> are ignored.<br/>
+        Blank lines are ignored too.
+      </div>
+    </div>
+
+    <div class="guide-block">
+      <div class="guide-label">Example</div>
+      <div class="guide-sample"><span class="g-topic">Learning</span>
+    <span class="g-sub">Python</span>
+        <span class="g-link">docs</span>,<span class="g-url">https://docs.python.org</span>
+        <span class="g-link">tutorial</span>,<span class="g-url">https://realpython.com</span>
+    <span class="g-sub">Linux</span>
+        <span class="g-link">man pages</span>,<span class="g-url">https://man7.org</span></div>
+    </div>
+
+    <div class="guide-block">
+      <div class="guide-label">Tips</div>
+      <div class="guide-note">
+        • Save with <code>Ctrl+S</code><br/>
+        • Tab key inserts 4 spaces<br/>
+        • Changes are live on /links immediately after save
+      </div>
+    </div>
+  </aside>
+
+  <!-- EDITOR -->
+  <div class="editor-wrap">
+    <div class="editor-toolbar">
+      <span id="lineCount">0 lines</span>
+      <button class="mini-btn" onclick="insertTemplate()">+ Add Topic</button>
+      <button class="mini-btn" onclick="insertSubtemplate()">+ Add Subtopic</button>
+      <button class="mini-btn" onclick="insertLinkTemplate()">+ Add Link</button>
+    </div>
+    <textarea id="editor" spellcheck="false">{{ content }}</textarea>
+    <div class="cursor-info" id="cursorInfo">Ln 1, Col 1</div>
+  </div>
+
+</div>
+
+<script>
+  const editor     = document.getElementById('editor');
+  const saveBtn    = document.getElementById('saveBtn');
+  const discardBtn = document.getElementById('discardBtn');
+  const statusMsg  = document.getElementById('statusMsg');
+  const unsavedDot = document.getElementById('unsavedDot');
+  const lineCount  = document.getElementById('lineCount');
+  const cursorInfo = document.getElementById('cursorInfo');
+
+  // original content for discard
+  const originalContent = editor.value;
+  let isDirty = false;
+
+  // ── Dirty tracking ──
+  editor.addEventListener('input', () => {
+    isDirty = editor.value !== originalContent;
+    unsavedDot.classList.toggle('visible', isDirty);
+    saveBtn.disabled = !isDirty;
+    updateStats();
+  });
+
+  function updateStats() {
+    const lines = editor.value.split('\n').length;
+    lineCount.textContent = lines + ' lines';
+  }
+  updateStats();
+  saveBtn.disabled = true;
+
+  // ── Cursor info ──
+  editor.addEventListener('keyup', updateCursor);
+  editor.addEventListener('click', updateCursor);
+  function updateCursor() {
+    const text = editor.value.substring(0, editor.selectionStart);
+    const lines = text.split('\n');
+    cursorInfo.textContent = `Ln ${lines.length}, Col ${lines[lines.length - 1].length + 1}`;
+  }
+
+  // ── Tab key → 4 spaces ──
+  editor.addEventListener('keydown', e => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const start = editor.selectionStart;
+      const end   = editor.selectionEnd;
+      editor.value = editor.value.substring(0, start) + '    ' + editor.value.substring(end);
+      editor.selectionStart = editor.selectionEnd = start + 4;
+      editor.dispatchEvent(new Event('input'));
+    }
+    // Ctrl+S / Cmd+S to save
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      if (!saveBtn.disabled) save();
+    }
+  });
+
+  // ── Discard ──
+  discardBtn.addEventListener('click', () => {
+    if (!isDirty || confirm('Discard all unsaved changes?')) {
+      editor.value = originalContent;
+      isDirty = false;
+      unsavedDot.classList.remove('visible');
+      saveBtn.disabled = true;
+      updateStats();
+      showStatus('ok', 'Discarded');
+    }
+  });
+
+  // ── Save ──
+  saveBtn.addEventListener('click', save);
+
+  function save() {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    const form = new FormData();
+    form.append('content', editor.value);
+    fetch('/links/edit', {method: 'POST', body: form})
+      .then(r => r.json())
+      .then(d => {
+        if (d.status === 'success') {
+          isDirty = false;
+          unsavedDot.classList.remove('visible');
+          showStatus('ok', d.message || 'Saved ✓');
+        } else {
+          showStatus('err', d.message || 'Save failed');
+          saveBtn.disabled = false;
+        }
+        saveBtn.textContent = 'Save';
+      })
+      .catch(() => {
+        showStatus('err', 'Network error');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      });
+  }
+
+  // ── Status message ──
+  let statusTimer;
+  function showStatus(type, msg) {
+    statusMsg.className = 'status-msg ' + type;
+    statusMsg.textContent = msg;
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => { statusMsg.className = 'status-msg'; }, 3000);
+  }
+
+  // ── Insert snippets ──
+  function insertAtCursor(text) {
+    const start = editor.selectionStart;
+    const end   = editor.selectionEnd;
+    editor.value = editor.value.substring(0, start) + text + editor.value.substring(end);
+    editor.selectionStart = editor.selectionEnd = start + text.length;
+    editor.focus();
+    editor.dispatchEvent(new Event('input'));
+  }
+
+  function insertTemplate()     { insertAtCursor('\nNewTopic\n    Subtopic\n        Link name,https://example.com\n'); }
+  function insertSubtemplate()  { insertAtCursor('\n    New Subtopic\n        Link name,https://example.com\n'); }
+  function insertLinkTemplate() { insertAtCursor('\n        Link name,https://example.com'); }
+
+  // ── Warn on unload if dirty ──
+  window.addEventListener('beforeunload', e => {
+    if (isDirty) { e.preventDefault(); e.returnValue = ''; }
+  });
+</script>
+{% endblock %}

@@ -69,6 +69,33 @@ def _unlock_x(pin):
 def _display_state(state):
     state = dict(state)
     database = state.get('database_name')
+    if database == 'mp3' and state.get('media_id'):
+        from routes.routes_mm_mp3 import get_db
+        conn = get_db()
+        try:
+            track = conn.execute('SELECT * FROM tracks WHERE id = ?', (state['media_id'],)).fetchone()
+            if track:
+                state['track'] = dict(track)
+        finally:
+            conn.close()
+    elif state.get('media_id'):
+        selected = _get_media_database(database)
+        if selected:
+            conn = get_db_connection(selected[1])
+            try:
+                track = conn.execute("""
+                    SELECT id, title, artist, playlist, category, duration, chapter
+                    FROM videos WHERE id = ?
+                """, (state['media_id'],)).fetchone()
+                if track:
+                    state['track'] = dict(track)
+                    tags = conn.execute("""
+                        SELECT t.name FROM tags t JOIN video_tags vt ON vt.tag_id = t.id
+                        WHERE vt.video_id = ? ORDER BY t.name COLLATE NOCASE
+                    """, (state['media_id'],)).fetchall()
+                    state['track']['tag_list'] = ', '.join(tag['name'] for tag in tags)
+            finally:
+                conn.close()
     if database in {'x', 'mov'} and state.get('media_id'):
         serializer = _media_serializer(database, 'stream')
         if serializer:
@@ -606,6 +633,15 @@ def _queue_context(data):
     }
 
 
+UNCATEGORIZED_CATEGORY = '__uncategorized__'
+
+
+def _remote_category_matches(value, selected):
+    if selected == UNCATEGORIZED_CATEGORY:
+        return value is None or not value.strip()
+    return value == selected
+
+
 def _next_queue_media_id(database, media_id, queue):
     """Next item in the remote list order (title, id), wrapping to the first."""
     if database == 'mp3':
@@ -617,6 +653,7 @@ def _next_queue_media_id(database, media_id, queue):
     if not selected:
         return None
     conn = get_db_connection(selected[1])
+    conn.create_function('REMOTE_CATEGORY_MATCH', 2, _remote_category_matches)
     try:
         playlist = queue.get('playlist')
         if not playlist:
@@ -628,13 +665,13 @@ def _next_queue_media_id(database, media_id, queue):
             placeholders = ','.join('?' for _ in tags)
             rows = conn.execute(f"""
                 SELECT v.id FROM videos v JOIN video_tags vt ON vt.video_id = v.id JOIN tags t ON t.id = vt.tag_id
-                WHERE v.playlist = ? AND (? = '' OR v.category = ?) AND t.name IN ({placeholders})
+                WHERE v.playlist = ? AND (? = '' OR REMOTE_CATEGORY_MATCH(v.category, ?)) AND t.name IN ({placeholders})
                 GROUP BY v.id HAVING COUNT(DISTINCT t.id) = ?
                 ORDER BY v.title COLLATE NOCASE, v.id
             """, [playlist, category, category] + tags + [len(tags)]).fetchall()
         else:
             rows = conn.execute("""
-                SELECT id FROM videos WHERE playlist = ? AND (? = '' OR category = ?)
+                SELECT id FROM videos WHERE playlist = ? AND (? = '' OR REMOTE_CATEGORY_MATCH(category, ?))
                 ORDER BY title COLLATE NOCASE, id
             """, (playlist, category, category)).fetchall()
     finally:
@@ -774,26 +811,31 @@ def api_remote_library():
     _label, db_path = selected
     init_db(None if database == 'youtube' else db_path)
     conn = get_db_connection(db_path)
+    conn.create_function('REMOTE_CATEGORY_MATCH', 2, _remote_category_matches)
     playlists = [row['playlist'] for row in conn.execute(
         "SELECT DISTINCT playlist FROM videos WHERE playlist IS NOT NULL AND TRIM(playlist) != '' ORDER BY playlist COLLATE NOCASE"
     ).fetchall()]
     playlist = request.args.get('playlist', '').strip()
     if playlist not in playlists:
         playlist = playlists[0] if playlists else ''
-    categories = [row['category'] for row in conn.execute("""
-        SELECT DISTINCT category FROM videos
-        WHERE playlist = ? AND category IS NOT NULL AND TRIM(category) != ''
-        ORDER BY category COLLATE NOCASE
-    """, (playlist,)).fetchall()] if playlist else []
+    category_rows = conn.execute("""
+        SELECT CASE WHEN category IS NULL OR TRIM(category) = '' THEN '' ELSE category END AS category,
+               COUNT(*) AS count
+        FROM videos WHERE playlist = ? GROUP BY 1 ORDER BY 1 COLLATE NOCASE
+    """, (playlist,)).fetchall() if playlist else []
+    categories = [row['category'] for row in category_rows if row['category']]
+    category_counts = {row['category']: row['count'] for row in category_rows if row['category']}
+    uncategorized_count = next((row['count'] for row in category_rows if not row['category']), 0)
+    playlist_count = sum(row['count'] for row in category_rows)
     category = request.args.get('category', '').strip()
-    if category not in categories:
+    if category not in categories and category != UNCATEGORIZED_CATEGORY:
         category = ''
     tags = [dict(row) for row in conn.execute("""
         SELECT t.name, COUNT(DISTINCT vt.video_id) AS count
         FROM tags t
         JOIN video_tags vt ON vt.tag_id = t.id
         JOIN videos v ON v.id = vt.video_id
-        WHERE v.playlist = ? AND (? = '' OR v.category = ?) AND LOWER(t.name) != LOWER(?)
+        WHERE v.playlist = ? AND (? = '' OR REMOTE_CATEGORY_MATCH(v.category, ?)) AND LOWER(t.name) != LOWER(?)
         GROUP BY t.id ORDER BY count DESC, t.name COLLATE NOCASE
     """, (playlist, category, category, playlist)).fetchall()] if playlist else []
     selected_tags = [tag.strip() for tag in request.args.get('tags', '').split(',') if tag.strip()]
@@ -812,7 +854,7 @@ def api_remote_library():
                 SELECT v.id FROM videos v
                 JOIN video_tags vt ON vt.video_id = v.id
                 JOIN tags t ON t.id = vt.tag_id
-                WHERE v.playlist = ? AND (? = '' OR v.category = ?) AND t.name IN ({placeholders}){search_clause}
+                WHERE v.playlist = ? AND (? = '' OR REMOTE_CATEGORY_MATCH(v.category, ?)) AND t.name IN ({placeholders}){search_clause}
                 GROUP BY v.id HAVING COUNT(DISTINCT t.id) = ?
             )
         """, filter_params).fetchone()[0]
@@ -821,31 +863,31 @@ def api_remote_library():
         rows = conn.execute(f"""
             SELECT v.id, v.video_id, v.title, v.artist, v.duration, v.playlist, v.category, v.chapter, {FAV_SQL.format(id='v.id')} AS fav
             FROM videos v JOIN video_tags vt ON vt.video_id = v.id JOIN tags t ON t.id = vt.tag_id
-            WHERE v.playlist = ? AND (? = '' OR v.category = ?) AND t.name IN ({placeholders}){search_clause}
+            WHERE v.playlist = ? AND (? = '' OR REMOTE_CATEGORY_MATCH(v.category, ?)) AND t.name IN ({placeholders}){search_clause}
             GROUP BY v.id HAVING COUNT(DISTINCT t.id) = ?
             ORDER BY v.title COLLATE NOCASE, v.id LIMIT ? OFFSET ?
         """, filter_params + [page_size, (page - 1) * page_size]).fetchall()
     elif playlist:
         total_items = conn.execute(f"""
             SELECT COUNT(*) FROM videos
-            WHERE playlist = ? AND (? = '' OR category = ?){search_clause}
+            WHERE playlist = ? AND (? = '' OR REMOTE_CATEGORY_MATCH(category, ?)){search_clause}
         """, scope_params).fetchone()[0]
         total_pages = max(1, (total_items + page_size - 1) // page_size)
         focus_id = request.args.get('focus_id', type=int)
         focus = conn.execute(f"""
-            SELECT title FROM videos WHERE id = ? AND playlist = ? AND (? = '' OR category = ?){search_clause}
+            SELECT title FROM videos WHERE id = ? AND playlist = ? AND (? = '' OR REMOTE_CATEGORY_MATCH(category, ?)){search_clause}
         """, [focus_id] + scope_params).fetchone() if focus_id else None
         if focus:
             rank = conn.execute(f"""
                 SELECT COUNT(*) FROM videos
-                WHERE playlist = ? AND (? = '' OR category = ?){search_clause}
+                WHERE playlist = ? AND (? = '' OR REMOTE_CATEGORY_MATCH(category, ?)){search_clause}
                   AND (title < ? COLLATE NOCASE OR (title = ? COLLATE NOCASE AND id < ?))
             """, scope_params + [focus['title'], focus['title'], focus_id]).fetchone()[0]
             page = rank // page_size + 1
         page = min(page, total_pages)
         rows = conn.execute(f"""
             SELECT id, video_id, title, artist, duration, playlist, category, chapter, {FAV_SQL.format(id='videos.id')} AS fav
-            FROM videos WHERE playlist = ? AND (? = '' OR category = ?){search_clause}
+            FROM videos WHERE playlist = ? AND (? = '' OR REMOTE_CATEGORY_MATCH(category, ?)){search_clause}
             ORDER BY title COLLATE NOCASE, id LIMIT ? OFFSET ?
         """, scope_params + [page_size, (page - 1) * page_size]).fetchall()
     else:
@@ -868,6 +910,9 @@ def api_remote_library():
         'playlists': playlists,
         'playlist': playlist,
         'categories': categories,
+        'category_counts': category_counts,
+        'uncategorized_count': uncategorized_count,
+        'playlist_count': playlist_count,
         'category': category,
         'tags': tags,
         'selected_tags': selected_tags,
@@ -884,7 +929,7 @@ def api_remote_state():
     state = _get_remote_state()
     if state['database_name'] in {'x', 'mov'} and not _media_access_valid(state['database_name']):
         return jsonify({'success': False, 'error': 'X PIN required.'}), 403
-    return jsonify(state)
+    return jsonify(_display_state(state))
 
 
 def _remote_view_connection():
@@ -1782,6 +1827,9 @@ def api_add_video():
             metadata.update(fetch_video_metadata(vid))
         except Exception as error:
             current_app.logger.warning(f'[metadata] fetch failed for {vid}: {error}')
+        title = (data.get('title') or '').strip()
+        if title:
+            metadata['title'] = title
         cur = conn.execute("""
             INSERT INTO videos (video_id, url, title, artist, duration, thumbnail_url,
                                 chapter, chapter_checked, playlist, category, is_new)

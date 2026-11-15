@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Work{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/work.css') }}?v=3">
+    {% block head %}{% endblock %}
+</head>
+<body class="work-page {% block body_class %}{% endblock %}">
+    <nav class="work-tabs" aria-label="Work tools">
+        {% for endpoint, label, active_endpoints in [
+            ('triage_email_dashboard', 'Email Triage', ['triage_email_dashboard']),
+            ('triage_its_dashboard', 'HSD-ES Tickets', ['triage_its_dashboard']),
+            ('links', 'Useful Links', ['links', 'links_edit']),
+            ('acronyms', 'Acronyms', ['acronyms'])
+        ] %}
+        <a href="{{ url_for(endpoint) }}"{% if request.endpoint in active_endpoints %} aria-current="page"{% endif %}>{{ label }}</a>
+        {% endfor %}
+    </nav>
+    {% block content %}{% endblock %}
+    {% block scripts %}{% endblock %}
+</body>
+</html>

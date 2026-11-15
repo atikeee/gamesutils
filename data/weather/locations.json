@@ -1,0 +1,17 @@
+{
+  "locations": [
+    {
+      "id": "45.5229.-122.9898",
+      "name": "Hillsboro, OR",
+      "latitude": 45.5229,
+      "longitude": -122.9898
+    },
+    {
+      "id": "45.5512.-122.8365",
+      "name": "Home- Portland, OR",
+      "latitude": 45.5512,
+      "longitude": -122.8365
+    }
+  ],
+  "selected_id": "45.5512.-122.8365"
+}

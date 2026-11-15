@@ -167,6 +167,7 @@
         byId('analysisAdd').disabled = true;
     });
     byId('analysisRefresh').addEventListener('click', () => { if (analysisSelection) analyzeStock(analysisSelection); });
+    byId('analysisHelp').addEventListener('click', () => byId('signalHelpDialog').showModal());
     byId('analysisAdd').addEventListener('click', async () => {
         if (!analysisSelection) return;
         byId('analysisAdd').disabled = true;

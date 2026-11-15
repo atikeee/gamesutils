@@ -14,9 +14,24 @@
         #tvYoutubePlayer { pointer-events: none; }
         #playerStage { cursor: none; }
         #tvYoutubePlayer[hidden], #tvLocalPlayer[hidden] { display: none; }
-        #tvAudioOverlay { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; padding: 5vw; background: #101413; color: #edf2ee; text-align: center; }
+        #tvAudioOverlay { position: absolute; inset: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 24px; padding: 32px 32px 48px; background: #101413; color: #edf2ee; text-align: center; }
         #tvAudioOverlay[hidden] { display: none; }
-        #tvAudioOverlay h1 { margin: 0; font-size: clamp(1.5rem, 5vw, 4rem); }
+        #tvAudioInfo { width: min(1100px, 100%); margin: auto; max-height: 100%; overflow-y: auto; }
+        #tvAudioOverlay h1 { margin: 0; font-size: 2rem; line-height: 1.25; overflow-wrap: anywhere; }
+        #tvAudioArtist { margin: 12px 0 20px; color: #a7d7a5; font-size: 1.25rem; overflow-wrap: anywhere; }
+        #tvAudioArtist:empty { display: none; }
+        #tvAudioDetails { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; margin: 20px 0 0; }
+        #tvAudioDetails .audio-detail-wide { grid-column: 1 / -1; }
+        #tvAudioDetails dt { margin-bottom: 4px; color: #a7b3ab; font-size: .85rem; }
+        #tvAudioDetails dd { margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
+        #tvAudioTime { margin: 0 0 12px; color: #a7d7a5; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+        #tvAudioChapters { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; max-height: 28vh; overflow-y: auto; }
+        #tvAudioChapters[hidden] { display: none; }
+        .audio-chapter-label { align-self: center; color: #a7b3ab; }
+        .audio-chapter-time { padding: 6px 10px; border-bottom: 2px solid #49544d; color: #edf2ee; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+        .audio-chapter-time.current { border-color: #e8c879; color: #e8c879; }
+        @media (min-width: 1000px) { #tvAudioOverlay h1 { font-size: 3rem; } }
+        @media (max-width: 600px) { #tvAudioOverlay { padding: 20px 16px 40px; gap: 16px; } #tvAudioOverlay h1 { font-size: 1.5rem; } #tvAudioDetails { gap: 12px; } }
         .audio-only #tvYoutubePlayer, .audio-only #tvLocalPlayer { opacity: 0; }
         #tvStatus { position: absolute; inset: auto 16px 14px; margin: 0; color: #ddd; font-size: .9rem; text-align: center; text-shadow: 0 1px 5px #000; pointer-events: none; }
     </style>
@@ -27,10 +42,20 @@
             <div id="tvYoutubePlayer" hidden></div>
             <video id="tvLocalPlayer" playsinline preload="metadata" hidden></video>
         </div>
-        <div id="tvAudioOverlay" hidden><h1 id="tvAudioTitle"></h1></div>
+        <div id="tvAudioOverlay" hidden>
+            <section id="tvAudioInfo" aria-label="Current song">
+                <h1 id="tvAudioTitle"></h1>
+                <p id="tvAudioArtist" aria-label="Artist"></p>
+                <dl id="tvAudioDetails"></dl>
+            </section>
+            <footer>
+                <p id="tvAudioTime"></p>
+                <div id="tvAudioChapters" aria-label="Chapters" hidden></div>
+            </footer>
+        </div>
         <p id="tvStatus" role="status">Waiting for media selection</p>
     </main>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="{{ url_for('static', filename='js/mm_tvremote.js') }}?v=16"></script>
+    <script src="{{ url_for('static', filename='js/mm_tvremote.js') }}?v=17"></script>
 </body>
 </html>

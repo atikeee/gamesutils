@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Weather Forecast</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/weather.css', v='weather-4') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script defer src="{{ url_for('static', filename='js/weather.js', v='weather-4') }}"></script>
+</head>
+<body>
+    <header class="weather-header">
+        <div>
+            <p class="eyebrow">FORECAST DESK</p>
+            <h1>Weather</h1>
+        </div>
+        <div class="location-controls">
+            <label class="sr-only" for="locationSelect">Forecast location</label>
+            <select id="locationSelect" {% if not locations %}disabled{% endif %}>
+                {% for location in locations %}
+                <option value="{{ location.id }}" {% if location.id == selected_id %}selected{% endif %}>{{ location.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" class="add-location-button" id="manageLocations" aria-label="Manage locations" title="Manage locations">+</button>
+        </div>
+    </header>
+
+    <main class="weather-main">
+        <section class="forecast-toolbar" aria-label="Forecast options">
+            <fieldset class="horizon-picker">
+                <legend class="sr-only">Forecast duration</legend>
+                <label><input type="radio" name="horizon" value="48hr" checked><span>Next 48 hours</span></label>
+                <label><input type="radio" name="horizon" value="10_day"><span>Next 10 days</span></label>
+            </fieldset>
+            <div class="forecast-meta">
+                <span id="forecastLocation">{{ (locations | selectattr('id', 'equalto', selected_id) | first).name if selected_id else 'No location selected' }}</span>
+                <span id="forecastUpdated">{% if initial_forecast %}Updated {{ initial_forecast.timestamp }}{% else %}Waiting for forecast{% endif %}</span>
+            </div>
+        </section>
+        <div id="forecastLoading" class="forecast-loading" role="status" aria-live="polite" {% if not initial_loading %}hidden{% endif %}>
+            <span class="loading-spinner" aria-hidden="true"></span>
+            <span>Fetching weather data from all sources. This page will update automatically when it is ready.</span>
+        </div>
+        <p id="forecastMessage" class="forecast-message" role="status" {% if not initial_warning %}hidden{% endif %}>{{ initial_warning or '' }}</p>
+        <section id="emptyState" class="empty-state" {% if initial_forecast %}hidden{% endif %}>
+            <h2>No forecast loaded</h2>
+            <p>Select or add a location to request a forecast.</p>
+        </section>
+        <section id="chartScroll" class="chart-scroll" aria-label="Weather forecast charts" hidden>
+            <div id="chartGrid" class="chart-grid" aria-live="polite"></div>
+        </section>
+    </main>
+
+    <dialog id="locationsDialog" class="locations-dialog" aria-labelledby="locationsTitle">
+        <form id="locationsForm">
+            <div class="dialog-heading">
+                <div>
+                    <p class="eyebrow">SAVED PLACES</p>
+                    <h2 id="locationsTitle">Manage locations</h2>
+                </div>
+                <button type="button" class="icon-close" id="closeLocations" aria-label="Close">&times;</button>
+            </div>
+            <div class="location-table-wrap">
+                <table class="location-table">
+                    <thead><tr><th scope="col">Name</th><th scope="col">Longitude</th><th scope="col">Latitude</th></tr></thead>
+                    <tbody id="locationRows"></tbody>
+                </table>
+            </div>
+            <div class="dialog-actions">
+                <button type="button" class="secondary-button" id="addLocationRow">Add row</button>
+                <span class="dialog-spacer"></span>
+                <button type="button" class="secondary-button" id="cancelLocations">Cancel</button>
+                <button type="submit" class="primary-button">Save locations</button>
+            </div>
+            <p id="locationFormMessage" class="form-message" role="alert" hidden></p>
+        </form>
+    </dialog>
+
+    <script id="weatherBootstrap" type="application/json">{{ {
+        'locations': locations,
+        'selectedId': selected_id,
+        'forecast': initial_forecast,
+        'loading': initial_loading,
+        'warning': initial_warning,
+        'sourceNames': source_names
+    } | tojson }}</script>
+</body>
+</html>

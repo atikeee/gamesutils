@@ -1,18 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Email Triage</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/work.css') }}?v=2">
-</head>
-<body class="work-page work-email">
-
-
-<nav id="work-dashboard-nav" aria-label="Work dashboard">
-    {% include 'work/_back_button.html' %}
-</nav>
+{% extends 'work/base.html' %}
+{% block title %}Email Triage{% endblock %}
+{% block body_class %}work-email{% endblock %}
+{% block content %}
 <button id="run-triage-btn" type="button" onclick="runTriageImport()">Run Email Import</button>
 <section id="triage-run-panel" aria-label="Email import output" hidden>
     <div id="triage-run-panel-header">
@@ -446,5 +435,4 @@ document.querySelectorAll('th.resizable').forEach(th => {
     document.addEventListener('mouseup', () => { isResizing = false; });
 });
 </script>
-</body>
-</html>
+{% endblock %}

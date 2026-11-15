@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stocks</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/stocks.css') }}?v=6">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/stocks.css') }}?v=8">
 </head>
 <body>
     <header class="stocks-toolbar">
@@ -53,6 +53,7 @@
         <section id="view-analysis" role="tabpanel" aria-labelledby="tab-analysis" hidden>
             <div class="view-heading"><h1>Analyze</h1><div class="actions">
                 <button type="button" id="analysisRefresh" title="Refresh analysis" aria-label="Refresh analysis" disabled><i data-lucide="refresh-cw" aria-hidden="true"></i></button>
+                <button type="button" id="analysisHelp" title="Signal meanings and values" aria-label="Signal meanings and values" aria-haspopup="dialog" aria-controls="signalHelpDialog"><i data-lucide="circle-help" aria-hidden="true"></i></button>
                 <button type="button" id="analysisAdd" title="Add analyzed stock to shortlist" aria-label="Add analyzed stock to shortlist" disabled><i data-lucide="plus" aria-hidden="true"></i></button>
             </div></div>
             <div class="stock-search analysis-search"><label for="analysisSearch">Stock<input id="analysisSearch" type="search" placeholder="Symbol or company name" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="analysisSearchResults"></label><div id="analysisSearchResults" class="stock-search-results" role="listbox" hidden></div></div>
@@ -66,6 +67,34 @@
             </div>
         </section>
     </main>
+    <dialog id="signalHelpDialog" class="signal-help" aria-labelledby="signalHelpTitle">
+        <div class="signal-help-heading">
+            <h2 id="signalHelpTitle">Reading Signals</h2>
+            <button type="button" data-close="signalHelpDialog" title="Close signal meanings" aria-label="Close signal meanings"><i data-lucide="x" aria-hidden="true"></i></button>
+        </div>
+        <p>Type names the indicator. Signal is its rule-based interpretation. Value is the measurement, not a confidence score. Basis explains the rule used.</p>
+        <h3>Labels and Overall Bias</h3>
+        <dl>
+            <dt>Buy watch / Sell watch</dt><dd>Bullish or bearish conditions worth watching, not instructions to trade. Neutral means neither directional rule is met. Context means background information, excluded from the technical bias.</dd>
+            <dt>Overall bias</dt><dd>Buy watch requires at least two BUY signals and more BUY than SELL signals; Sell watch uses the reverse rule. Otherwise the result is Mixed / Neutral. For example, three BUY and one SELL gives Buy watch; two of each gives Mixed / Neutral. This is a count of rules, not a probability of profit.</dd>
+        </dl>
+        <h3>Values and Examples</h3>
+        <dl>
+            <dt>Trend: SMA20 / SMA50</dt>
+            <dd>SMA20 and SMA50 are average daily closing prices over 20 and 50 days, in the stock's price units. <strong>SMA20 105.00 / SMA50 100.00</strong> means the recent average is higher. With current price above 105, this is bullish. Price below SMA20 with SMA20 below SMA50 is bearish; other combinations are neutral. A new crossover means the averages have just changed order.</dd>
+            <dt>RSI: Relative Strength Index</dt>
+            <dd>A 14-day momentum reading from 0 to 100. <strong>25</strong> is below 30: an oversold / Buy watch. <strong>75</strong> is above 70: an overbought / Sell watch. Readings from 30 through 70 are neutral. Oversold does not mean price must rise, nor overbought that it must fall. Undefined (flat price) means there was no price variation and is treated as neutral.</dd>
+            <dt>MACD: Moving Average Convergence Divergence</dt>
+            <dd>The value is the MACD histogram: the MACD line minus its signal line. <strong>+0.450</strong> indicates bullish momentum; <strong>-0.450</strong> indicates bearish momentum; zero is neutral. It is not a percentage. Its size depends on the stock's price scale, so values are not directly comparable between stocks.</dd>
+            <dt>20-Day Range</dt>
+            <dd><strong>95.00 - 110.00</strong> shows the lowest and highest closing prices in the previous 20 daily bars. Current price above 110 flags an upward breakout / Buy watch; below 95 flags a downward breakout / Sell watch; inside the range or on its boundary is neutral. This uses closes, not intraday highs and lows.</dd>
+            <dt>Volume</dt>
+            <dd>The latest daily-bar volume divided by the previous 20-bar average. <strong>1.00x</strong> means normal activity, <strong>2.00x</strong> twice the average, and <strong>0.50x</strong> half the average. At least 1.50x highlights higher activity, not a buy or sell direction. Intraday volume can be incomplete. Unavailable means the average volume could not support a valid ratio.</dd>
+            <dt>Headlines</dt>
+            <dd><strong>3 positive / 1 negative matches</strong> counts headlines containing positive or negative keywords, not the number of words or a sentiment percentage. A headline can match both groups. Context and negation can be missed; these counts do not affect the technical bias.</dd>
+        </dl>
+        <p class="analysis-note">At least 60 daily bars are required. Signals can conflict, and market data may be delayed. These experimental rules are not investment advice or a guarantee of returns.</p>
+    </dialog>
     <dialog id="stockDialog" aria-labelledby="stockDialogTitle"><h2 id="stockDialogTitle">Add Stock</h2><form id="stockForm">
         <div id="stockSearchWrap" class="stock-search"><label for="stockSearch">Search<input id="stockSearch" type="search" placeholder="Symbol or company name" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="stockSearchResults"></label><div id="stockSearchResults" class="stock-search-results" role="listbox" hidden></div></div>
         <label>Symbol<input id="stockSymbol" autocomplete="off" list="stockSymbols" required></label>
@@ -88,6 +117,6 @@
     <datalist id="stockSymbols"></datalist>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-    <script src="{{ url_for('static', filename='js/stocks.js') }}?v=4"></script>
+    <script src="{{ url_for('static', filename='js/stocks.js') }}?v=5"></script>
 </body>
 </html>

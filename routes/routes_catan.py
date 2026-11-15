@@ -1,6 +1,7 @@
 from dashboard import PROJECT_ROOT, dashboard_tile
 from flask import abort, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from collections import Counter
+from routes.catan_dice import roll_number_dice
 from functools import wraps
 import hashlib
 import hmac
@@ -19,6 +20,7 @@ PLAYER_REGISTRY_FILE = os.path.join(CATAN_DATA_DIR, "catan_player_registry.json"
 PLAYER_COLOR_OPTIONS = [
     {"name": "Red", "value": "#D64545"},
     {"name": "Black", "value": "#000000"},
+    {"name": "White", "value": "#FFFFFF"},
     {"name": "Green", "value": "#218C63"},
     {"name": "Yellow", "value": "#F1C40F"},
     {"name": "Purple", "value": "#8B5FBF"},
@@ -44,6 +46,8 @@ DEFAULT_PLAYER_COLORS = [option["value"] for option in PLAYER_COLOR_OPTIONS]
 #f"player{seat}": DEFAULT_PLAYER_COLORS[(seat - 1) % len(DEFAULT_PLAYER_COLORS)]
 
 STARTING_HAND = []
+DEBUG_FORCE_ROLL_SEVEN = False  # TEMP DEBUG: set True for robber testing.
+USE_BALANCED_DICE_POOL = True
 CATAN_REGISTRY_LOCK = RLock()
 BOARD_COLUMNS = {
     4: {q: (max(-2, -2 - q), min(2, 2 - q)) for q in range(-2, 3)},
@@ -384,9 +388,14 @@ def configure_routes_catan(app,socketio):
         state = json.loads(load_play_state_from_json() or '{}')
         if not state.get('_started'):
             return jsonify({'status': 'error', 'message': 'Start the game before moving the robber.'}), 409
-        if state.get('_pendingDiscards'):
-            return jsonify({'status': 'error', 'message': 'Wait for all players with 8 or more cards to drop cards.'}), 409
         position = request.get_json(silent=True) or {}
+        player_id = position.get('player_id')
+        if player_id:
+            registry = load_catan_player_registry()
+            if not catan_authenticated_seat(registry, player_id):
+                return jsonify({'status': 'error', 'message': 'Player access required.'}), 403
+            if state.get('_currentTurnPlayerId') != player_id or not state.get('_robberPending'):
+                return jsonify({'status': 'error', 'message': 'It is not your pending robber move.'}), 409
         try:
             board = json.loads(load_latest_catan_board_state_from_json() or '{}')
         except (TypeError, ValueError):
@@ -398,10 +407,13 @@ def configure_routes_catan(app,socketio):
         if state.get('robber', {}).get('q') == position['q'] and state.get('robber', {}).get('r') == position['r']:
             return jsonify({'status': 'error', 'message': 'Select a different tile.'}), 409
         state['robber'] = {'q': position['q'], 'r': position['r']}
+        state['_robberPending'] = False
+        if player_id and isinstance(position.get('_undoStack'), list):
+            state['_undoStack'] = position['_undoStack'][-3:]
         if not save_play_state_to_json(json.dumps(state)):
             return jsonify({'status': 'error', 'message': 'Could not move the robber.'}), 500
         socketio.emit('catan_update')
-        return jsonify({'status': 'success'})
+        return jsonify({'status': 'success', 'robber': state['robber'], 'robber_pending': state['_robberPending']})
 
     @app.route('/catan/start_game', methods=['POST'])
     @catan_registry_locked
@@ -605,6 +617,8 @@ def configure_routes_catan(app,socketio):
                 for option in PLAYER_COLOR_OPTIONS
             ],
             player_colors=get_catan_player_colors(),
+            debug_force_roll_seven=DEBUG_FORCE_ROLL_SEVEN,
+            use_balanced_dice_pool=USE_BALANCED_DICE_POOL,
             error=error,
             game_started=json.loads(load_play_state_from_json() or '{}').get('_started', False),
         )
@@ -710,11 +724,6 @@ def configure_routes_catan(app,socketio):
                 registry = load_catan_player_registry()
                 sync_catan_turn_order(previous, registry['players'])
                 actor = previous.get('_currentTurnPlayerId')
-                if previous.get('_pendingDiscards') and (
-                    play_state.get('robber') != previous.get('robber')
-                    or play_state.get('_robberPending') is False
-                ):
-                    return jsonify({'status': 'error', 'message': 'Wait for all required players to drop cards before moving the robber.'}), 409
                 seat_ids = [f"player{player['seat']}" for player in registry['players']]
                 authorized_ids = [player_id for player_id in seat_ids if catan_authenticated_seat(registry, player_id)]
                 changed = [player_id for player_id in seat_ids if play_state.get(player_id) != previous.get(player_id)]
@@ -747,8 +756,34 @@ def configure_routes_catan(app,socketio):
                     new_roads = len(player.get('roads', [])) - len(before.get('roads', []))
                     if new_houses < 0 or new_roads < 0 or new_houses > 1 or new_roads > 1:
                         return jsonify({'status': 'error', 'message': 'Place one free settlement and road during setup.'}), 409
+                elif previous.get('_phase') == 'MAIN_PHASE':
+                    player = play_state.get(actor, {})
+                    previous_player = previous.get(actor, {})
+                    old_structures = previous_player.get('structures', [])
+                    old_house_junctions = {
+                        structure.get('junction', {}).get('id')
+                        for structure in old_structures if structure.get('type') == 'house'
+                    }
+                    road_endpoints = set()
+                    for road in previous_player.get('roads', []):
+                        edge = road.get('edge', {})
+                        try:
+                            road_endpoints.update((
+                                f"{round(float(edge['x1']))},{round(float(edge['y1']))}",
+                                f"{round(float(edge['x2']))},{round(float(edge['y2']))}",
+                            ))
+                        except (KeyError, TypeError, ValueError):
+                            continue
+                    for structure in player.get('structures', []):
+                        if structure.get('type') != 'house':
+                            continue
+                        junction_id = structure.get('junction', {}).get('id')
+                        if junction_id in old_house_junctions:
+                            continue
+                        if junction_id not in road_endpoints:
+                            return jsonify({'status': 'error', 'message': 'A settlement must connect to one of your roads.'}), 409
                 pending = dict(previous.get('_pendingDiscards', {}))
-                for field in ('_started', '_phase', '_setupIndex', '_turnOrder', '_currentTurnPlayerId', '_rolled', '_lastRoll', '_devDeck'):
+                for field in ('_started', '_phase', '_setupIndex', '_turnOrder', '_currentTurnPlayerId', '_rolled', '_lastRoll', '_devDeck', '_numberDicePool'):
                     if field in previous:
                         play_state[field] = previous[field]
                 play_state['_activityLog'] = previous.get('_activityLog', [])
@@ -926,7 +961,7 @@ def configure_routes_catan(app,socketio):
         pid = data.get('pid')
         message = data.get('message')
         if pid and message:
-            return
+            socketio.emit('catan_update')
     #@socketio.on('catan_gen_update')
     #def handle_catan_gen_update(info):
     #    pid = info.get('pid')
@@ -964,7 +999,7 @@ def configure_routes_catan(app,socketio):
             return
         state['_undoStack'] = []
         state['_rolled'] = True
-        dice = [random.randint(1, 6), random.randint(1, 6)]
+        dice = [3, 4] if DEBUG_FORCE_ROLL_SEVEN else roll_number_dice(state, USE_BALANCED_DICE_POOL)
         state['_lastRoll'] = {'dice': dice, 'player': current_player_id}
         if sum(dice) == 7:
             state['_pendingDiscards'] = {player_id: len(state[player_id].get('hand', [])) // 2
