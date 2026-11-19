@@ -102,7 +102,7 @@ def validate_destination(value):
     if len(value) > 2048:
         raise ValueError('The URL is too long.')
     target = destination_path(decoded)
-    if target == '/' or path_matches(target, '/static') or path_matches(target, '/passphrases'):
+    if target == '/' or path_matches(target, '/static') or path_matches(target, '/pass'):
         raise ValueError('The root, manager, and static asset paths are reserved.')
     if any(segment in ('.', '..') for segment in urlsplit(decoded).path.split('/')):
         raise ValueError('Use a local URL without . or .. path segments.')
@@ -113,12 +113,12 @@ def seed_destinations(path, master, dashboard):
     validate_passphrase(master)
     validate_passphrase(dashboard)
     if hmac.compare_digest(master.encode(), dashboard.encode()):
-        raise ValueError('The two passphrases must be different.')
+        raise ValueError('The two pass must be different.')
     with database(path) as connection:
         if connection.execute('SELECT 1 FROM destinations').fetchone():
             raise ValueError('Already initialized. Use the manager to make changes.')
         for passphrase, info, target, is_master in (
-            (master, 'Passphrase manager', '/passphrases', 1),
+            (master, 'Passphrase manager', '/pass', 1),
             (dashboard, 'Game Hub', '/index', 0),
         ):
             connection.execute('INSERT INTO destinations (lookup, password_hash, info, url, is_master) VALUES (?, ?, ?, ?, ?)',
@@ -132,30 +132,75 @@ def configure_routes_passphrase(app):
     initialize_database(path)
     router = Blueprint('passphrase_router', __name__)
 
+    #@app.before_request
+    #def require_destination_access():
+    #    requested_path = request.path.rstrip('/') or '/'
+    #    if requested_path in {'/', '/index'} or path_matches(requested_path, '/pass') or path_matches(requested_path, '/static'):
+    #        return None
+    #    with database(path) as connection:
+    #        entries = connection.execute('SELECT * FROM destinations WHERE is_master = 0').fetchall()
+    #        protected = {row['path'] for row in connection.execute('SELECT path FROM protected_paths')}
+    #        matching = [target for target in protected if path_matches(requested_path, target)]
+    #        if not matching:
+    #            return None
+    #        required_path = max(matching, key=len)
+    #        g.passphrase_protected = True
+    #        token = request.cookies.get(ACCESS_COOKIE, '')
+    #        token_hash = hashlib.sha256(token.encode()).hexdigest()
+    #        grant = connection.execute('SELECT * FROM access_sessions WHERE token_hash = ? AND expires > ?',
+    #                                   (token_hash, int(time.time()))).fetchone() if token else None
+    #        entry = next((entry for entry in entries if grant and entry['id'] == grant['destination_id']), None)
+    #        if entry and hmac.compare_digest(grant['signature'], destination_signature(entry)) and destination_path(entry['url']) == required_path:
+    #            g.passphrase_access = dict(entry)
+    #            g.passphrase_access_expires = grant['expires']
+    #            return None
+    #    if '/api/' in request.path or request.is_json:
+    #        return jsonify(status='error', message='Enter a passphrase to access this page.', login_url='/'), 401
+    #    return redirect(url_for('passphrase_router.home'), code=303)
     @app.before_request
     def require_destination_access():
         requested_path = request.path.rstrip('/') or '/'
-        if requested_path in {'/', '/index'} or path_matches(requested_path, '/passphrases') or path_matches(requested_path, '/static'):
+
+        # 1. Allow public access to:
+        #    - Root profile page: '/' and '/index'
+        #    - Passphrase login/entry points: '/pass', '/passphrase', '/passphrases'
+        #    - Static files: '/static'
+        if (
+            requested_path in {'/', '/index', '/pass'}
+            or path_matches(requested_path, '/pass')
+            or path_matches(requested_path, '/passphrase')
+            or path_matches(requested_path, '/passphrases')
+            or path_matches(requested_path, '/static')
+        ):
             return None
+
         with database(path) as connection:
             entries = connection.execute('SELECT * FROM destinations WHERE is_master = 0').fetchall()
             protected = {row['path'] for row in connection.execute('SELECT path FROM protected_paths')}
             matching = [target for target in protected if path_matches(requested_path, target)]
             if not matching:
                 return None
+
             required_path = max(matching, key=len)
             g.passphrase_protected = True
             token = request.cookies.get(ACCESS_COOKIE, '')
             token_hash = hashlib.sha256(token.encode()).hexdigest()
-            grant = connection.execute('SELECT * FROM access_sessions WHERE token_hash = ? AND expires > ?',
-                                       (token_hash, int(time.time()))).fetchone() if token else None
+            grant = connection.execute(
+                'SELECT * FROM access_sessions WHERE token_hash = ? AND expires > ?',
+                (token_hash, int(time.time()))
+            ).fetchone() if token else None
+
             entry = next((entry for entry in entries if grant and entry['id'] == grant['destination_id']), None)
             if entry and hmac.compare_digest(grant['signature'], destination_signature(entry)) and destination_path(entry['url']) == required_path:
                 g.passphrase_access = dict(entry)
                 g.passphrase_access_expires = grant['expires']
                 return None
+
+        # 2. Redirect API requests to '/pass' instead of '/'
         if '/api/' in request.path or request.is_json:
-            return jsonify(status='error', message='Enter a passphrase to access this page.', login_url='/'), 401
+            return jsonify(status='error', message='Enter a passphrase to access this page.', login_url='/pass'), 401
+
+        # 3. Redirect browser requests to the passphrase login route
         return redirect(url_for('passphrase_router.home'), code=303)
 
     @app.after_request
@@ -213,7 +258,7 @@ def configure_routes_passphrase(app):
         response.headers['Content-Security-Policy'] = "default-src 'none'; style-src 'self'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
         return response
 
-    @router.route('/', methods=['GET', 'POST'])
+    @router.route('/home', methods=['GET', 'POST'])
     def home():
         with database(path) as connection:
             ready = connection.execute('SELECT 1 FROM destinations WHERE is_master = 1').fetchone() is not None
@@ -243,7 +288,7 @@ def configure_routes_passphrase(app):
             if entry['is_master']:
                 token = secrets.token_urlsafe(32)
                 connection.execute('INSERT INTO manager_sessions VALUES (?, ?)', (hashlib.sha256(token.encode()).hexdigest(), now + SESSION_SECONDS))
-                response.set_cookie(AUTH_COOKIE, token, max_age=SESSION_SECONDS, httponly=True, secure=request.is_secure, samesite='Strict', path='/passphrases')
+                response.set_cookie(AUTH_COOKIE, token, max_age=SESSION_SECONDS, httponly=True, secure=request.is_secure, samesite='Strict', path='/pass')
             else:
                 previous = request.cookies.get(ACCESS_COOKIE, '')
                 connection.execute('DELETE FROM access_sessions WHERE token_hash = ?', (hashlib.sha256(previous.encode()).hexdigest(),))
@@ -253,14 +298,14 @@ def configure_routes_passphrase(app):
                 response.set_cookie(ACCESS_COOKIE, token, max_age=SESSION_SECONDS, httponly=True, secure=request.is_secure, samesite='Strict', path='/')
             return response
 
-    @router.get('/passphrases')
+    @router.get('/pass')
     def manager():
         with database(path) as connection:
             if not authorized(connection):
                 return redirect(url_for('passphrase_router.home'), code=303)
             return manager_page(connection)
 
-    @router.post('/passphrases/save')
+    @router.post('/pass/save')
     def save():
         with database(path) as connection:
             if not authorized(connection):
@@ -275,7 +320,7 @@ def configure_routes_passphrase(app):
                 info = request.form.get('info', '').strip()
                 if not info or len(info) > 200:
                     raise ValueError('Enter an info label of up to 200 characters.')
-                target = '/passphrases' if entry and entry['is_master'] else validate_destination(request.form.get('url', ''))
+                target = '/pass' if entry and entry['is_master'] else validate_destination(request.form.get('url', ''))
                 passphrase = request.form.get('passphrase', '')
                 if passphrase or not entry:
                     validate_passphrase(passphrase)
@@ -296,7 +341,7 @@ def configure_routes_passphrase(app):
                 if entry and entry['is_master'] and passphrase:
                     connection.execute('DELETE FROM manager_sessions')
                     response = redirect(url_for('passphrase_router.home'), code=303)
-                    response.delete_cookie(AUTH_COOKIE, path='/passphrases')
+                    response.delete_cookie(AUTH_COOKIE, path='/pass')
                     return response
             except ValueError as error:
                 return manager_page(connection, str(error), 400)
@@ -304,7 +349,7 @@ def configure_routes_passphrase(app):
                 return manager_page(connection, 'That passphrase is already assigned. Choose a different one.', 409)
             return redirect(url_for('passphrase_router.manager'), code=303)
 
-    @router.post('/passphrases/delete')
+    @router.post('/pass/delete')
     def delete():
         with database(path) as connection:
             if not authorized(connection):
@@ -314,7 +359,7 @@ def configure_routes_passphrase(app):
             connection.execute('DELETE FROM destinations WHERE id = ? AND is_master = 0', (request.form.get('id', type=int),))
             return redirect(url_for('passphrase_router.manager'), code=303)
 
-    @router.post('/passphrases/logout')
+    @router.post('/pass/logout')
     def logout():
         with database(path) as connection:
             if not valid_csrf(connection):
@@ -322,7 +367,7 @@ def configure_routes_passphrase(app):
             token = request.cookies.get(AUTH_COOKIE, '')
             connection.execute('DELETE FROM manager_sessions WHERE token_hash = ?', (hashlib.sha256(token.encode()).hexdigest(),))
         response = redirect(url_for('passphrase_router.home'), code=303)
-        response.delete_cookie(AUTH_COOKIE, path='/passphrases')
+        response.delete_cookie(AUTH_COOKIE, path='/pass')
         return response
 
     app.register_blueprint(router)
@@ -346,7 +391,7 @@ def initialize_command(database_path):
         seed_destinations(database_path, master, dashboard)
     except ValueError as error:
         raise click.ClickException(str(error)) from error
-    click.echo('Configured /passphrases and /index. No plaintext passphrases were saved.')
+    click.echo('Configured /pass and /index. No plaintext pass were saved.')
 
 
 if __name__ == '__main__':

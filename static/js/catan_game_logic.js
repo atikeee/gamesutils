@@ -9,6 +9,11 @@ messageBox?.addEventListener('click', () => {
 
 const isGamePage = window.location.pathname === '/catan/1/game';
 const isPlayerPage = window.location.pathname.startsWith('/catan/1/player/');
+const CATAN_DEBUG_BUILD = 6;
+const CATAN_DEBUG_ALERTS = false;
+if (isPlayerPage && CATAN_DEBUG_ALERTS) {
+    alert(`DEBUG BUILD ${CATAN_DEBUG_BUILD}: ${window.CATAN_DEBUG_FORCE_ROLL_SEVEN ? 'forced dice total is 7' : window.CATAN_USE_BALANCED_DICE_POOL ? 'balanced 72-roll dice pool enabled' : 'independent random dice enabled'}.`);
+}
 
 const PLAYER_ID = isPlayerPage && window.PLAYER_ID ? 'player' + window.PLAYER_ID : null;
 
@@ -61,8 +66,6 @@ const CARD_COSTS = {
 const PLAYER_PIECE_LIMITS = { house: 5, city: 4, road: 15 };
 let globalDevCardDeck = [];
 let lastTurnNotice = null;
-let lastRobberReminderKey = null;
-let catanSelfDiscardPromptOpen = false;
 
 let offsetX = 0;
 let offsetY = 0;
@@ -244,7 +247,7 @@ function chooseOption(title, options) {
 }
 
 function choosePlayer(ids) {
-    return chooseOption('Steal a random card from:', ids.map(value => ({ value, label: allPlayersData[value].playerName })));
+    return chooseOption('Please ask all players with 8+ cards to drop their cards. Steal a random card from:', ids.map(value => ({ value, label: allPlayersData[value].playerName })));
 }
 
 function isCatan1RobberRoller() {
@@ -253,22 +256,6 @@ function isCatan1RobberRoller() {
         && Array.isArray(roll.dice) && roll.dice[0] + roll.dice[1] === 7;
 }
 
-function isCatan1RobberMoveComplete() {
-    const roll = allPlayersData._lastRoll;
-    return isPlayerPage && !allPlayersData._robberPending && roll?.player === PLAYER_ID
-        && Array.isArray(roll.dice) && roll.dice[0] + roll.dice[1] === 7;
-}
-
-function showCatan1RobberReminder() {
-    if (!diceResultDismissedForRoll || !isCatan1RobberMoveComplete() || catanSelfDiscardPromptOpen) return;
-    const roll = allPlayersData._lastRoll;
-    const key = `${roll.player}:${roll.dice.join('-')}:${(allPlayersData._activityLog || []).length}`;
-    if (key === lastRobberReminderKey) return;
-    lastRobberReminderKey = key;
-    void chooseOption('Please ask all players with 8 or more cards to drop cards before you move the robber.', [
-        { value: 'ok', label: 'OK' }
-    ]);
-}
 
 // count > 1 keeps the most recent `count` clicks (same resource may repeat) and resolves an array
 function chooseResourceToPlay(title, text, count = 1) {
@@ -980,13 +967,7 @@ async function loadAllPlayerStatesFromBackend() {
             if (isPlayerPage && required && lastTurnNotice !== `discard:${required}`) {
                 lastTurnNotice = `discard:${required}`;
                 const players = Object.keys(allPlayersData._pendingDiscards).map(playerId => allPlayersData[playerId].playerName).join(', ');
-                catanSelfDiscardPromptOpen = isCatan1RobberRoller();
-                void chooseOption(`Drop ${required} card(s) from your hand. Waiting players: ${players}`, [{ value: 'select', label: 'OK' }]).then(() => {
-                    catanSelfDiscardPromptOpen = false;
-                    showCatan1RobberReminder();
-                });
-            } else if (!catanSelfDiscardPromptOpen) {
-                showCatan1RobberReminder();
+                void chooseOption(`Drop ${required} card(s) from your hand. Waiting players: ${players}`, [{ value: 'select', label: 'OK' }]);
             }
         } else {
             if (!isPlayerPage) showMessage("No saved player states found. Initializing default player states.", 'info');
@@ -1740,10 +1721,12 @@ function renderTransferDropButtons() {
     const transferDropButtonsDiv = document.getElementById('transferDropButtons');
     if (!transferDropButtonsDiv) return; // Exit if the container doesn't exist
 
-    transferDropButtonsDiv.innerHTML = ''; // Clear existing buttons
-
     // Get player IDs for other players
     const otherPlayerIds = allPlayersData._turnOrder.filter(pId => pId !== PLAYER_ID);
+    const recipientsKey = JSON.stringify(otherPlayerIds.map(pId => [pId, allPlayersData[pId].playerName]));
+    if (transferDropButtonsDiv.dataset.recipients === recipientsKey) return;
+    transferDropButtonsDiv.dataset.recipients = recipientsKey;
+    transferDropButtonsDiv.innerHTML = '';
 
     // Create buttons for other players
     otherPlayerIds.forEach(pId => {
@@ -1881,7 +1864,6 @@ function updatePlayerUI() {
 
     const handCardsDiv = document.getElementById('handCards');
     if (handCardsDiv) {
-        handCardsDiv.innerHTML = '';
 
         const resourceTypes = ['wood', 'brick', 'sheep', 'hay', 'rock'];
         const resourceCounts = allPlayersData[PLAYER_ID].hand.reduce((counts, resourceType) => {
@@ -1890,16 +1872,28 @@ function updatePlayerUI() {
         }, {});
         resourceTypes.forEach(resourceType => {
             const count = resourceCounts[resourceType] || 0;
+            const existingCard = handCardsDiv.querySelector(`[data-resource-type="${resourceType}"]`);
+            if (existingCard) {
+                const selectedCount = selectedHandCards.filter(resource => resource === resourceType).length;
+                const remainingCount = Math.max(0, count - selectedCount);
+                if (existingCard.dataset.count !== String(count)) existingCard.dataset.count = count;
+                const badge = existingCard.querySelector('.hand-card-count');
+                if (badge.textContent !== String(remainingCount)) badge.textContent = remainingCount;
+                existingCard.setAttribute('aria-label', `${count} ${resourceType} cards`);
+                existingCard.classList.toggle('selected', selectedCount > 0);
+                existingCard.classList.toggle('hand-resource-empty', remainingCount === 0);
+                if (remainingCount === 0) existingCard.setAttribute('aria-hidden', 'true');
+                else existingCard.removeAttribute('aria-hidden');
+                return;
+            }
             const cardItem = document.createElement('div');
             cardItem.classList.add('card-item');
             cardItem.classList.add('resource-card'); // Add resource-card class for background image styling
-            cardItem.classList.add('animate-in'); // Keep animation
             cardItem.dataset.resourceType = resourceType; // Set data-resource-type for CSS background image
             cardItem.dataset.count = count;
             cardItem.setAttribute('aria-label', `${count} ${resourceType} cards`);
-            if (count > 0) {
-                cardItem.addEventListener('click', () => toggleCardSelection(cardItem, resourceType));
-            } else {
+            cardItem.addEventListener('click', () => toggleCardSelection(cardItem, resourceType));
+            if (count === 0) {
                 cardItem.classList.add('hand-resource-empty');
                 cardItem.setAttribute('aria-hidden', 'true');
             }
@@ -1922,6 +1916,8 @@ function updatePlayerUI() {
 
     const devCardsDiv = document.getElementById('devCards');
     if (devCardsDiv) {
+        const cardsKey = JSON.stringify(allPlayersData[PLAYER_ID].devCards);
+        if (devCardsDiv.dataset.cards !== cardsKey) {
             devCardsDiv.innerHTML = '';
             allPlayersData[PLAYER_ID].devCards.forEach(cardType => { // Changed 'card' to 'cardType' for clarity
                 const cardItem = document.createElement('div');
@@ -1936,6 +1932,8 @@ function updatePlayerUI() {
                 devCardsDiv.appendChild(cardItem);
             }
         );
+            devCardsDiv.dataset.cards = cardsKey;
+        }
         document.getElementById('devCardCount').textContent = allPlayersData[PLAYER_ID].devCards.length;
         document.getElementById('victoryPointCount').textContent = Number(allPlayersData[PLAYER_ID].victory_point) || 0;
         document.getElementById('knightPlayedCount').textContent = Number(allPlayersData[PLAYER_ID].knightplayed) || 0;
@@ -2337,7 +2335,6 @@ function dismissDiceRollOverlay() {
     overlay.classList.remove('is-visible', 'is-result');
     overlay.hidden = true;
     diceResultDismissedForRoll = true;
-    showCatan1RobberReminder();
 }
 
 function showSharedDiceRoll(finalDice) {
@@ -2637,7 +2634,7 @@ document.addEventListener('visibilitychange', () => {
     if (!document.hidden) void refreshCatanState();
 });
 window.setInterval(() => {
-    if (!document.hidden) void refreshCatanState();
+    if (isGamePage && !document.hidden) void refreshCatanState();
 }, 5000);
 
 socket.on('catan_card_transfer', data => {

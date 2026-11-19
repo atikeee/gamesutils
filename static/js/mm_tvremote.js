@@ -204,7 +204,11 @@
         });
 
         function renderState(nextState) {
-            state = ['x', 'mov'].includes(nextState?.database_name) && (!mediaAccessToken || selectedDatabase !== nextState.database_name) ? null : nextState;
+            const prevChapter = state?.chapter;
+            state = ['x', 'mov'].includes(nextState?.database_name) && (!mediaAccessToken || selectedDatabase !== nextState.database_name)
+                ? null
+                : { ...nextState, chapter: nextState?.chapter || prevChapter || '' };
+            //state = ['x', 'mov'].includes(nextState?.database_name) && (!mediaAccessToken || selectedDatabase !== nextState.database_name) ? null : nextState;
             const hasMedia = Boolean(state?.media_id);
             currentMedia.textContent = hasMedia
                 ? `${state.title} · ${state.database_name.toUpperCase()}`

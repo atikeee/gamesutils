@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css', v='catan2-light-2') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/catan_styles.css', v='catan2-light-3') }}">
     <style>
         body.catan-player-page.catan2-player-page { background: #fff; }
         .catan2-player-page .canvas-wrapper.map-zoom-viewport { position: relative; overflow: hidden; }
@@ -449,6 +449,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .catan2-player-page #transferDropButtons .hand-selection-btn { min-height: 48px; font-size: 1rem; }
         /* seats that are not taken ("Player 2", ...) or empty: no button at all */
         .catan2-player-page #transferDropButtons .transfer-btn:disabled { display: none; }
         .c2-hand-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
@@ -1024,7 +1025,7 @@
                     </div>
                     <div class="c2-hand-actions-row c2-ha-commands">
                         <button type="button" class="btn btn-tool hand-selection-btn hand-selection-drop" data-hand-action="drop" disabled>Drop</button>
-                        <button type="button" class="btn btn-tool hand-selection-btn hand-selection-clear" data-hand-action="clear" disabled>Clear</button>
+                        <button type="button" class="btn btn-tool hand-selection-btn hand-selection-clear" data-hand-action="clear" disabled>Cancel</button>
                     </div>
                 </div>
             </div>
@@ -1146,7 +1147,7 @@
     </script>
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/catan_drawing_utils.js', v='4') }}"></script>
-    <script src="{{ url_for('static', filename='js/catan2_game_logic.js', v='28') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan2_game_logic.js', v='30') }}"></script>
     <script>
     // Build menu: open/close only. Tool selection itself is still handled by catan2_game_logic.js.
     (function () {

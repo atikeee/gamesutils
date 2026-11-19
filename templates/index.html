@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mohammad Atiqur Rahman | Personal Profile</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --border: #334155;
+            --tag-bg: #0f172a;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            max-width: 760px;
+            width: 100%;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+        .avatar {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid var(--border);
+            margin-bottom: 16px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+        }
+        h1 { font-size: 1.9rem; color: var(--text-primary); margin-bottom: 6px; }
+        .tagline { color: var(--accent); font-weight: 500; font-size: 1.05rem; margin-bottom: 6px; }
+        .location { color: var(--text-secondary); font-size: 0.95rem; }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        h2 { font-size: 1.25rem; color: var(--accent); margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        p { color: var(--text-secondary); margin-bottom: 12px; font-size: 0.98rem; }
+        ul { list-style: none; padding: 0; }
+        li { color: var(--text-secondary); margin-bottom: 10px; font-size: 0.95rem; }
+        li strong { color: var(--text-primary); }
+        .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .tag {
+            background: var(--tag-bg);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 10px;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--tag-bg);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px 14px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        .btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: #132238;
+        }
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .project-btn {
+            display: block;
+            text-align: center;
+            padding: 12px;
+            background: #0284c7;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            transition: background 0.2s;
+        }
+        .project-btn:hover { background: var(--accent-hover); }
+        footer {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            
+            <img src="{{ url_for('static', filename='atik_pp.jpg') }}" alt="Mohammad Atiqur Rahman" class="avatar">
+
+            <h1>Mohammad Atiqur Rahman</h1>
+            <div class="tagline">Software Developer • Security & Automation Enthusiast</div>
+            <div class="location">📍 Portland, Oregon</div>
+        </header>
+
+        <section class="card">
+            <h2>About Me</h2>
+            <p>
+                Hi! I'm Atiq. I am a software engineer with nearly 10 years of experience building automation pipelines, security validation tools, and backend frameworks.
+            </p>
+            <p>
+                Outside my corporate work, I love managing my home lab, hosting personal applications on my NAS, exploring machine learning models, and building interactive web tools.
+            </p>
+        </section>
+
+        <section class="card">
+            <h2>Personal Lab & Applications</h2>
+            <p>Explore tools and games hosted on my personal infrastructure:</p>
+            <div class="projects-grid">
+                <a href="/games" class="project-btn">🎲 Games Online</a>
+                <a href="/index" class="project-btn">🎵 Misc Social Games</a>
+                
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Core Skills</h2>
+            <div class="tags">
+                <span class="tag">Python</span>
+                <span class="tag">C# / .NET</span>
+                <span class="tag">C++</span>
+                <span class="tag">Django & Flask</span>
+                <span class="tag">JavaScript & React</span>
+                <span class="tag">Machine Learning (PyTorch)</span>
+                <span class="tag">Security Testing</span>
+                <span class="tag">Docker & CI/CD</span>
+                <span class="tag">PostgreSQL & SQLite</span>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Connect & Profiles</h2>
+            <div class="links-grid">
+                <a href="https://github.com/atikeee" target="_blank" class="btn">GitHub</a>
+                <a href="https://www.linkedin.com/in/rahman1979" target="_blank" class="btn">LinkedIn</a>
+                <a href="https://www.facebook.com/atiq3e" target="_blank" class="btn">Facebook</a>
+                <a href="mailto:atikeee@gmail.com" class="btn">Email Me</a>
+            </div>
+        </section>
+
+        <footer>
+            &copy; 2025 Mohammad Atiqur Rahman • Hosted on private infrastructure via Cloudflare
+        </footer>
+    </div>
+</body>
+</html>

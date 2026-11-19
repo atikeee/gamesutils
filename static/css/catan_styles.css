@@ -2314,8 +2314,10 @@ body.catan-setup-page {
 .catan-player-page .resource-selection-actions #transferDropButtons { display: contents; }
 .catan-player-page .resource-selection-actions #transferDropButtons[hidden] { display: none; }
 .catan-player-page .resource-selection-actions button { flex: 1 0 88px; min-width: 88px; min-height: 38px; padding: 5px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.76rem; line-height: 1.2; }
-.catan-player-page .hand-selection-panel .resource-selection-actions { display: grid; grid-template-columns: repeat(2, 38px) repeat(3, minmax(0, 1fr)); gap: 4px; overflow-x: hidden; }
+.catan-player-page .hand-selection-panel .resource-selection-actions { display: grid; grid-template-columns: 56px 72px repeat(3, minmax(0, 1fr)); gap: 4px; overflow-x: hidden; }
 .catan-player-page .hand-selection-panel .resource-selection-actions button { width: 100%; min-width: 0; padding: 5px 2px; white-space: nowrap; font-size: 0.72rem; }
+.catan-player-page .hand-selection-panel #dropSelectedCards { min-height: 48px; font-size: 1.25rem; }
+.catan-player-page .hand-selection-panel #clearHandSelection { min-height: 48px; font-size: 0.9rem; }
 .catan-game-page .game-activity-section { flex: 1 1 auto; max-height: calc(100svh - 24px); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .catan-game-page .game-activity-section h2 { margin-bottom: 8px; font-size: 1rem; font-weight: 700; }
 .catan-game-page #gameActivity { flex: 1 1 auto; min-height: 0; overflow-y: auto; }

@@ -77,8 +77,12 @@ def configure_routes(app,socketio):
     def game_dashboard():
         return render_template('game_dashboard.html')
 
-    @app.route("/index")
+    @app.route("/")
     def index():
+        return render_template("/index.html")
+        
+    @app.route("/index")
+    def mainindex():
         return render_template("main/index.html", dashboard_sections=dashboard_sections(app))
 
    

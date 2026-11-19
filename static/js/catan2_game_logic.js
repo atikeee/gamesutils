@@ -4,6 +4,11 @@ const messageBox = document.getElementById('messageBox');
 
 const isGamePage = window.location.pathname === '/catan/2/game';
 const isPlayerPage = window.location.pathname.startsWith('/catan/2/player/');
+const CATAN_DEBUG_BUILD = 6;
+const CATAN_DEBUG_ALERTS = false;
+if (isPlayerPage && CATAN_DEBUG_ALERTS) {
+    alert(`DEBUG BUILD ${CATAN_DEBUG_BUILD}: ${window.CATAN_DEBUG_FORCE_ROLL_SEVEN ? 'forced dice total is 7' : window.CATAN_USE_BALANCED_DICE_POOL ? 'balanced 72-roll dice pool enabled' : 'independent random dice enabled'}.`);
+}
 if (isPlayerPage && messageBox.parentElement !== document.body) {
     document.body.appendChild(messageBox);
 }
@@ -687,21 +692,13 @@ const modalMessage = document.getElementById('modalMessage');
 const modalConfirmBtn = document.getElementById('modalConfirmBtn');
 const modalCancelBtn = document.getElementById('modalCancelBtn');
 const robberSelfDiscardModal = document.getElementById('robberSelfDiscardModal');
-const robberWaitModal = document.getElementById('robberWaitModal');
-let lastRobberReminderKey = null;
 let lastRobberSelfPromptKey = null;
 let robberSelfDiscardModalOpen = false;
-let robberWaitModalOpen = false;
+let robberMoveRefreshPending = false;
 
 document.getElementById('robberSelfDiscardOk')?.addEventListener('click', () => {
     robberSelfDiscardModal?.classList.add('hidden');
     robberSelfDiscardModalOpen = false;
-    showCatan2RobberWaitReminder();
-});
-
-document.getElementById('robberWaitOk')?.addEventListener('click', () => {
-    robberWaitModal?.classList.add('hidden');
-    robberWaitModalOpen = false;
 });
 let modalResolve;
 
@@ -1613,39 +1610,23 @@ function isCatan2RobberRoller() {
         && Array.isArray(roll.dice) && roll.dice[0] + roll.dice[1] === 7;
 }
 
-function isCatan2RobberMoveComplete() {
-    return isCatan2RobberRoller()
-        && allPlayersData._robberMoveAvailable !== true
-        && !allPlayersData._robberMovePlayerId;
-}
-
-function showCatan2RobberWaitReminder() {
-    if (!diceResultDismissedForRoll || !isCatan2RobberMoveComplete() || robberWaitModalOpen) return;
-    const roll = allPlayersData.lastDiceRoll;
-    const key = `${roll?.player}:${roll?.dice?.join('-') || 'seven'}`;
-    if (key === lastRobberReminderKey) return;
-    lastRobberReminderKey = key;
-    robberWaitModalOpen = true;
-    robberWaitModal?.classList.remove('hidden');
-}
 
 function syncCatan2RobberReminders() {
+    if (robberMoveRefreshPending) return;
     if (!isCatan2RobberRoller()) return;
     const roll = allPlayersData.lastDiceRoll;
     const key = `${roll.player}:${roll.dice.join('-')}`;
     if (allPlayersData._pendingDiscards?.[PLAYER_ID]) {
         if (key !== lastRobberSelfPromptKey && !robberSelfDiscardModalOpen) {
             const required = Math.floor((allPlayersData[PLAYER_ID]?.hand?.length || 0) / 2);
-            document.getElementById('robberSelfDiscardMessage').textContent = `You have ${required} cards to discard. Drop them when convenient; you can move the robber without waiting for other discards.`;
+            document.getElementById('robberSelfDiscardMessage').textContent = `You have ${required} cards to discard.`;
             lastRobberSelfPromptKey = key;
             robberSelfDiscardModalOpen = true;
             robberSelfDiscardModal?.classList.remove('hidden');
             return;
         }
-        if (diceResultDismissedForRoll && !robberSelfDiscardModalOpen) showCatan2RobberWaitReminder();
         return;
     }
-    showCatan2RobberWaitReminder();
 }
 
 function isRobberOnBoard() {
@@ -2342,7 +2323,7 @@ async function chooseRobberVictim(tile) {
     const canSteal = true;
     const result = await showProgressCardActionModal({
         title: 'Steal a card',
-        message: canSteal ? 'Choose a player beside the robber.' : 'These players have no cards to steal.',
+        message: 'Please ask all players with 8+ cards to drop their cards. Choose a player beside the robber.',
         choices,
         confirmLabel: canSteal ? 'Steal card' : 'OK',
         unavailable: !canSteal
@@ -2386,9 +2367,14 @@ async function finishRobberMove(tile) {
     allPlayersData._robberMoveAvailable = false;
     allPlayersData._robberMovePlayerId = null;
     selectedPlayerTool = null;
+    robberMoveRefreshPending = true;
     updateRobberToolAvailability();
     drawBoard();
-    await refreshCatanState();
+    try {
+        await refreshCatanState();
+    } finally {
+        robberMoveRefreshPending = false;
+    }
     if (allPlayersData.robber?.q !== confirmedRobber.q || allPlayersData.robber?.r !== confirmedRobber.r
         || canPlayerMoveRobber()) {
         allPlayersData.robber = confirmedRobber;
@@ -2398,6 +2384,7 @@ async function finishRobberMove(tile) {
         showMessage('The server has not confirmed the robber move yet.', 'error');
         return false;
     }
+    updateRobberToolAvailability();
     return true;
 }
 
@@ -3389,7 +3376,7 @@ function updateHandSelectionButtons() {
         button.disabled = count === 0;
         button.title = button.dataset.handAction === 'drop'
             ? (count ? `Drop ${count}/${handCount} selected card${count === 1 ? '' : 's'}` : 'Select hand cards to drop')
-            : 'Clear hand selection';
+            : 'Cancel hand selection';
     });
     const dropButton = document.querySelector('[data-hand-action="drop"]');
     if (dropButton) dropButton.textContent = count ? `Drop ${count}` : 'Drop';
@@ -3481,7 +3468,6 @@ function updatePlayerUI() {
 
     const handCardsDiv = document.getElementById('handCards');
     if (handCardsDiv) {
-        handCardsDiv.innerHTML = '';
 
         const resourceTypes = ['wood', 'sheep', 'rock', 'brick', 'hay', 'paper', 'cloth', 'coin'];
         const resourceCounts = allPlayersData[PLAYER_ID].hand.reduce((counts, resourceType) => {
@@ -3490,16 +3476,28 @@ function updatePlayerUI() {
         }, {});
         resourceTypes.forEach(resourceType => {
             const count = resourceCounts[resourceType] || 0;
+            const existingCard = handCardsDiv.querySelector(`[data-resource-type="${resourceType}"]`);
+            if (existingCard) {
+                const selectedCount = selectedHandCards.filter(resource => resource === resourceType).length;
+                const remainingCount = Math.max(0, count - selectedCount);
+                if (existingCard.dataset.count !== String(count)) existingCard.dataset.count = count;
+                const badge = existingCard.querySelector('.hand-card-count');
+                if (badge.textContent !== String(remainingCount)) badge.textContent = remainingCount;
+                existingCard.setAttribute('aria-label', `${count} ${resourceType} cards`);
+                existingCard.classList.toggle('selected', selectedCount > 0);
+                existingCard.classList.toggle('hand-resource-empty', remainingCount === 0);
+                if (remainingCount === 0) existingCard.setAttribute('aria-hidden', 'true');
+                else existingCard.removeAttribute('aria-hidden');
+                return;
+            }
             const cardItem = document.createElement('div');
             cardItem.classList.add('card-item');
             cardItem.classList.add('resource-card'); // Add resource-card class for background image styling
-            cardItem.classList.add('animate-in'); // Keep animation
             cardItem.dataset.resourceType = resourceType; // Set data-resource-type for CSS background image
             cardItem.dataset.count = count;
             cardItem.setAttribute('aria-label', `${count} ${resourceType} cards`);
-            if (count > 0) {
-                cardItem.addEventListener('click', () => toggleCardSelection(cardItem, resourceType));
-            } else {
+            cardItem.addEventListener('click', () => toggleCardSelection(cardItem, resourceType));
+            if (count === 0) {
                 cardItem.classList.add('hand-resource-empty');
                 cardItem.setAttribute('aria-hidden', 'true');
             }
@@ -4155,7 +4153,6 @@ socket.on('catan2_roll_dice_broadcast', (data) => {
         ? data.event_die
         : getRandomCitiesAndKnightsEventFace();
     if (data.current_player) allPlayersData._currentTurnPlayerId = data.current_player;
-    lastRobberReminderKey = null;
     lastRobberSelfPromptKey = null;
     diceHighlightVisible = false;
     diceResultDismissedForRoll = false;
@@ -4721,7 +4718,7 @@ document.addEventListener('visibilitychange', () => {
     if (!document.hidden) void refreshCatanState();
 });
 window.setInterval(() => {
-    if (!document.hidden && !socket.connected) void refreshCatanState();
+    if (isGamePage && !document.hidden && !socket.connected) void refreshCatanState();
 }, 5000);
 
 socket.on('catan2_score_update_broadcast', () => {

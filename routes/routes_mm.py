@@ -218,8 +218,17 @@ def resolve_vdo_file(path):
     if not path:
         return None
     roots = get_vdo_roots()
-    expanded_path = os.path.expanduser(path)
-    candidates = [expanded_path] if os.path.isabs(expanded_path) else [os.path.join(root, expanded_path) for root in roots]
+    stored_paths = [path]
+    normalized_path = path.strip()
+    if len(normalized_path) >= 2 and normalized_path[0] == normalized_path[-1] and normalized_path[0] in ('"', "'"):
+        normalized_path = normalized_path[1:-1]
+    if normalized_path != path:
+        stored_paths.append(normalized_path)
+    candidates = []
+    for stored_path in stored_paths:
+        expanded_path = os.path.expanduser(stored_path)
+        candidates.extend([expanded_path] if os.path.isabs(expanded_path)
+                          else [os.path.join(root, expanded_path) for root in roots])
     for candidate in candidates:
         resolved = os.path.realpath(candidate)
         if not any(Path(resolved).is_relative_to(Path(root)) for root in roots):
