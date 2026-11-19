@@ -780,7 +780,7 @@ def configure_routes_catan(app,socketio):
                         junction_id = structure.get('junction', {}).get('id')
                         if junction_id in old_house_junctions:
                             continue
-                        if junction_id not in road_endpoints:
+                        #if junction_id not in road_endpoints:
                             return jsonify({'status': 'error', 'message': 'A settlement must connect to one of your roads.'}), 409
                 pending = dict(previous.get('_pendingDiscards', {}))
                 for field in ('_started', '_phase', '_setupIndex', '_turnOrder', '_currentTurnPlayerId', '_rolled', '_lastRoll', '_devDeck', '_numberDicePool'):
@@ -821,7 +821,6 @@ def configure_routes_catan(app,socketio):
             return jsonify({"status": "info", "message": f"No saved state found for player ."}), 200
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
-
     @app.route('/catan/reset_game')
     @catan_registry_locked
     def reset_game():
@@ -848,8 +847,32 @@ def configure_routes_catan(app,socketio):
             for player_number in range(1, player_count + 1)
         }
         reset_state["max_players"] = player_count
-        if not save_catan_board_state_to_json(json.dumps(generate_catan_board(player_count))):
-            return jsonify({"status": "error", "message": "Failed to generate board."}), 500
+
+        # Safely load the existing board whether it returns a dict, string, or None
+        raw_board = None
+        try:
+            raw_board = load_catan_board_state_from_json()
+        except Exception as e:
+            app.logger.warning(f"Could not load existing board: {e}")
+
+        if isinstance(raw_board, str):
+            try:
+                existing_board = json.loads(raw_board)
+            except Exception:
+                existing_board = {}
+        elif isinstance(raw_board, dict):
+            existing_board = raw_board
+        else:
+            existing_board = {}
+
+        current_tiles = existing_board.get("boardTiles", []) if isinstance(existing_board, dict) else []
+        expected_tiles = 30 if player_count == 6 else 19
+
+        # Only generate a fresh board if no board exists or switching between 4P and 6P sizes
+        if not current_tiles or len(current_tiles) != expected_tiles:
+            if not save_catan_board_state_to_json(json.dumps(generate_catan_board(player_count))):
+                return jsonify({"status": "error", "message": "Failed to generate board."}), 500
+
         reset_state["robber"] = catan_desert_position()
         reset_state["_undoStack"] = []
         reset_state["_turnOrder"] = []
@@ -874,6 +897,7 @@ def configure_routes_catan(app,socketio):
             "status": "success",
             "message": f"Game reset for {player_count} players. Player seats were cleared.",
         }), 200
+
 
     @app.route('/catan/longest_road', methods=['POST'])
     def assign_longest_road():

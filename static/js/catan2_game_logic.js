@@ -4397,7 +4397,6 @@ function getPlayerMetropolisCount(playerId) {
         allPlayersData.metropolisOwners?.[track] === playerId
     ).length;
 }
-
 function renderGameScoreboard() {
     if (!isGamePage) return;
 
@@ -4406,55 +4405,90 @@ function renderGameScoreboard() {
         ? allPlayersData._turnOrder.filter(playerId => seatPlayerIds.includes(playerId))
         : [];
     const playerIds = [...new Set([...registeredOrder, ...seatPlayerIds])];
-    const scoreboardBody = document.querySelector('#assignpoint table tbody');
     const highestScore = Math.max(0, ...playerIds.filter(isActiveCatanPlayer).map(playerId => Number(allPlayersData[playerId]?.score) || 0));
 
-    playerIds.forEach(playerId => {
+    playerIds.forEach((playerId, index) => {
         const player = allPlayersData[playerId];
-        const row = scoreboardBody.querySelector(`[data-player-id="${playerId}"]`);
-        if (!row) return;
         const active = isActiveCatanPlayer(playerId);
-        row.hidden = !active;
+
+        // Update modal choice buttons
         document.querySelectorAll(`[data-award-vp="${playerId}"], [data-metropolis-player="${playerId}"], [data-title-player="${playerId}"]`).forEach(button => {
             button.hidden = !active;
             button.disabled = !active;
             button.textContent = active ? player.playerName : '';
         });
+
+        // Cells for this player's column across metric rows
+        const nameCell = document.getElementById(`cell-${index}-name`);
+        const scCell = document.getElementById(`cell-${index}-sc`);
+        const knCell = document.getElementById(`cell-${index}-kn`);
+        const vpCell = document.getElementById(`cell-${index}-vp`);
+        const mtCell = document.getElementById(`cell-${index}-mt`);
+        const lvlCell = document.getElementById(`cell-${index}-lvl`);
+        const colCells = [nameCell, scCell, knCell, vpCell, mtCell, lvlCell].filter(Boolean);
+
         if (!active) {
-            [...row.cells].forEach(cell => { cell.textContent = ''; });
-            row.classList.remove('c2-score-leader', 'c2-score-inactive', 'c2-score-active');
+            colCells.forEach(cell => {
+                cell.hidden = true;
+                cell.textContent = '';
+                cell.classList.remove('c2-score-leader', 'c2-score-inactive', 'c2-score-active');
+            });
             return;
         }
 
-        row.classList.toggle('c2-score-leader', highestScore > 0 && Number(player.score) === highestScore);
-        row.classList.toggle('c2-score-inactive', /^playe/i.test(String(player.playerName || '').trim()));
-        row.classList.toggle('c2-score-active', playerId === allPlayersData._currentTurnPlayerId);
-        row.cells[0].textContent = player.playerName;
-        if (player.longestroad) {
-            const roadIcon = document.createElement('i');
-            roadIcon.className = 'fas fa-road';
-            roadIcon.title = 'Longest road';
-            roadIcon.setAttribute('role', 'img');
-            roadIcon.setAttribute('aria-label', 'Longest road');
-            row.cells[0].appendChild(document.createTextNode(' '));
-            row.cells[0].appendChild(roadIcon);
-        }
-        row.cells[1].textContent = player.score;
-        row.cells[2].textContent = `${player.hand.length}-${(player.citiesAndKnights?.progressCards || []).length}`;
-        const improvements = player.citiesAndKnights?.improvements || {};
-        const knights = (player.structures || []).filter(structure => structure.type === 'knight');
-        const knightStrength = knight => Math.max(1, Math.min(3, Number(knight.knightLevel) || 1));
-        const totalStrength = knights.reduce((total, knight) => total + knightStrength(knight), 0);
-        const activeStrength = knights.reduce((total, knight) => total + (knight.active === true ? knightStrength(knight) : 0), 0);
-        row.cells[3].textContent = `${totalStrength}(${activeStrength})`;
-        row.cells[3].title = `${totalStrength} knight strength (${activeStrength} active strength)`;
-        row.cells[4].textContent = getPlayerVictoryPoints(player);
-        row.cells[5].textContent = getPlayerMetropolisCount(playerId);
-        row.cells[6].textContent = ['trade', 'politics', 'science'].map(track =>
-            Math.min(5, Math.max(0, Number(improvements[track]) || 0))
-        ).join('-');
-        scoreboardBody.appendChild(row);
+        const isLeader = highestScore > 0 && Number(player.score) === highestScore;
+        const isInactiveName = /^playe/i.test(String(player.playerName || '').trim());
+        const isActiveTurn = playerId === allPlayersData._currentTurnPlayerId;
 
+        colCells.forEach(cell => {
+            cell.hidden = false;
+            cell.classList.toggle('c2-score-leader', isLeader);
+            cell.classList.toggle('c2-score-inactive', isInactiveName);
+            cell.classList.toggle('c2-score-active', isActiveTurn);
+        });
+
+        // 1. Name & Longest Road Icon
+        if (nameCell) {
+            nameCell.textContent = player.playerName;
+            if (player.longestroad) {
+                const roadIcon = document.createElement('i');
+                roadIcon.className = 'fas fa-road';
+                roadIcon.title = 'Longest road';
+                roadIcon.setAttribute('role', 'img');
+                roadIcon.setAttribute('aria-label', 'Longest road');
+                nameCell.appendChild(document.createTextNode(' '));
+                nameCell.appendChild(roadIcon);
+            }
+        }
+
+        // 2. Score (SC)
+        if (scCell) scCell.textContent = player.score;
+
+        // 3. Knights (KN)
+        if (knCell) {
+            const knights = (player.structures || []).filter(structure => structure.type === 'knight');
+            const knightStrength = knight => Math.max(1, Math.min(3, Number(knight.knightLevel) || 1));
+            const totalStrength = knights.reduce((total, knight) => total + knightStrength(knight), 0);
+            const activeStrength = knights.reduce((total, knight) => total + (knight.active === true ? knightStrength(knight) : 0), 0);
+            knCell.textContent = `${totalStrength}(${activeStrength})`;
+            knCell.title = `${totalStrength} knight strength (${activeStrength} active strength)`;
+        }
+
+        // 4. Victory Points (VP)
+        if (vpCell) vpCell.textContent = getPlayerVictoryPoints(player);
+
+        // 5. Metropolis (MT)
+        if (mtCell) mtCell.textContent = getPlayerMetropolisCount(playerId);
+
+        // 6. Progress Levels (LVL)
+        if (lvlCell) {
+            const improvements = player.citiesAndKnights?.improvements || {};
+            lvlCell.textContent = ['trade', 'politics', 'science'].map(track =>
+                Math.min(5, Math.max(0, Number(improvements[track]) || 0))
+            ).join('');
+        }
+
+        // Update award action buttons
         const awardButton = document.querySelector(`[data-award-vp="${playerId}"]`);
         if (awardButton) awardButton.textContent = player.playerName;
         const metropolisButton = document.querySelector(`[data-metropolis-player="${playerId}"]`);
@@ -4463,6 +4497,7 @@ function renderGameScoreboard() {
         if (titleButton) titleButton.textContent = player.playerName;
     });
 }
+
 
 function calculatepointsandcards() {
     for (const playerId in allPlayersData) {

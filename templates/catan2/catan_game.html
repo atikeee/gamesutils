@@ -28,6 +28,7 @@
             max-width: none;
             overflow: hidden;
         }
+
         .catan2-game-page .middle-column,
         .catan2-game-page .right-column { gap: 8px; }
         .catan2-game-page .right-column:not(:has([id$="log"] *)) { display: flex; }
@@ -87,6 +88,24 @@
             line-height: 1.35;
             overflow-wrap: anywhere;
         }
+        .catan2-game-page #assignpoint table {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+        }
+        .catan2-game-page #assignpoint th:first-child,
+        .catan2-game-page #assignpoint td:first-child {
+            width: 22%;
+            text-align: left;
+            padding-left: 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+        .catan2-game-page #assignpoint [data-player-col] {
+            text-align: center;
+            width: 19.5%;
+        }
+
         .c2-activity-player { flex: 0 0 auto; white-space: nowrap; font-size: 1.8rem; font-weight: 800; line-height: 1.1; text-transform: uppercase; text-shadow: 0 0 1px #172329; }
         .c2-activity-card { position: relative; display: inline-block; flex: 0 0 38px; width: 38px; height: 52px; }
         .c2-activity-card img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 3px; }
@@ -281,24 +300,21 @@
             .catan2-game-page .middle-section .assign-point-section { margin-top: 4px; }
             .catan2-game-page #assignpoint th,
             .catan2-game-page #assignpoint td {
-                padding: 6px 2px;
+                padding: 3px 1px;
+                font-size: 0.72rem;   /* Ensures desktop/TV inherits smaller font */
+                line-height: 1.1;
                 border-right: 1px solid #cbd5d1;
                 border-left: 1px solid #cbd5d1;
-                font-size: 0.9rem;
-                line-height: 20px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
             }
+            
             .catan2-game-page #assignpoint col:nth-child(1) { width: 27.8%; }
             .catan2-game-page #assignpoint col:nth-child(2) { width: 11.1%; }
-            .catan2-game-page #assignpoint col:nth-child(3) { display: none; }
+            
             .catan2-game-page #assignpoint col:nth-child(4) { width: 11.1%; }
             .catan2-game-page #assignpoint col:nth-child(5) { width: 11.1%; }
             .catan2-game-page #assignpoint col:nth-child(6) { width: 11.1%; }
             .catan2-game-page #assignpoint col:nth-child(7) { width: 27.8%; }
-            .catan2-game-page #assignpoint th:nth-child(3),
-            .catan2-game-page #assignpoint td:nth-child(3) { display: none; }
+
             .catan2-game-page .c2-score-mobile-label { display: none; }
             .catan2-game-page .c2-vp-footer { padding: 6px; }
             .catan2-game-page .c2-vp-award { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; }
@@ -446,67 +462,60 @@
             <div class="middle-section">
                 <div class="assign-point-section mt-6">
                     <div id="assignpoint">
-                    <!-- add couple of button-->
-                     <table class="w-full text-left table-auto border-collapse">
-                    <colgroup>
-                        <col><col><col><col><col><col><col>
-                    </colgroup>
-                    <thead>
-                        <tr class="bg-gray-200 text-gray-700 uppercase text-sm leading-normal">
-                            <!-- Table Headers -->
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300 rounded-tl-lg">NAME</th>
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300"><span class="c2-score-desktop-label">Sc</span><span class="c2-score-mobile-label">Score</span></th>
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Resource and commodity cards - Progress cards">Cards</th>
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Total knight strength (active knight strength)">KN</th>
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Victory Points">VP</th>
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300" title="Metropolises (2 points each)"><span class="c2-score-desktop-label">MT</span><span class="c2-score-mobile-label">Metro</span></th>
-                            <th class="py-3 px-2 text-left border-b-2 border-gray-300 c2-progress-level-heading" title="Trade - Politics - Science"><span class="c2-score-desktop-label">LVL</span><span class="c2-score-mobile-label">Prog Lvl</span></th>
-                        </tr>
-                    </thead>
-                    <tbody class="text-gray-600 text-sm font-light">
-                        <!-- Row 1 -->
-                        <tr class="border-b border-gray-200 hover:bg-gray-100" data-player-id="player1" hidden>
-                            <td class="result" id="cell-0-0">Player 1</td>
-                            <td class="result" id="cell-0-1">0</td>
-                            <td class="result" id="cell-0-2">0-0</td>
-                            <td class="result" id="cell-0-3">0</td>
-                            <td class="result" id="cell-0-4">0</td>
-                            <td class="result" id="cell-0-5">0</td>
-                            <td class="result c2-progress-levels" id="cell-0-6">1-1-1</td>
-                        </tr>
-                        <!-- Row 2 -->
-                        <tr class="border-b border-gray-200 hover:bg-gray-100" data-player-id="player2" hidden>
-                            <td class="result" id="cell-1-0">Player 2</td>
-                            <td class="result" id="cell-1-1">0</td>
-                            <td class="result" id="cell-1-2">0-0</td>
-                            <td class="result" id="cell-1-3">0</td>
-                            <td class="result" id="cell-1-4">0</td>
-                            <td class="result" id="cell-1-5">0</td>
-                            <td class="result c2-progress-levels" id="cell-1-6">1-1-1</td>
-                        </tr>
-                        <!-- Row 3 -->
-                        <tr class="border-b border-gray-200 hover:bg-gray-100" data-player-id="player3" hidden>
-                            <td class="result" id="cell-2-0">Player 3</td>
-                            <td class="result" id="cell-2-1">0</td>
-                            <td class="result" id="cell-2-2">0-0</td>
-                            <td class="result" id="cell-2-3">0</td>
-                            <td class="result" id="cell-2-4">0</td>
-                            <td class="result" id="cell-2-5">0</td>
-                            <td class="result c2-progress-levels" id="cell-2-6">1-1-1</td>
-                        </tr>
-                        <!-- Row 4 -->
-                        <tr class="hover:bg-gray-100" data-player-id="player4" hidden>
-                            <td class="result" id="cell-3-0">Player 4</td>
-                            <td class="result" id="cell-3-1">0</td>
-                            <td class="result" id="cell-3-2">0-0</td>
-                            <td class="result" id="cell-3-3">0</td>
-                            <td class="result" id="cell-3-4">0</td>
-                            <td class="result" id="cell-3-5">0</td>
-                            <td class="result c2-progress-levels" id="cell-3-6">1-1-1</td>
-                        </tr>
-                    </tbody>
-                </table>
+                    <table class="w-full text-left table-auto border-collapse">
+                        <tbody class="text-gray-600 text-sm font-light">
+                            <!-- Row 1: Player Names Header -->
+                            <tr id="row-name" class="bg-gray-200 text-gray-700 uppercase font-bold">
+                                <th class="py-2 px-2 text-left border-b-2 border-gray-300">NAME</th>
+                                <th class="py-2 px-2 text-center border-b-2 border-gray-300" id="cell-0-name" data-player-col="player1">Player 1</th>
+                                <th class="py-2 px-2 text-center border-b-2 border-gray-300" id="cell-1-name" data-player-col="player2">Player 2</th>
+                                <th class="py-2 px-2 text-center border-b-2 border-gray-300" id="cell-2-name" data-player-col="player3" hidden>Player 3</th>
+                                <th class="py-2 px-2 text-center border-b-2 border-gray-300" id="cell-3-name" data-player-col="player4" hidden>Player 4</th>
+                            </tr>
+                            <!-- Row 2: Score (SC) -->
+                            <tr id="row-sc" class="border-b border-gray-200 hover:bg-gray-50">
+                                <th class="py-2 px-2 text-left font-bold text-gray-700">SC</th>
+                                <td class="result py-2 px-2 text-center font-bold" id="cell-0-sc" data-player-col="player1">0</td>
+                                <td class="result py-2 px-2 text-center font-bold" id="cell-1-sc" data-player-col="player2">0</td>
+                                <td class="result py-2 px-2 text-center font-bold" id="cell-2-sc" data-player-col="player3" hidden>0</td>
+                                <td class="result py-2 px-2 text-center font-bold" id="cell-3-sc" data-player-col="player4" hidden>0</td>
+                            </tr>
+                            <!-- Row 3: Knights (KN) -->
+                            <tr id="row-kn" class="border-b border-gray-200 hover:bg-gray-50">
+                                <th class="py-2 px-2 text-left font-bold text-gray-700" title="Total knight strength (active knight strength)">KN</th>
+                                <td class="result py-2 px-2 text-center" id="cell-0-kn" data-player-col="player1">0(0)</td>
+                                <td class="result py-2 px-2 text-center" id="cell-1-kn" data-player-col="player2">0(0)</td>
+                                <td class="result py-2 px-2 text-center" id="cell-2-kn" data-player-col="player3" hidden>0(0)</td>
+                                <td class="result py-2 px-2 text-center" id="cell-3-kn" data-player-col="player4" hidden>0(0)</td>
+                            </tr>
+                            <!-- Row 4: Victory Points (VP) -->
+                            <tr id="row-vp" class="border-b border-gray-200 hover:bg-gray-50">
+                                <th class="py-2 px-2 text-left font-bold text-gray-700" title="Victory Points">VP</th>
+                                <td class="result py-2 px-2 text-center" id="cell-0-vp" data-player-col="player1">0</td>
+                                <td class="result py-2 px-2 text-center" id="cell-1-vp" data-player-col="player2">0</td>
+                                <td class="result py-2 px-2 text-center" id="cell-2-vp" data-player-col="player3" hidden>0</td>
+                                <td class="result py-2 px-2 text-center" id="cell-3-vp" data-player-col="player4" hidden>0</td>
+                            </tr>
+                            <!-- Row 5: Metropolis (MT) -->
+                            <tr id="row-mt" class="border-b border-gray-200 hover:bg-gray-50">
+                                <th class="py-2 px-2 text-left font-bold text-gray-700" title="Metropolises">MT</th>
+                                <td class="result py-2 px-2 text-center" id="cell-0-mt" data-player-col="player1">0</td>
+                                <td class="result py-2 px-2 text-center" id="cell-1-mt" data-player-col="player2">0</td>
+                                <td class="result py-2 px-2 text-center" id="cell-2-mt" data-player-col="player3" hidden>0</td>
+                                <td class="result py-2 px-2 text-center" id="cell-3-mt" data-player-col="player4" hidden>0</td>
+                            </tr>
+                            <!-- Row 6: Progress Levels (LVL) -->
+                            <tr id="row-lvl" class="border-b border-gray-200 hover:bg-gray-50">
+                                <th class="py-2 px-2 text-left font-bold text-gray-700" title="Trade - Politics - Science">LVL</th>
+                                <td class="result py-2 px-2 text-center c2-progress-levels" id="cell-0-lvl" data-player-col="player1">111</td>
+                                <td class="result py-2 px-2 text-center c2-progress-levels" id="cell-1-lvl" data-player-col="player2">111</td>
+                                <td class="result py-2 px-2 text-center c2-progress-levels" id="cell-2-lvl" data-player-col="player3" hidden>111</td>
+                                <td class="result py-2 px-2 text-center c2-progress-levels" id="cell-3-lvl" data-player-col="player4" hidden>111</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
+
                 </div>
             </div>
         </div>
@@ -577,6 +586,6 @@
     </div>
     <script>window.CATAN_PLAYER_COLORS = {{ player_colors|tojson }};</script>
     <script src="{{ url_for('static', filename='js/catan_drawing_utils.js', v='4') }}"></script>
-    <script src="{{ url_for('static', filename='js/catan2_game_logic.js', v='20') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan2_game_logic.js', v='22') }}"></script>
 </body>
 </html>
