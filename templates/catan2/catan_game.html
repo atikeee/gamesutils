@@ -512,6 +512,14 @@
                                 <td class="result py-2 px-2 text-center c2-progress-levels" id="cell-2-lvl" data-player-col="player3" hidden>111</td>
                                 <td class="result py-2 px-2 text-center c2-progress-levels" id="cell-3-lvl" data-player-col="player4" hidden>111</td>
                             </tr>
+                            <!-- Row: Cards (CD) - Hand Cards and Progress Cards -->
+                            <tr id="row-cards" class="border-b border-gray-200 hover:bg-gray-50">
+                                <th class="py-2 px-2 text-left font-bold text-gray-700" title="Resource/Commodity cards - Progress cards">CD</th>
+                                <td class="result py-2 px-2 text-center" id="cell-0-cards" data-player-col="player1">0-0</td>
+                                <td class="result py-2 px-2 text-center" id="cell-1-cards" data-player-col="player2">0-0</td>
+                                <td class="result py-2 px-2 text-center" id="cell-2-cards" data-player-col="player3" hidden>0-0</td>
+                                <td class="result py-2 px-2 text-center" id="cell-3-cards" data-player-col="player4" hidden>0-0</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -586,6 +594,6 @@
     </div>
     <script>window.CATAN_PLAYER_COLORS = {{ player_colors|tojson }};</script>
     <script src="{{ url_for('static', filename='js/catan_drawing_utils.js', v='4') }}"></script>
-    <script src="{{ url_for('static', filename='js/catan2_game_logic.js', v='22') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan2_game_logic.js', v='23') }}"></script>
 </body>
 </html>

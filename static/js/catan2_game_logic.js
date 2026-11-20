@@ -4425,8 +4425,14 @@ function renderGameScoreboard() {
         const vpCell = document.getElementById(`cell-${index}-vp`);
         const mtCell = document.getElementById(`cell-${index}-mt`);
         const lvlCell = document.getElementById(`cell-${index}-lvl`);
-        const colCells = [nameCell, scCell, knCell, vpCell, mtCell, lvlCell].filter(Boolean);
-
+        const cardsCell = document.getElementById(`cell-${index}-cards`);
+        const colCells = [nameCell, scCell, cardsCell, knCell, vpCell, mtCell, lvlCell].filter(Boolean);
+        if (cardsCell) {
+            const handCount = (player.hand || []).length;
+            const progressCount = (player.citiesAndKnights?.progressCards || []).length;
+            cardsCell.textContent = `${handCount}-${progressCount}`;
+            cardsCell.title = `${handCount} resource/commodity cards, ${progressCount} progress cards`;
+        }
         if (!active) {
             colCells.forEach(cell => {
                 cell.hidden = true;

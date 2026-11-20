@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TV Remote</title>
+    <style>
+        :root {
+            --bg-color: #121316;
+            --surface-color: #1e2024;
+            --btn-color: #2b2e35;
+            --btn-active: #3b3f49;
+            --accent-color: #10b981;
+            --danger-color: #ef4444;
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            margin: 0;
+            padding: 16px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100dvh;
+        }
+        .remote-container {
+            width: 100%;
+            max-width: 360px;
+            background: var(--surface-color);
+            border-radius: 28px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .remote-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2e323b;
+        }
+        .remote-title { font-size: 1rem; font-weight: 700; color: var(--text-muted); }
+        .btn {
+            background: var(--btn-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.08s, background 0.12s;
+            user-select: none;
+        }
+        .btn:active { transform: scale(0.92); background: var(--btn-active); }
+        .btn-power { background: rgba(239, 68, 68, 0.18); color: var(--danger-color); width: 44px; height: 44px; border-radius: 50%; font-size: 1.2rem; }
+        
+        /* D-Pad Styles */
+        .dpad {
+            position: relative;
+            width: 220px;
+            height: 220px;
+            margin: 8px auto;
+            border-radius: 50%;
+            background: var(--btn-color);
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.4);
+        }
+        .dpad-btn {
+            position: absolute;
+            background: transparent;
+            color: var(--text-color);
+            border: none;
+            cursor: pointer;
+            font-size: 1.4rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .dpad-btn:active { color: var(--accent-color); }
+        .dpad-up { top: 0; left: 50%; transform: translateX(-50%); width: 70px; height: 60px; }
+        .dpad-down { bottom: 0; left: 50%; transform: translateX(-50%); width: 70px; height: 60px; }
+        .dpad-left { left: 0; top: 50%; transform: translateY(-50%); width: 60px; height: 70px; }
+        .dpad-right { right: 0; top: 50%; transform: translateY(-50%); width: 60px; height: 70px; }
+        .dpad-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--surface-color);
+            color: var(--accent-color);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            font-weight: 700;
+        }
+        .dpad-center:active { transform: translate(-50%, -50%) scale(0.92); }
+
+        /* Row Layouts */
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .row-btn { height: 48px; border-radius: 14px; font-size: 0.95rem; }
+        .status-bar { text-align: center; font-size: 0.8rem; color: var(--text-muted); min-height: 18px; }
+        .grid-4 { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 8px; 
+        }
+        .btn-input {
+            height: 42px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            background: #252830;
+            border: 1px solid #363a45;
+            color: #e5e7eb;
+        }
+        .btn-input:active {
+            background: var(--accent-color);
+            color: #000;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="remote-container">
+    <div class="remote-header">
+        <span class="remote-title">Android TV</span>
+        <button class="btn btn-power" onclick="sendCmd('power')" aria-label="Power">&#x23FB;</button>
+    </div>
+
+    <!-- Navigation buttons -->
+    <div class="grid-3">
+        <button class="btn row-btn" onclick="sendCmd('back')">&#x21A9; Back</button>
+        <button class="btn row-btn" onclick="sendCmd('home')">&#x2302; Home</button>
+        <button class="btn row-btn" onclick="sendCmd('menu')">&#x2630; Menu</button>
+    </div>
+
+    <!-- Directional Pad -->
+    <div class="dpad">
+        <button class="dpad-btn dpad-up" onclick="sendCmd('up')" aria-label="Up">&#x25B2;</button>
+        <button class="dpad-btn dpad-left" onclick="sendCmd('left')" aria-label="Left">&#x25C0;</button>
+        <button class="dpad-btn dpad-center" onclick="sendCmd('select')">OK</button>
+        <button class="dpad-btn dpad-right" onclick="sendCmd('right')" aria-label="Right">&#x25B6;</button>
+        <button class="dpad-btn dpad-down" onclick="sendCmd('down')" aria-label="Down">&#x25BC;</button>
+    </div>
+
+    <!-- Volume & Media Controls -->
+    <div class="grid-3">
+        <button class="btn row-btn" onclick="sendCmd('vol_down')">VOL -</button>
+        <button class="btn row-btn" onclick="sendCmd('mute')">&#x1F507; Mute</button>
+        <button class="btn row-btn" onclick="sendCmd('vol_up')">VOL +</button>
+    </div>
+
+    <div class="grid-3">
+        <button class="btn row-btn" onclick="sendCmd('rewind')">&#x23EA;</button>
+        <button class="btn row-btn" onclick="sendCmd('play_pause')">&#x23EF;</button>
+        <button class="btn row-btn" onclick="sendCmd('fast_forward')">&#x23E9;</button>
+    </div>
+    <!-- HDMI Source Input Buttons -->
+    <div class="grid-4">
+        <button class="btn btn-input" onclick="sendCmd('hdmi1')">HDMI 1</button>
+        <button class="btn btn-input" onclick="sendCmd('hdmi2')">HDMI 2</button>
+        <button class="btn btn-input" onclick="sendCmd('hdmi3')">HDMI 3</button>
+        <button class="btn btn-input" onclick="sendCmd('hdmi4')">HDMI 4</button>
+    </div>
+
+    <div class="status-bar" id="remoteStatus">Ready</div>
+</div>
+
+<script>
+    async function sendCmd(command) {
+        if ('vibrate' in navigator) navigator.vibrate(25);
+        const statusEl = document.getElementById('remoteStatus');
+        statusEl.textContent = 'Sending...';
+
+        try {
+            const res = await fetch('/rc/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command })
+            });
+            const data = await res.json();
+            if (data.success) {
+                statusEl.textContent = `Sent: ${command}`;
+            } else {
+                statusEl.textContent = data.error || 'Failed';
+            }
+        } catch (err) {
+            statusEl.textContent = 'Network Error';
+        }
+    }
+</script>
+
+</body>
+</html>

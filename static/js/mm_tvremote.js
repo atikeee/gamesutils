@@ -60,6 +60,7 @@
         const pageNumbers = document.getElementById('pageNumbers');
         const editMediaButton = document.getElementById('editMediaBtn');
         const addChapterButton = document.getElementById('addChapter');
+        const trashMediaButton = document.getElementById('trashMediaBtn');
         let addingChapter = false;
         let items = [];
         let state = null;
@@ -242,6 +243,7 @@
             });
             const playingKey = hasMedia ? `${state.database_name}:${state.media_id}` : '';
             editMediaButton.disabled = !hasMedia || state.database_name !== selectedDatabase;
+            trashMediaButton.disabled = !hasMedia || state.database_name !== selectedDatabase;
             addChapterButton.disabled = addingChapter || !hasMedia || state.database_name !== selectedDatabase;
             if (hasMedia && state.database_name === selectedDatabase && lastMediaIds[selectedDatabase] !== state.media_id) {
                 lastMediaIds[selectedDatabase] = state.media_id;
@@ -653,6 +655,56 @@
         };
         let editTarget = null;
         let savingEdit = false;
+
+        trashMediaButton.addEventListener('click', async () => {
+            if (!state?.media_id || state.database_name !== selectedDatabase) return;
+            if (!window.confirm(`Move "${state.title || 'this track'}" to trash?`)) return;
+
+            const target = { database: state.database_name, id: state.media_id };
+            trashMediaButton.disabled = true;
+            remoteMessage.textContent = 'Moving to trash...';
+
+            try {
+                // 1. Fetch current entry to preserve other fields
+                const getRes = await fetch(`/mm/api/remote/media/${encodeURIComponent(target.database)}/${target.id}`);
+                const getData = await readJson(getRes);
+                if (!getRes.ok || !getData.success) throw new Error(getData.error || 'Could not load entry.');
+
+                const media = getData.media;
+
+                // 2. Update playlist to 'trash'
+                const postRes = await fetch(`/mm/api/remote/media/${encodeURIComponent(target.database)}/${target.id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: media.title,
+                        artist: media.artist,
+                        playlist: 'trash',
+                        category: media.category,
+                        tags: media.tags || [],
+                        duration: Number(media.duration || 0),
+                        chapter: media.chapter || '',
+                        thumbnail_url: media.thumbnail_url || '',
+                        url: media.url || ''
+                    })
+                });
+
+                const postData = await readJson(postRes);
+                if (!postRes.ok || !postData.success) throw new Error(postData.error || 'Could not move entry to trash.');
+
+                remoteMessage.textContent = 'Moved to trash.';
+
+                // 3. Refresh list and skip to next track
+                await loadLibrary();
+                navigateTrack(1);
+            } catch (error) {
+                remoteMessage.textContent = error.message || 'Failed to move to trash.';
+            } finally {
+                trashMediaButton.disabled = !state?.media_id || state.database_name !== selectedDatabase;
+            }
+        });
+
+
         editMediaButton.addEventListener('click', async () => {
             if (!state?.media_id || state.database_name !== selectedDatabase) return;
             const target = { database: state.database_name, id: state.media_id };
@@ -1083,12 +1135,40 @@
             }
         }
 
-        localPlayer.addEventListener('loadedmetadata', () => {
+        /*localPlayer.addEventListener('loadedmetadata', () => {
             if (!pendingLocal || !currentState || pendingLocal.state.revision !== currentState.revision) return;
             const pending = pendingLocal;
             pendingLocal = null;
             applyLocalState(pending.state, pending.command);
         });
+        */
+        localPlayer.addEventListener('loadedmetadata', () => {
+            // Fix portrait / reel autozoom on TVs:
+            const vWidth = localPlayer.videoWidth || 0;
+            const vHeight = localPlayer.videoHeight || 0;
+
+            if (vHeight > vWidth && vHeight > 0) {
+                // Video is Portrait (Reel / Short): lock height to viewport and scale width proportionally
+                const screenHeight = window.innerHeight;
+                const targetWidth = Math.floor(screenHeight * (vWidth / vHeight));
+                localPlayer.style.width = `${targetWidth}px`;
+                localPlayer.style.height = '100vh';
+                localPlayer.style.maxWidth = '100vw';
+                localPlayer.style.maxHeight = '100vh';
+            } else {
+                // Video is Landscape (Normal 16:9): reset to full width/height
+                localPlayer.style.width = '100%';
+                localPlayer.style.height = '100%';
+                localPlayer.style.maxWidth = '100vw';
+                localPlayer.style.maxHeight = '100vh';
+            }
+
+            if (!pendingLocal || !currentState || pendingLocal.state.revision !== currentState.revision) return;
+            const pending = pendingLocal;
+            pendingLocal = null;
+            applyLocalState(pending.state, pending.command);
+        });
+
         localPlayer.addEventListener('ended', () => {
             if (currentState?.media_id) {
                 socket.emit('media_ended', { revision: currentState.revision });

@@ -9,8 +9,48 @@
         * { box-sizing: border-box; }
         html, body, #tvApp { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #000; }
         #tvApp { position: relative; display: grid; place-items: center; }
-        #playerStage { width: 100%; height: 100%; display: grid; place-items: center; }
-        #tvYoutubePlayer, #tvLocalPlayer { width: 100%; height: 100%; border: 0; object-fit: contain; background: #000; }
+
+        #playerStage {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 100vw;
+            max-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #000;
+            cursor: none;
+        }
+
+        /* Local Video Player: Hard-clamp to viewport bounds to prevent portrait autozooming */
+        #tvLocalPlayer {
+            width: 100%;
+            height: 100%;
+            max-width: 100vw;
+            max-height: 100vh;
+            object-fit: contain !important;
+            object-position: center center;
+            border: 0;
+            background: #000;
+        }
+
+        /* YouTube IFrame Player & Wrapper: Maintains centered aspect ratio inside viewport */
+        #tvYoutubePlayer,
+        #tvYoutubePlayer iframe {
+            width: 100%;
+            height: 100%;
+            max-width: 100vw;
+            max-height: 100vh;
+            border: 0;
+            margin: auto;
+            background: #000;
+        }
+
+
+
+        
         #tvYoutubePlayer { pointer-events: none; }
         #playerStage { cursor: none; }
         #tvYoutubePlayer[hidden], #tvLocalPlayer[hidden] { display: none; }
