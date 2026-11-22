@@ -1601,7 +1601,7 @@ def configure_routes_catan2(app, socketio):
         )
         dice = ([3, 4] if DEBUG_FORCE_ROLL_SEVEN
             else list(alchemist_dice) if alchemist_used
-            else roll_number_dice(state, USE_BALANCED_DICE_POOL))
+            else roll_number_dice(state, alg=2))
         alchemist_used = alchemist_used and not DEBUG_FORCE_ROLL_SEVEN
         robber_move_available = sum(dice) == 7
         state['_pendingDiscards'] = {

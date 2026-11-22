@@ -77,6 +77,7 @@ let boardCenterRawY = 0;
 let selectedTool = null;
 let selectedSwapItem1 = null;
 let selectedSwapItem2 = null;
+let isSavingBoardTiles = false;
 let builderHistoryStack = [];
 
 let selectedPlayerTool = null;
@@ -430,6 +431,26 @@ function drawBoard() {
     if (isGamePage) {
         if (selectedTool === 'swap') {
             if (selectedSwapItem1) {
+                const pixel = hexToPixel(selectedSwapItem1.q, selectedSwapItem1.r, offsetX, offsetY);
+                ctx.strokeStyle = 'cyan';
+                ctx.lineWidth = 4;
+                if (selectedSwapItem1.type === 'tile') {
+                    ctx.beginPath();
+                    const vertices = getHexVertices(pixel.x, pixel.y, TILE_RADIUS);
+                    ctx.moveTo(vertices[0].x, vertices[0].y);
+                    for (let i = 1; i < 6; i++) {
+                        ctx.lineTo(vertices[i].x, vertices[i].y);
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                } else if (selectedSwapItem1.type === 'number') {
+                    ctx.beginPath();
+                    ctx.arc(pixel.x, pixel.y, NUMBER_RADIUS + 2, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+            
+            if (selectedSwapItem1) {
                 const pixel = hexToPixel(selectedSwapItem1.tile.q, selectedSwapItem1.tile.r, offsetX, offsetY);
                 ctx.strokeStyle = 'cyan';
                 ctx.lineWidth = 4;
@@ -756,6 +777,7 @@ async function saveBoardTilesToBackend() {
         return false;
     }
 
+    isSavingBoardTiles = true;
     try {
         const boardTilesState = {
             boardTiles: boardTiles.map(tile => ({
@@ -767,31 +789,23 @@ async function saveBoardTilesToBackend() {
         };
         const response = await fetch('/catan/save_board', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(boardTilesState),
         });
         const result = await response.json();
-        if (result.status === 'success') {
-            return true;
-        } else {
-            if (response.status === 409) {
-                boardEditingAllowed = false;
-                updateBoardEditingUI();
-                await loadBoardTilesFromBackend();
-            }
-            showMessage('Error saving board tiles: ' + result.message, 'error');
-            return false;
-        }
+        return result.status === 'success';
     } catch (e) {
         showMessage('Network error saving board tiles: ' + e.message, 'error');
-        console.error('Error saving board tiles to backend:', e);
         return false;
+    } finally {
+        isSavingBoardTiles = false;
     }
+
+   
 }
 async function loadBoardTilesFromBackend() {
     try {
+        if (isSavingBoardTiles) return;
         const response = await fetch('/catan/load_board', { cache: 'no-store' });
         const result = await response.json();
         boardEditingAllowed = result.editable === true;
@@ -1099,6 +1113,7 @@ function getLongestRoadLength(playerId) {
 }
 
 function updateLongestRoadHolder() {
+    /*
     const playerIds = ['player1', 'player2', 'player3', 'player4'];
     const lengths = Object.fromEntries(playerIds.map(playerId => [playerId, getLongestRoadLength(playerId)]));
     const highestLength = Math.max(0, ...Object.values(lengths));
@@ -1124,6 +1139,8 @@ function updateLongestRoadHolder() {
         allPlayersData[playerId].longestroad = playerId === leaders[0] ? 1 : 0;
         allPlayersData[playerId].longestroadmanual = 0;
     });
+    */
+   return;
 }
 
 function areJunctionsAdjacent(firstJunction, secondJunction) {
@@ -1172,30 +1189,29 @@ function getClosestJunction(px, py, threshold = 20) {
     });
     return closestJunction;
 }
-
 function getClosestEdge(px, py, threshold = 20, middleOnly = false) {
     let closestEdge = null;
     let minDistance = Infinity;
     let ambiguous = false;
+    let rejectedByMiddleOnly = false;
+    let nearestEdgeOverall = null;
+    let nearestDistOverall = Infinity;
 
     allEdges.forEach(edge => {
         const edgeX1 = edge.x1 + offsetX;
         const edgeY1 = edge.y1 + offsetY;
         const edgeX2 = edge.x2 + offsetX;
         const edgeY2 = edge.y2 + offsetY;
-
         const A = px - edgeX1;
         const B = py - edgeY1;
         const C = edgeX2 - edgeX1;
         const D = edgeY2 - edgeY1;
-
         const dot = A * C + B * D;
         const len_sq = C * C + D * D;
         let param = -1;
         if (len_sq != 0) {
             param = dot / len_sq;
         }
-        if (middleOnly && (param < 0.25 || param > 0.75)) return;
 
         let xx, yy;
         if (param < 0) {
@@ -1208,10 +1224,19 @@ function getClosestEdge(px, py, threshold = 20, middleOnly = false) {
             xx = edgeX1 + param * C;
             yy = edgeY1 + param * D;
         }
-
         const dx = px - xx;
         const dy = py - yy;
         const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < nearestDistOverall) {
+            nearestDistOverall = dist;
+            nearestEdgeOverall = edge;
+        }
+
+        if (middleOnly && (param < 0.25 || param > 0.75)) {
+            if (dist < threshold) rejectedByMiddleOnly = true;
+            return;
+        }
 
         if (dist >= threshold) return;
         if (Math.abs(dist - minDistance) <= 0.000001) {
@@ -1222,7 +1247,11 @@ function getClosestEdge(px, py, threshold = 20, middleOnly = false) {
             ambiguous = false;
         }
     });
-    return ambiguous ? null : closestEdge;
+
+    if (closestEdge) return { edge: closestEdge, error: null };
+    if (ambiguous) return { edge: null, error: 'Click was equidistant between two edges (ambiguous).' };
+    if (rejectedByMiddleOnly) return { edge: null, error: 'Clicked too close to corner/vertex.' };
+    return { edge: null, error: `No edge found within reach (nearest was ${Math.round(nearestDistOverall)}px away, threshold is ${threshold}px).` };
 }
 
 canvas.addEventListener('click', async (event) => {
@@ -1286,58 +1315,83 @@ canvas.addEventListener('click', async (event) => {
     let completedActionTool = null;
 
     if (isGamePage) {
-        if (selectedTool === 'swap') {
-            const clickedHex = pixelToHex(mouseX, mouseY, offsetX, offsetY);
-            const clickedTile = boardTiles.find(t => t.q === clickedHex.q && t.r === clickedHex.r);
 
-            if (clickedTile) {
-                const isNumberClick = isPointInNumberCircle(mouseX, mouseY, clickedTile, offsetX, offsetY);
-                const currentSelectionType = isNumberClick ? 'number' : 'tile';
+            if ( selectedTool === 'swap') {
+                const clickedHex = pixelToHex(mouseX, mouseY, offsetX, offsetY);
+                const clickedTile = boardTiles.find(t => t.q === clickedHex.q && t.r === clickedHex.r);
 
-                if (clickedTile.type === 'desert' && isNumberClick) {
-                    showMessage('Cannot swap numbers on a desert tile.', 'error');
-                } else if (!selectedSwapItem1) {
-                    selectedSwapItem1 = { type: currentSelectionType, tile: clickedTile };
-                    showMessage(`First ${currentSelectionType} selected. Click another ${currentSelectionType} to swap.`);
-                } else if (selectedSwapItem1.tile.q === clickedTile.q && selectedSwapItem1.tile.r === clickedTile.r) {
-                    showMessage(`${selectedSwapItem1.type} deselected. Start new selection.`, 'info');
+                if (!clickedTile) {
+                    showMessage('Click on a valid board tile.', 'error');
                     selectedSwapItem1 = null;
-                    selectedSwapItem2 = null;
-                } else if (selectedSwapItem1.type !== currentSelectionType) {
-                    showMessage(`Cannot swap a ${selectedSwapItem1.type} with a ${currentSelectionType}. Please select two of the same type.`, 'error');
-                    selectedSwapItem1 = { type: currentSelectionType, tile: clickedTile };
-                    selectedSwapItem2 = null;
-                } else {
-                    selectedSwapItem2 = { type: currentSelectionType, tile: clickedTile };
-
-                    if (selectedSwapItem1.type === 'number') {
-                        const tempNumber = selectedSwapItem1.tile.number;
-                        selectedSwapItem1.tile.number = selectedSwapItem2.tile.number;
-                        selectedSwapItem2.tile.number = tempNumber;
-                        showMessage('Numbers swapped successfully!');
-                    } else if (selectedSwapItem1.type === 'tile') {
-                        const tempType = selectedSwapItem1.tile.type;
-                        const tempNumber = selectedSwapItem1.tile.number;
-
-                        selectedSwapItem1.tile.type = selectedSwapItem2.tile.type;
-                        selectedSwapItem1.tile.number = selectedSwapItem2.tile.number;
-
-                        selectedSwapItem2.tile.type = tempType;
-                        selectedSwapItem2.tile.number = tempNumber;
-                        const desert = [selectedSwapItem1.tile, selectedSwapItem2.tile].find(tile => tile.type === 'desert');
-                        if (desert) allPlayersData.robber = { q: desert.q, r: desert.r };
-                        showMessage('Tiles swapped successfully!');
-                    }
-                    actionSuccessful = true;
-                    selectedSwapItem1 = null;
-                    selectedSwapItem2 = null;
+                    drawBoard();
+                    return;
                 }
-            } else {
-                showMessage('Click on a resource tile to select for swap.', 'error');
+
+                // Click 1: No previous selection -> establish Source and Mode
+                if (!selectedSwapItem1) {
+                    const isNumberClick = isPointInNumberCircle(mouseX, mouseY, clickedTile, offsetX, offsetY);
+                    if (isNumberClick && clickedTile.type === 'desert') {
+                        showMessage('Cannot select number on a desert tile.', 'error');
+                        return;
+                    }
+                    const mode = isNumberClick ? 'number' : 'tile';
+                    selectedSwapItem1 = { type: mode, q: clickedTile.q, r: clickedTile.r };
+                    showMessage(`Selected ${mode} (${mode === 'number' ? clickedTile.number : clickedTile.type}). Click target hex to swap.`);
+                    drawBoard();
+                    return;
+                }
+
+                // Click on the same tile -> Deselect / Cancel
+                if (selectedSwapItem1.q === clickedTile.q && selectedSwapItem1.r === clickedTile.r) {
+                    showMessage('Swap cancelled.');
+                    selectedSwapItem1 = null;
+                    drawBoard();
+                    return;
+                }
+
+                // Click 2: Find BOTH tiles in the live boardTiles array
+                const tile1 = boardTiles.find(t => t.q === selectedSwapItem1.q && t.r === selectedSwapItem1.r);
+                const tile2 = clickedTile;
+
+                if (!tile1 || !tile2) {
+                    selectedSwapItem1 = null;
+                    drawBoard();
+                    return;
+                }
+
+                if (selectedSwapItem1.type === 'number') {
+                    if (tile1.type === 'desert' || tile2.type === 'desert') {
+                        showMessage('Cannot swap numbers with a desert tile.', 'error');
+                        selectedSwapItem1 = null;
+                        drawBoard();
+                        return;
+                    }
+                    const tempNumber = tile1.number;
+                    tile1.number = tile2.number;
+                    tile2.number = tempNumber;
+                    showMessage(`Swapped numbers: ${tile1.number} ↔ ${tile2.number}`);
+                    actionSuccessful = true;
+                } else {
+                    // Swap tiles (type + number, keeping desert number as null)
+                    const tempType = tile1.type;
+                    const tempNumber = tile1.number;
+                    tile1.type = tile2.type;
+                    tile1.number = tile2.number;
+                    tile2.type = tempType;
+                    tile2.number = tempNumber;
+
+                    if (tile1.type === 'desert') tile1.number = null;
+                    if (tile2.type === 'desert') tile2.number = null;
+
+                    const desert = [tile1, tile2].find(t => t.type === 'desert');
+                    if (desert) allPlayersData.robber = { q: desert.q, r: desert.r };
+
+                    showMessage(`Swapped tiles: ${tile1.type} ↔ ${tile2.type}`);
+                    actionSuccessful = true;
+                }
+
                 selectedSwapItem1 = null;
-                selectedSwapItem2 = null;
             }
-        }
     } else if (isPlayerPage) {
         if (!allPlayersData._started) {
             showMessage('Waiting for the game to start.', 'error');
@@ -1348,11 +1402,14 @@ canvas.addEventListener('click', async (event) => {
             return;
         }
         if (allPlayersData._robberPending) {
-            const clickedHex = pixelToHex(mouseX, mouseY, offsetX, offsetY);
+            /*const clickedHex = pixelToHex(mouseX, mouseY, offsetX, offsetY);
             const clickedTile = boardTiles.find(tile => tile.q === clickedHex.q && tile.r === clickedHex.r);
             const center = clickedTile && hexToPixel(clickedTile.q, clickedTile.r, offsetX, offsetY);
-            if (center && Math.hypot(mouseX - center.x, mouseY - center.y) < TILE_RADIUS * 0.4) selectedPlayerTool = 'robber';
+            if (center && Math.hypot(mouseX - center.x, mouseY - center.y) < TILE_RADIUS * 0.4) 
+            */
+            selectedPlayerTool = 'robber';
         }
+        
         if (allPlayersData._phase === 'START_PHASE' && !['house', 'road'].includes(selectedPlayerTool)) return;
         if (allPlayersData._phase === 'MAIN_PHASE' && !allPlayersData._rolled && selectedPlayerTool !== 'robber') {
             showMessage('Roll before building.', 'error');
@@ -1392,9 +1449,15 @@ canvas.addEventListener('click', async (event) => {
                     showMessage('A structure already exists here.', 'error');
                 } else if (hasAdjacentSettlement(clickedJunction)) {
                     showMessage('A house or city must be at least two intersections away from another settlement.', 'error');
-                } else if (allPlayersData._phase === 'MAIN_PHASE' && !hasAdjacentOwnRoad(clickedJunction)) {
-                    showMessage('A settlement must connect to one of your roads.', 'error');
-                } else {
+                }
+                // else if (allPlayersData._phase === 'MAIN_PHASE' && !hasAdjacentOwnRoad(clickedJunction)) {
+                //    showMessage('A settlement must connect to one of your roads.', 'error');
+                //} 
+                else {
+
+                    if (allPlayersData._phase === 'MAIN_PHASE' && !hasAdjacentOwnRoad(clickedJunction)) {
+                     showMessage('Warning: Placed settlement without an adjacent connected road.', 'info');
+                }   
                     //function to add items to the board
                     if(checkAndDeductCards(PLAYER_ID,selectedPlayerTool,true))
                     {
@@ -1421,44 +1484,84 @@ canvas.addEventListener('click', async (event) => {
                     showMessage('You must have a house here to build a city.', 'error');
                 }
             }
-        } else if (selectedPlayerTool === 'road') {
-            if (allPlayersData._phase === 'START_PHASE' && allPlayersData[PLAYER_ID].roads.length > (allPlayersData._setupIndex >= allPlayersData._turnOrder.length ? 1 : 0)) return;
-            if (allPlayersData[PLAYER_ID].roads.filter(road => getBoardRoadEdge(road, allEdges)).length >= PLAYER_PIECE_LIMITS.road) {
+               } else if (selectedPlayerTool === 'road') {
+            // Scenario 1: Setup phase limit (1 road per setup round)
+            if (allPlayersData._phase === 'START_PHASE' && allPlayersData[PLAYER_ID].roads.length > (allPlayersData._setupIndex >= allPlayersData._turnOrder.length ? 1 : 0)) {
+                showMessage('You have already placed your road for this setup round.', 'error');
+                return;
+            }
+
+            // Scenario 2: Maximum piece limit (15 roads)
+            const placedRoadsCount = (allPlayersData[PLAYER_ID].roads || []).filter(road => getBoardRoadEdge(road, allEdges)).length;
+            if (placedRoadsCount >= PLAYER_PIECE_LIMITS.road) {
                 showMessage('You have already placed all 15 roads.', 'error');
                 return;
             }
-            const clickedEdge = getClosestEdge(mouseX, mouseY, placementHitRadius, true);
-            if (clickedEdge) {
-                let existingRoad = false;
-                for (const pId in allPlayersData) {
-                    if (pId.startsWith('player')){
-                        if ((allPlayersData[pId].roads || []).some(road => getBoardRoadEdge(road, allEdges)?.id === clickedEdge.id)) {
-                            existingRoad = true;
-                            break;
-                        }
-                    }
-                }
 
-                if (existingRoad) {
-                    showMessage('A road already exists here.', 'error');
-                } else {
-                    if (allPlayersData._phase === 'START_PHASE') {
-                        const house = allPlayersData[PLAYER_ID].structures.at(-1);
-                        if (!house || ![`${Math.round(clickedEdge.x1)},${Math.round(clickedEdge.y1)}`, `${Math.round(clickedEdge.x2)},${Math.round(clickedEdge.y2)}`].includes(house.junction.id)) {
-                            return;
-                        }
-                    }
-                    if(checkAndDeductCards(PLAYER_ID,selectedPlayerTool,true))
-                    {
-                        allPlayersData[PLAYER_ID].roads.push({ edge: clickedEdge, owner: PLAYER_ID });
-                        updateLongestRoadHolder();
-                        updatePlayerUI();
-                        actionSuccessful = true;
+            // Scenario 3: Edge hit detection (keeps middleOnly = true and returns detailed failure reason)
+            const edgeResult = getClosestEdge(mouseX, mouseY, placementHitRadius, true);
+            const clickedEdge = edgeResult.edge;
+            if (!clickedEdge) {
+                showMessage(`Cannot select edge: ${edgeResult.error}`, 'error');
+                return;
+            }
+
+            // Scenario 4: Edge already occupied by ANY player
+            const clickedEdgeId = clickedEdge.id || [
+                `${Math.round(clickedEdge.x1)},${Math.round(clickedEdge.y1)}`,
+                `${Math.round(clickedEdge.x2)},${Math.round(clickedEdge.y2)}`
+            ].sort().join('-');
+
+            let existingRoadOwner = null;
+            for (const pId in allPlayersData) {
+                if (pId.startsWith('player')) {
+                    const roads = allPlayersData[pId].roads || [];
+                    const match = roads.some(road => {
+                        const edge = getBoardRoadEdge(road, allEdges) || road.edge;
+                        if (!edge) return false;
+                        const edgeId = edge.id || [
+                            `${Math.round(edge.x1)},${Math.round(edge.y1)}`,
+                            `${Math.round(edge.x2)},${Math.round(edge.y2)}`
+                        ].sort().join('-');
+                        return edgeId === clickedEdgeId;
+                    });
+                    if (match) {
+                        existingRoadOwner = allPlayersData[pId].playerName || pId;
+                        break;
                     }
                 }
-            } else {
-                showMessage('Click near the middle of an edge to place a road.', 'error');
             }
+
+            if (existingRoadOwner) {
+                showMessage(`A road already exists on this edge (built by ${existingRoadOwner}).`, 'error');
+                return;
+            }
+
+            // Scenario 5: Setup phase must connect to the settlement placed this round
+            if (allPlayersData._phase === 'START_PHASE') {
+                const house = allPlayersData[PLAYER_ID].structures.at(-1);
+                if (!house) {
+                    showMessage('Setup error: No settlement found. Place your settlement first.', 'error');
+                    return;
+                }
+                const endpoint1 = `${Math.round(clickedEdge.x1)},${Math.round(clickedEdge.y1)}`;
+                const endpoint2 = `${Math.round(clickedEdge.x2)},${Math.round(clickedEdge.y2)}`;
+                const houseJunctionId = house.junction?.id;
+                if (![endpoint1, endpoint2].includes(houseJunctionId)) {
+                    showMessage(`Road must connect to your settlement (House at: ${houseJunctionId}, Edge: [${endpoint1}, ${endpoint2}]).`, 'error');
+                    return;
+                }
+            }
+
+            // Scenario 6: Resource cost deduction (1 Wood, 1 Brick, or free via Road Building)
+            if (checkAndDeductCards(PLAYER_ID, selectedPlayerTool, true)) {
+                allPlayersData[PLAYER_ID].roads.push({ edge: clickedEdge, owner: PLAYER_ID });
+                updatePlayerUI();
+                actionSuccessful = true;
+            } else {
+                showMessage('Cannot place road: Requires 1 Wood and 1 Brick.', 'error');
+            }
+
         } else if (selectedPlayerTool === 'robber') {
             if (!allPlayersData._robberPending) return;
             const clickedHex = pixelToHex(mouseX, mouseY, offsetX, offsetY);
@@ -2469,10 +2572,11 @@ async function playdevcard(currentPlayerId, item) {
         
         if(item === "knight")
         {
-            allPlayersData[currentPlayerId].knightplayed +=1;
+            allPlayersData[currentPlayerId].knightplayed = (Number(allPlayersData[currentPlayerId].knightplayed) || 0) + 1;
             updateLargestArmyHolder();
             allPlayersData._robberPending = true;
             selectedPlayerTool = 'robber';
+            showMessage('Knight played! Click a hex on the board to move the robber.');
         }else if (item === "victory_point")
         {
             allPlayersData[currentPlayerId].victory_point +=1;

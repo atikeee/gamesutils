@@ -384,6 +384,7 @@ def configure_routes_catan(app,socketio):
         return render_template("catan/catan_game.html", player_colors=get_catan_player_colors())
 
     @app.route('/catan/move_robber', methods=['POST'])
+    @catan_registry_locked
     def move_catan_robber():
         state = json.loads(load_play_state_from_json() or '{}')
         if not state.get('_started'):
@@ -394,8 +395,10 @@ def configure_routes_catan(app,socketio):
             registry = load_catan_player_registry()
             if not catan_authenticated_seat(registry, player_id):
                 return jsonify({'status': 'error', 'message': 'Player access required.'}), 403
-            if state.get('_currentTurnPlayerId') != player_id or not state.get('_robberPending'):
-                return jsonify({'status': 'error', 'message': 'It is not your pending robber move.'}), 409
+            if state.get('_currentTurnPlayerId') != player_id:
+                return jsonify({'status': 'error', 'message': 'It is not your turn.'}), 409
+            if not state.get('_robberPending'):
+                return jsonify({'status': 'error', 'message': 'Robber is not currently pending a move.'}), 409
         try:
             board = json.loads(load_latest_catan_board_state_from_json() or '{}')
         except (TypeError, ValueError):
@@ -789,10 +792,13 @@ def configure_routes_catan(app,socketio):
                 play_state['_activityLog'] = previous.get('_activityLog', [])
                 play_state['_devDeckInitialized'] = previous.get('_devDeckInitialized', False) or play_state.get('_devDeckInitialized', False)
                 play_state['_pendingDiscards'] = pending
-                if previous.get('_robberPending'):
-                    play_state['_robberPending'] = not (actor in authorized_ids and play_state.get('_robberPending') is False)
                 if actor in authorized_ids:
+                    play_state['_robberPending'] = bool(play_state.get('_robberPending'))
                     advance_catan_setup(play_state)
+                else:
+                    play_state['_robberPending'] = previous.get('_robberPending', False)
+ 
+
                 update_catan_scores(play_state)
                 if save_play_state_to_json(json.dumps(play_state)):
                     socketio.emit('catan_update')
@@ -821,6 +827,7 @@ def configure_routes_catan(app,socketio):
             return jsonify({"status": "info", "message": f"No saved state found for player ."}), 200
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
+    
     @app.route('/catan/reset_game')
     @catan_registry_locked
     def reset_game():
@@ -848,27 +855,19 @@ def configure_routes_catan(app,socketio):
         }
         reset_state["max_players"] = player_count
 
-        # Safely load the existing board whether it returns a dict, string, or None
-        raw_board = None
-        try:
-            raw_board = load_catan_board_state_from_json()
-        except Exception as e:
-            app.logger.warning(f"Could not load existing board: {e}")
-
-        if isinstance(raw_board, str):
+        # 1. Load the existing board using the correct function name
+        raw_board = load_latest_catan_board_state_from_json()
+        existing_board = {}
+        if raw_board:
             try:
-                existing_board = json.loads(raw_board)
+                existing_board = json.loads(raw_board) if isinstance(raw_board, str) else raw_board
             except Exception:
                 existing_board = {}
-        elif isinstance(raw_board, dict):
-            existing_board = raw_board
-        else:
-            existing_board = {}
 
         current_tiles = existing_board.get("boardTiles", []) if isinstance(existing_board, dict) else []
         expected_tiles = 30 if player_count == 6 else 19
 
-        # Only generate a fresh board if no board exists or switching between 4P and 6P sizes
+        # 2. ONLY generate a new board if none exists OR if player count changed (19 hexes <-> 30 hexes)
         if not current_tiles or len(current_tiles) != expected_tiles:
             if not save_catan_board_state_to_json(json.dumps(generate_catan_board(player_count))):
                 return jsonify({"status": "error", "message": "Failed to generate board."}), 500
@@ -895,7 +894,7 @@ def configure_routes_catan(app,socketio):
         socketio.emit('catan_update')
         return jsonify({
             "status": "success",
-            "message": f"Game reset for {player_count} players. Player seats were cleared.",
+            "message": f"Game reset for {player_count} players. Existing board tiles and numbers were preserved.",
         }), 200
 
 
@@ -1023,7 +1022,7 @@ def configure_routes_catan(app,socketio):
             return
         state['_undoStack'] = []
         state['_rolled'] = True
-        dice = [3, 4] if DEBUG_FORCE_ROLL_SEVEN else roll_number_dice(state, USE_BALANCED_DICE_POOL)
+        dice = [3, 4] if DEBUG_FORCE_ROLL_SEVEN else roll_number_dice(state, alg=4)
         state['_lastRoll'] = {'dice': dice, 'player': current_player_id}
         if sum(dice) == 7:
             state['_pendingDiscards'] = {player_id: len(state[player_id].get('hand', [])) // 2
