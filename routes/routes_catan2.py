@@ -13,14 +13,26 @@ from functools import wraps
 from collections import Counter
 from routes.catan_dice import roll_number_dice
 from threading import Lock
+from threading import RLock, get_ident
+import time
+
+CATAN2_STATE_LOCK = RLock()
+ACTIVITY_LOG_LOCK = Lock()
+
+
+
+def catan2_state_locked(handler):
+    @wraps(handler)
+    def locked(*args, **kwargs):
+        with CATAN2_STATE_LOCK:
+            return handler(*args, **kwargs)
+    return locked
 
 CATAN2_DATA_DIR = os.path.join(PROJECT_ROOT, "data", "catan2")
 JSON_BOARD_STATE_FILE = os.path.join(CATAN2_DATA_DIR, "catan_board_state.json")
 JSON_PLAY_STATE_FILE = os.path.join(CATAN2_DATA_DIR, "catan_play_state.json")
 JSON_ACTIVITY_LOG_FILE = os.path.join(CATAN2_DATA_DIR, "catan_activity_log.json")
 PLAYER_REGISTRY_FILE = os.path.join(CATAN2_DATA_DIR, "catan_player_registry.json")
-ACTIVITY_LOG_LOCK = Lock()
-SETUP_LOCK = Lock()
 PLAYER_COLOR_OPTIONS = [
     {"name": "Red", "value": "#D64545"},
     {"name": "Black", "value": "#000000"},
@@ -52,12 +64,7 @@ def catan2_setup_action(state):
     return steps[index] if type(index) is int and 0 <= index < len(steps) else None
 
 
-def catan2_setup_locked(handler):
-    @wraps(handler)
-    def locked(*args, **kwargs):
-        with SETUP_LOCK:
-            return handler(*args, **kwargs)
-    return locked
+
 
 
 def catan2_board_geometry(board):
@@ -498,20 +505,35 @@ def load_latest_catan_board_state_from_json():
         return None
 
 
-def save_play_state_to_json(player_state_json):
-    """Saves a player's current state to a JSON file."""
 
+
+def save_play_state_to_json(player_state_json):
+    """Atomic write via temp file + rename so concurrent readers never see partial data."""
     try:
         state = json.loads(player_state_json)
         normalize_catan2_names(state)
         player_state_json = json.dumps(state)
         os.makedirs(CATAN2_DATA_DIR, exist_ok=True)
-        with open(JSON_PLAY_STATE_FILE, 'w', encoding='utf-8') as f:
+        temporary_path = f"{JSON_PLAY_STATE_FILE}.{get_ident()}.tmp"
+        with open(temporary_path, 'w', encoding='utf-8') as f:
             f.write(player_state_json)
+        
+        # Windows / OneDrive retry loop
+        for attempt in range(8):
+            try:
+                os.replace(temporary_path, JSON_PLAY_STATE_FILE)
+                return True
+            except PermissionError:
+                if attempt == 7:
+                    if os.path.exists(temporary_path):
+                        os.remove(temporary_path)
+                    raise
+                time.sleep(0.04 * (attempt + 1))
         return True
     except Exception as e:
         print(f"Error saving play state to JSON file: {e}")
         return False
+
 
 def load_play_state_from_json():
     """Loads a player's state from a JSON file."""
@@ -785,7 +807,7 @@ def configure_routes_catan2(app, socketio):
         )
 
     @app.route('/catan2/correct_robber', methods=['POST'])
-    @catan2_setup_locked
+    @catan2_state_locked
     def catan2_correct_robber():
         position = request.get_json(silent=True)
         if not isinstance(position, dict) or any(type(position.get(axis)) is not int for axis in ('q', 'r')):
@@ -811,10 +833,65 @@ def configure_routes_catan2(app, socketio):
         socketio.emit('catan2_update')
         return jsonify(status='success', robber=state['robber'], robber_move_available=state['_robberMoveAvailable'])
 
+    #@app.route('/catan2/save_play_state', methods=['POST'])
+    #@catan2_state_locked
+    #def catan2_save_play_state():
+    #    """API endpoint to save a specific player's state."""
+    #    try:
+    #        play_state = request.json
+    #        if play_state:
+    #            try:
+    #                saved_state = json.loads(load_play_state_from_json() or "{}")
+    #            except (TypeError, ValueError):
+    #                saved_state = {}
+    #            if saved_state.get('_turnPhase') == 'setup':
+    #                return jsonify(status='error', message='Complete setup using the required free placement.'), 409
+    #            play_state['_pendingDiscards'] = dict(saved_state.get('_pendingDiscards') or {})
+    #            play_state['progressCardDecks'] = normalize_progress_card_decks(
+    #                play_state.get('progressCardDecks', saved_state.get('progressCardDecks'))
+    #            )
+    #            play_state['activityLog'] = load_catan2_activity_log(saved_state)
+    #            play_state['vpAwardLog'] = merge_catan2_award_log(saved_state.get('vpAwardLog'), play_state.get('vpAwardLog'))
+    #            # Turn progression is server-owned; ignore stale client copies.
+    #            for turn_key in ('_turnOrder', '_currentTurnPlayerId', '_turnRolled', '_alchemistDice', '_gameStarted', '_turnPhase', '_setupQueue', '_setupIndex', '_setupUndoOpen', '_inventorSelection', '_numberDicePool'):
+    #                if turn_key in saved_state:
+    #                    play_state[turn_key] = saved_state[turn_key]
+    #                else:
+    #                    play_state.pop(turn_key, None)
+    #            normalize_legacy_hand_resources(play_state)
+    #            play_state.pop('_colorsReady', None)
+    #            for player_id, player_state in play_state.items():
+    #                if not player_id.startswith('player') or not isinstance(player_state, dict):
+    #                    continue
+    #                player_state.pop('devCards', None)
+    #                cities_and_knights = player_state.get('citiesAndKnights') or default_cities_and_knights_state()
+    #                progress_cards = cities_and_knights.get('progressCards', [])
+    #                if not isinstance(progress_cards, list) or len(progress_cards) > 5:
+    #                    return jsonify({"status": "error", "message": "A player can hold at most five progress cards."}), 400
+    #                if any(
+    #                    not isinstance(card, str)
+    #                    or (card not in PROGRESS_CARD_TYPES and card != "progress")
+    #                    for card in progress_cards
+    #                ):
+    #                    return jsonify({"status": "error", "message": "Invalid progress card."}), 400
+    #                cities_and_knights['progressCards'] = progress_cards[:]
+    #                player_state['citiesAndKnights'] = cities_and_knights
+    #            # Cards that left every hand were played or dropped; undo brings them back out of the deck.
+    #            held_before = count_held_progress_cards(saved_state)
+    #            held_after = count_held_progress_cards(play_state)
+    #            return_progress_cards_to_decks(play_state['progressCardDecks'], list((held_before - held_after).elements()))
+    #            take_progress_cards_from_decks(play_state['progressCardDecks'], list((held_after - held_before).elements()))
+    #            if save_play_state_to_json(json.dumps(play_state)):
+    #                socketio.emit('catan2_update')
+    #                return jsonify({"status": "success", "message": f"Player  state saved successfully!"}), 200
+    #            return jsonify({"status": "error", "message": f"Failed to save player  state to file."}), 500
+    #        return jsonify({"status": "error", "message": "No player state provided."}), 400
+    #    except Exception as e:
+    #        return jsonify({"status": "error", "message": str(e)}), 500
+    
     @app.route('/catan2/save_play_state', methods=['POST'])
-    @catan2_setup_locked
+    @catan2_state_locked
     def catan2_save_play_state():
-        """API endpoint to save a specific player's state."""
         try:
             play_state = request.json
             if play_state:
@@ -822,53 +899,64 @@ def configure_routes_catan2(app, socketio):
                     saved_state = json.loads(load_play_state_from_json() or "{}")
                 except (TypeError, ValueError):
                     saved_state = {}
+
                 if saved_state.get('_turnPhase') == 'setup':
                     return jsonify(status='error', message='Complete setup using the required free placement.'), 409
+
+                # Identify who is sending the request
+                registry = load_catan_player_registry()
+                authorized_codes = set(session.get('catan2_player_access', []))
+                authorized_ids = {
+                    f"player{p['seat']}" for p in registry['players']
+                    if p.get('code') in authorized_codes
+                }
+
+                # 🛡️ DATA ACCURACY GUARD:
+                # If Player 1 is saving, NEVER allow Player 1's payload to overwrite Player 2, 3, or 4's hands!
+                for p_id in [f"player{i}" for i in range(1, 5)]:
+                    if p_id not in authorized_ids and p_id in saved_state:
+                        if p_id in play_state and isinstance(play_state[p_id], dict):
+                            play_state[p_id]['hand'] = saved_state[p_id].get('hand', [])
+
                 play_state['_pendingDiscards'] = dict(saved_state.get('_pendingDiscards') or {})
                 play_state['progressCardDecks'] = normalize_progress_card_decks(
                     play_state.get('progressCardDecks', saved_state.get('progressCardDecks'))
                 )
                 play_state['activityLog'] = load_catan2_activity_log(saved_state)
                 play_state['vpAwardLog'] = merge_catan2_award_log(saved_state.get('vpAwardLog'), play_state.get('vpAwardLog'))
-                # Turn progression is server-owned; ignore stale client copies.
+
+                # Preserve server-owned turn fields
                 for turn_key in ('_turnOrder', '_currentTurnPlayerId', '_turnRolled', '_alchemistDice', '_gameStarted', '_turnPhase', '_setupQueue', '_setupIndex', '_setupUndoOpen', '_inventorSelection', '_numberDicePool'):
                     if turn_key in saved_state:
                         play_state[turn_key] = saved_state[turn_key]
                     else:
                         play_state.pop(turn_key, None)
+
                 normalize_legacy_hand_resources(play_state)
                 play_state.pop('_colorsReady', None)
+
                 for player_id, player_state in play_state.items():
                     if not player_id.startswith('player') or not isinstance(player_state, dict):
                         continue
                     player_state.pop('devCards', None)
                     cities_and_knights = player_state.get('citiesAndKnights') or default_cities_and_knights_state()
                     progress_cards = cities_and_knights.get('progressCards', [])
-                    if not isinstance(progress_cards, list) or len(progress_cards) > 5:
-                        return jsonify({"status": "error", "message": "A player can hold at most five progress cards."}), 400
-                    if any(
-                        not isinstance(card, str)
-                        or (card not in PROGRESS_CARD_TYPES and card != "progress")
-                        for card in progress_cards
-                    ):
-                        return jsonify({"status": "error", "message": "Invalid progress card."}), 400
-                    cities_and_knights['progressCards'] = progress_cards[:]
+                    if isinstance(progress_cards, list):
+                        cities_and_knights['progressCards'] = progress_cards[:5]
                     player_state['citiesAndKnights'] = cities_and_knights
-                # Cards that left every hand were played or dropped; undo brings them back out of the deck.
-                held_before = count_held_progress_cards(saved_state)
-                held_after = count_held_progress_cards(play_state)
-                return_progress_cards_to_decks(play_state['progressCardDecks'], list((held_before - held_after).elements()))
-                take_progress_cards_from_decks(play_state['progressCardDecks'], list((held_after - held_before).elements()))
+
                 if save_play_state_to_json(json.dumps(play_state)):
                     socketio.emit('catan2_update')
-                    return jsonify({"status": "success", "message": f"Player  state saved successfully!"}), 200
-                return jsonify({"status": "error", "message": f"Failed to save player  state to file."}), 500
+                    return jsonify({"status": "success", "message": "Player state saved successfully!"}), 200
+                return jsonify({"status": "error", "message": "Failed to save player state to file."}), 500
             return jsonify({"status": "error", "message": "No player state provided."}), 400
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
+
+
     @app.route('/catan2/discard_cards', methods=['POST'])
-    @catan2_setup_locked
+    @catan2_state_locked
     def catan2_discard_cards():
         data = request.get_json(silent=True) or {}
         player_id = data.get('player_id')
@@ -1003,7 +1091,7 @@ def configure_routes_catan2(app, socketio):
 
     @app.route('/catan2/progress_card/resource_monopoly', methods=['POST'])
     @app.route('/catan2/progress_card/trade_monopoly', methods=['POST'])
-    @catan2_setup_locked
+    @catan2_state_locked
     def catan2_play_trade_monopoly():
         payload = request.get_json(silent=True) or {}
         player_id = payload.get('player_id')
@@ -1072,7 +1160,7 @@ def configure_routes_catan2(app, socketio):
         return finish_server_progress_card(state, player_id, 'alchemist', None, {}, f"{dice[0]} + {dice[1]}")
 
     @app.route('/catan2/progress_card/inventor', methods=['POST'])
-    @catan2_setup_locked
+    @catan2_state_locked
     def catan2_play_inventor():
         payload = request.get_json(silent=True) or {}
         player_id = payload.get('player_id')
@@ -1144,7 +1232,7 @@ def configure_routes_catan2(app, socketio):
         return jsonify(status='success')
 
     @app.route('/catan2/progress_card/undo', methods=['POST'])
-    @catan2_setup_locked
+    @catan2_state_locked
     def catan2_undo_server_progress_card():
         player_id = (request.get_json(silent=True) or {}).get('player_id')
         state, is_current_player = load_turn_state_for_request(player_id)
@@ -1401,7 +1489,7 @@ def configure_routes_catan2(app, socketio):
         return state, is_current_player
 
     @app.route('/catan2/start_game', methods=['POST'])
-    @catan2_setup_locked
+    @catan2_state_locked
     def catan2_start_game():
         try:
             registry = load_catan_player_registry()
@@ -1456,7 +1544,7 @@ def configure_routes_catan2(app, socketio):
         return jsonify({"status": "success", "order": names})
 
     @app.route('/catan2/setup_undo', methods=['POST'])
-    @catan2_setup_locked
+    @catan2_state_locked
     def catan2_setup_undo():
         payload = request.get_json(silent=True) or {}
         player_id = payload.get('player_id')
@@ -1496,7 +1584,7 @@ def configure_routes_catan2(app, socketio):
         return jsonify(status='success')
 
     @app.route('/catan2/setup_piece', methods=['POST'])
-    @catan2_setup_locked
+    @catan2_state_locked
     def catan2_setup_piece():
         payload = request.get_json(silent=True) or {}
         player_id = payload.get('player_id')
@@ -1552,7 +1640,7 @@ def configure_routes_catan2(app, socketio):
         return jsonify(status='success', phase=state['_turnPhase'], current_player=state['_currentTurnPlayerId'])
 
     @socketio.on('catan2_roll_dice')
-    @catan2_setup_locked
+    @catan2_state_locked
     def catan2_handle_roll_dice(data=None):
         state, is_current_player = load_turn_state_for_request((data or {}).get('player_id'))
         current_player_id = state['_currentTurnPlayerId']
@@ -1601,7 +1689,7 @@ def configure_routes_catan2(app, socketio):
         )
         dice = ([3, 4] if DEBUG_FORCE_ROLL_SEVEN
             else list(alchemist_dice) if alchemist_used
-            else roll_number_dice(state, alg=2))
+            else roll_number_dice(state,  alg = 3 ))
         alchemist_used = alchemist_used and not DEBUG_FORCE_ROLL_SEVEN
         robber_move_available = sum(dice) == 7
         state['_pendingDiscards'] = {
@@ -1634,18 +1722,16 @@ def configure_routes_catan2(app, socketio):
     def catan2_handle_end_turn(data=None):
         state, is_current_player = load_turn_state_for_request((data or {}).get('player_id'))
         current_player_id = state['_currentTurnPlayerId']
-        if state.get('_pendingDiscards'):
-            socketio.emit('catan2_end_turn_rejected', {
-                'message': 'Wait for all required players to drop cards before ending your turn.',
-                'current_player': current_player_id, 'turn_rolled': state.get('_turnRolled') is True,
-            }, to=request.sid)
-            return
+
+        # 1. Block only if still in setup phase
         if state.get('_turnPhase') == 'setup':
             socketio.emit('catan2_end_turn_rejected', {
                 'message': 'Complete your free house or city and its connected road.',
                 'current_player': current_player_id, 'turn_rolled': True,
             }, to=request.sid)
             return
+
+        # 2. Block only if not your turn or dice not rolled
         if not is_current_player or state.get('_turnRolled') is not True:
             socketio.emit('catan2_end_turn_rejected', {
                 'message': 'Roll the dice before ending your turn.' if is_current_player else 'It is not your turn.',
@@ -1668,18 +1754,23 @@ def configure_routes_catan2(app, socketio):
             else:
                 next_player_id = turn_order[(turn_order.index(current_player_id) + 1) % len(turn_order)]
             state['_turnRolled'] = False
+
         state['_currentTurnPlayerId'] = next_player_id
+
         for structure in state.get(next_player_id, {}).get('structures', []):
             if structure.get('type') == 'knight':
                 structure.pop('activatedThisTurn', None)
+
+        # Clear turn-specific flags and discard blocks
         state['_robberMoveAvailable'] = False
         state['_robberMovePlayerId'] = None
         state['_freeRoads'] = 0
         state['_freeRoadsPlayerId'] = None
         state['_undoStack'] = []
-        state['_pendingDiscards'] = {}
+        state['_pendingDiscards'] = {}  # Clears any leftover discards
         state.pop('_alchemistDice', None)
         state.pop('_inventorSelection', None)
+
         save_play_state_to_json(json.dumps(state))
         socketio.emit('catan2_turn_ended_broadcast', {
             'previous_player': current_player_id,
@@ -1688,3 +1779,4 @@ def configure_routes_catan2(app, socketio):
             'phase': state.get('_turnPhase'),
         })
         socketio.emit('catan2_update')
+

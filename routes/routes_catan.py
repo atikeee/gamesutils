@@ -1022,7 +1022,7 @@ def configure_routes_catan(app,socketio):
             return
         state['_undoStack'] = []
         state['_rolled'] = True
-        dice = [3, 4] if DEBUG_FORCE_ROLL_SEVEN else roll_number_dice(state, alg=4)
+        dice = [3, 4] if DEBUG_FORCE_ROLL_SEVEN else roll_number_dice(state, alg= 3 )
         state['_lastRoll'] = {'dice': dice, 'player': current_player_id}
         if sum(dice) == 7:
             state['_pendingDiscards'] = {player_id: len(state[player_id].get('hand', [])) // 2

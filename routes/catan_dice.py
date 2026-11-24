@@ -18,6 +18,7 @@ HARDCODED_36 = [
     [6, 1], [6, 2], [6, 3], [6, 4], [6, 5], [6, 6],
 ]
 
+
 def generate_dice_distribution(exact=True):
     """
     Generates 144 pairs of dice rolls (each number 1-6).
@@ -58,6 +59,7 @@ def generate_dice_distribution(exact=True):
 
     return [[d1, d2] for d1, d2 in pool]
 
+
 def _write_dice_pool_atomic(pool):
     DICE_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
     temp_path = DICE_JSON_PATH.with_suffix(".json.tmp")
@@ -94,22 +96,6 @@ def generate_dice_distribution4(n=3):
 
 
 def _pop_soft_avoid_same_sum(pool, last_sum=None, avoid_prob=0.75):
-    """
-    Pops a pair from `pool`, softly avoiding back-to-back identical dice sums
-    with probability `avoid_prob` while still allowing repeats for uncertainty.
-    """
-    if not pool:
-        return None
-    if last_sum is None or len(pool) == 1:
-        return pool.pop()
-
-    # Check from the end of the shuffled pool (standard pop() behavior)
-    for idx in range(len(pool) - 1, -1, -1):
-        candidate = pool[idx]
-        candidate_sum = candidate[0] + candidate[1]
-        if candidate_sum == last_sum and random.random() < avoid_prob:
-            continue
-        return pooldef _pop_soft_avoid_same_sum(pool, last_sum=None, avoid_prob=0.75):
     """
     Pops a pair from `pool`, softly avoiding back-to-back identical dice sums
     with probability `avoid_prob` while still allowing repeats for uncertainty.
@@ -165,48 +151,7 @@ def generate_dice_distribution3(n=3, avoid_prob=0.75):
         new_last_sum = pair[0] + pair[1] if pair is not None else None
 
         _write_dice_pool_atomic({"pool": pool, "last_sum": new_last_sum})
-        return pair.pop(idx)
-
-    # Fallback if we skipped every item
-    return pool.pop()
-
-
-def generate_dice_distribution3(n=3, avoid_prob=0.75):
-    """
-    Thread-safely reads a dice pair list from /data/catan/dice.json,
-    generates a new shuffled sequence if empty, softly avoids repeating
-    the previous roll's sum, writes the remaining list back to disk,
-    and returns [d1, d2].
-    """
-    with DICE_JSON_LOCK:
-        pool = []
-        last_sum = None
-
-        if DICE_JSON_PATH.exists():
-            try:
-                with open(DICE_JSON_PATH, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                # Supports either a plain list [...] or {"pool": [...], "last_sum": int|None}
-                if isinstance(data, dict):
-                    if isinstance(data.get("pool"), list):
-                        pool = data["pool"]
-                    if isinstance(data.get("last_sum"), int):
-                        last_sum = data["last_sum"]
-                elif isinstance(data, list):
-                    pool = data
-            except (json.JSONDecodeError, OSError):
-                pool = []
-
-        if not pool:
-            pool = [pair[:] for pair in HARDCODED_36] * n
-            random.shuffle(pool)
-
-        pair = _pop_soft_avoid_same_sum(pool, last_sum=last_sum, avoid_prob=avoid_prob)
-        new_last_sum = pair[0] + pair[1] if pair is not None else None
-
-        _write_dice_pool_atomic({"pool": pool, "last_sum": new_last_sum})
         return pair
-
 
 
 def roll_number_dice(state, alg=4):
@@ -218,6 +163,8 @@ def roll_number_dice(state, alg=4):
             pool = generate_dice_distribution(exact=True)
             state["_numberDicePool"] = pool
         return pool.pop()
+    elif alg ==3:
+        return [secrets.randbelow(6) + 1, secrets.randbelow(6) + 1]
     elif alg == 4:
         return generate_dice_distribution3(n=2, avoid_prob=0.75)
 
@@ -247,7 +194,7 @@ if __name__ == "__main__":
         print(f"Adjacent same-sum rolls: {adjacent_repeats}")
 
     # Configure test parameters
-    num_rolls = 20 
+    num_rolls = 20
     algorithms = {
         1: "Alg 1 (Pure secrets)",
         2: "Alg 2 (144-pool spaced)",
@@ -260,5 +207,5 @@ if __name__ == "__main__":
         print_distribution_report(results, alg_name)
     """
     #results = [roll_number_dice({}, alg=3) for _ in range(num_rolls)]
-    results = [roll_number_dice({}, alg=4) for _ in range(1)]
+    results = [roll_number_dice({}, alg=3) for _ in range(10)]
     print(results)

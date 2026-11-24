@@ -55,7 +55,7 @@
                 <form method="dialog">
                     <div class="game-dialog-icon"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i></div>
                     <h2 id="resetDialogTitle">Reset game?</h2>
-                    <p id="resetDialogText">All player seats and progress will be cleared.</p>
+                    <p id="resetDialogText">All player seats will be cleared.</p>
                     
                     <div style="margin: 12px 0; text-align: left; font-size: 0.95rem;">
                         <label style="display: block; font-weight: 600; margin-bottom: 6px;">Game Mode:</label>
@@ -109,7 +109,7 @@
     </div>
 
     <script>window.CATAN_PLAYER_COLORS = {{ player_colors|tojson }};</script>
-    <script src="{{ url_for('static', filename='js/catan_drawing_utils.js', v='5') }}"></script>
+    <script src="{{ url_for('static', filename='js/catan_drawing_utils.js', v='6') }}"></script>
     <script src="{{ catan_asset_url('js/catan_game_logic.js') }}"></script>
 
     <!-- Display tweaks that run after your JS (no changes to catan_game_logic.js needed) -->

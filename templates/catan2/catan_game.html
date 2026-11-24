@@ -306,7 +306,36 @@
                 border-right: 1px solid #cbd5d1;
                 border-left: 1px solid #cbd5d1;
             }
-            
+            /* 1. Target only the inner data cells (not first row, not first column) */
+            .catan2-game-page #assignpoint td[data-player-col] {
+                font-size: 1.05rem !important;   /* Significantly larger numbers */
+                font-weight: 700;
+                line-height: 1.2;
+                padding: 2px 1px;
+            }
+
+            /* 2. Highlighted Score row (SC) can be even more prominent */
+            .catan2-game-page #assignpoint #row-sc td[data-player-col] {
+                font-size: 1.25rem !important;   /* Large bold score numbers */
+                font-weight: 800;
+                color: #145347;
+            }
+
+            /* 3. Keep Progress Levels (LVL) compact so all 3 digits fit without clipping */
+            .catan2-game-page #assignpoint #row-lvl td[data-player-col] {
+                font-size: 0.92rem !important;
+                letter-spacing: 0.5px;
+            }
+
+            /* 4. Ensure desktop/TV media query doesn't override the larger font */
+            @media (min-width: 901px) {
+                .catan2-game-page #assignpoint td[data-player-col] {
+                    font-size: 1.05rem !important;
+                }
+                .catan2-game-page #assignpoint #row-sc td[data-player-col] {
+                    font-size: 1.25rem !important;
+                }
+            }
             .catan2-game-page #assignpoint col:nth-child(1) { width: 27.8%; }
             .catan2-game-page #assignpoint col:nth-child(2) { width: 11.1%; }
             

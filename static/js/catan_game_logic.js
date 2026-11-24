@@ -1870,47 +1870,43 @@ function fitGameMap() {
 
 function resizeCanvas() {
     fitGameMap();
+
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    const viewport = canvas.parentElement;
     
-    const MOBILE_MAP_ZOOM = 1.6;   // 60% bigger
-    const mobileZoomed = mapZoomLevel === 2 && window.matchMedia('(max-width: 768px)').matches;
-    const gameMap = isGamePage ? document.querySelector('.game-map') : null;
+    // 1. Determine available container dimensions
+    const containerWidth = viewport.clientWidth || window.innerWidth;
+    const containerHeight = viewport.clientHeight || (window.innerHeight * 0.65);
+    
+    // Standard Catan board aspect ratio (width / height)
+    const aspectRatio = isPlayerPage && isMobile ? 1.05 : 1.25;
 
-    // undo the mobile-zoom sizing first, so the measurements below are the normal ones
-    if (gameMap && !mobileZoomed) {
-        gameMap.style.paddingBottom = '';
-        canvas.style.removeProperty('width');
-        canvas.style.removeProperty('height');
+    // 2. Compute base unzoomed dimensions that fit within the viewport
+    let baseWidth = containerWidth;
+    let baseHeight = baseWidth / aspectRatio;
+
+    if (baseHeight > containerHeight && !isMobile) {
+        baseHeight = containerHeight;
+        baseWidth = baseHeight * aspectRatio;
     }
 
-    const containerWidth = canvas.parentElement.clientWidth;
-    const containerHeight = canvas.parentElement.clientHeight;
-    const aspectRatio = isPlayerPage && window.matchMedia('(max-width: 768px)').matches ? 0.95 : 1.2;
-    let newWidth = containerWidth * mapZoomLevel;
-    let newHeight = newWidth / aspectRatio;
+    // 3. Apply uniform zoom multiplier
+    const zoomFactor = mapZoomLevel === 2 ? 1.6 : 1.0;
+    const renderWidth = Math.round(baseWidth * zoomFactor);
+    const renderHeight = Math.round(baseHeight * zoomFactor);
 
-    if (isGamePage && mobileZoomed) {
-        // buffer and on-screen size are set together, 1.6x bigger, same 1.2 : 1 shape
-        newWidth = containerWidth * MOBILE_MAP_ZOOM;
-        newHeight = newWidth / aspectRatio;
-        gameMap.style.paddingBottom = (newHeight / containerWidth * 100) + '%';   // box grows taller
-        canvas.style.setProperty('width', newWidth + 'px', 'important');
-        canvas.style.setProperty('height', newHeight + 'px', 'important');
-    } else if (isGamePage) {
-        // fill the whole map area; the board itself is scaled to fit below
-        newWidth = containerWidth;
-        newHeight = containerHeight || containerWidth / aspectRatio;
-    } else if (mobileZoomed) {
-        // player page (this part is already working for you)
-        newWidth = containerWidth * MOBILE_MAP_ZOOM;
-        newHeight = newWidth / aspectRatio;
-    }
-    canvas.width = newWidth;
-    canvas.height = newHeight;
+    // 4. Set both internal buffer and style pixels identically to avoid any stretching
+    canvas.width = renderWidth;
+    canvas.height = renderHeight;
+
     if (!isGamePage) {
-        canvas.style.width = `${newWidth}px`;
-        canvas.style.height = `${newHeight}px`;
+        canvas.style.width = `${renderWidth}px`;
+        canvas.style.height = `${renderHeight}px`;
+        canvas.style.maxWidth = 'none';
+        canvas.style.maxHeight = 'none';
     }
 
+    // 5. Measure board hex geometry and compute scale
     let minRawX = Infinity, maxRawX = -Infinity, minRawY = Infinity, maxRawY = -Infinity;
     if (boardTiles.length > 0) {
         boardTiles.forEach(tile => {
@@ -1924,38 +1920,42 @@ function resizeCanvas() {
             });
         });
 
-        const boardActualWidth = maxRawX - minRawX;
-        const boardActualHeight = maxRawY - minRawY;
-        const portExtent = HEX_SIZE * 0.4 + PORT_SIZE;
+        // Add padding for numbers, ports, and robbers
+        const portExtent = HEX_SIZE * 0.45 + PORT_SIZE;
         minRawX -= portExtent;
         maxRawX += portExtent;
         minRawY -= portExtent;
         maxRawY += portExtent;
-        const boardWithPortsWidth = maxRawX - minRawX;
-        const boardWithPortsHeight = maxRawY - minRawY;
-        const boardPadding = isGamePage ? 6 : isPlayerPage && window.matchMedia('(max-width: 768px)').matches ? 12 : 48;
+
+        const boardWidth = maxRawX - minRawX;
+        const boardHeight = maxRawY - minRawY;
+        const padding = isGamePage ? 8 : (isMobile ? 14 : 28);
+
+        // Fit the board perfectly inside the canvas width and height
         const fitScale = Math.min(
-            (canvas.width - boardPadding) / boardWithPortsWidth,
-            (canvas.height - boardPadding) / boardWithPortsHeight
+            (renderWidth - padding) / boardWidth,
+            (renderHeight - padding) / boardHeight
         );
+
         boardScale = isGamePage
             ? fitScale * (mapZoomLevel === 1 ? 1 : GAME_MAP_ZOOM)
-            : Math.min(1, fitScale);
+            : fitScale;
 
-        offsetX = (canvas.width / boardScale / 2) - (minRawX + boardWithPortsWidth / 2);
-        offsetY = (canvas.height / boardScale / 2) - (minRawY + boardWithPortsHeight / 2);
-
-        boardCenterRawX = minRawX + boardWithPortsWidth / 2;
-        boardCenterRawY = minRawY + boardWithPortsHeight / 2;
+        // Perfectly center the board in the canvas
+        offsetX = (renderWidth / boardScale / 2) - (minRawX + boardWidth / 2);
+        offsetY = (renderHeight / boardScale / 2) - (minRawY + boardHeight / 2);
+        boardCenterRawX = minRawX + boardWidth / 2;
+        boardCenterRawY = minRawY + boardHeight / 2;
     } else {
-        offsetX = canvas.width / 2;
-        offsetY = canvas.height / 2;
+        offsetX = renderWidth / 2;
+        offsetY = renderHeight / 2;
         boardCenterRawX = 0;
         boardCenterRawY = 0;
     }
 
     drawBoard();
 }
+
 
 function updatePlayerUI() {
     calculatepointsandcards();
